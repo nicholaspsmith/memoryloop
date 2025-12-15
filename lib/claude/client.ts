@@ -5,7 +5,7 @@ import type { Message } from '@/types'
  * Claude Client Wrapper
  *
  * Provides interface to Anthropic's Claude API with streaming support.
- * Uses Claude Sonnet 4.5 for educational tutoring interactions.
+ * Uses Claude Sonnet 4 for educational tutoring interactions.
  */
 
 // Initialize Anthropic client
@@ -14,7 +14,7 @@ const anthropic = new Anthropic({
 })
 
 // Model configuration
-export const CLAUDE_MODEL = 'claude-sonnet-4-5-20250929' // Claude Sonnet 4.5
+export const CLAUDE_MODEL = 'claude-sonnet-4-20250514' // Claude Sonnet 4
 export const MAX_TOKENS = 4096
 
 // Message history type for Claude API
