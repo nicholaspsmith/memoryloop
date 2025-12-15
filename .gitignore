@@ -1,0 +1,10 @@
+# Claude Code credentials
+.claude/settings.local.json
+.claude/mcp_settings.json
+
+# Beads local files
+.beads/beads.db
+.beads/beads.db-*
+.beads/bd.sock
+.beads/bd.pipe
+.beads/.exclusive-lock
