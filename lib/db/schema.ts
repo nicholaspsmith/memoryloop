@@ -66,6 +66,14 @@ export async function initializeSchema() {
   // 4. Flashcards table (with vector column and FSRS state)
   const emptyFSRSCard = createEmptyCard()
 
+  // Convert FSRS Card dates to timestamps for LanceDB
+  // Use 0 for null values so LanceDB can infer the type as number
+  const fsrsStateForSchema = {
+    ...emptyFSRSCard,
+    due: emptyFSRSCard.due.getTime(),
+    last_review: emptyFSRSCard.last_review?.getTime() || 0,
+  }
+
   await db.createTable(
     'flashcards',
     [
@@ -78,7 +86,7 @@ export async function initializeSchema() {
         answer: 'Init answer',
         questionEmbedding: new Array(1536).fill(0),
         createdAt: Date.now(),
-        fsrsState: emptyFSRSCard, // FSRS Card object stored as JSON
+        fsrsState: fsrsStateForSchema, // FSRS Card object with timestamps
       },
     ],
     { mode: 'create' }
@@ -95,13 +103,13 @@ export async function initializeSchema() {
         userId: '00000000-0000-0000-0000-000000000000',
         rating: 3, // Rating.Good
         state: 0, // State.New
-        due: new Date(),
+        due: Date.now(), // Use timestamp instead of Date object
         stability: 0,
         difficulty: 0,
         elapsed_days: 0,
         last_elapsed_days: 0,
         scheduled_days: 0,
-        review: new Date(),
+        review: Date.now(), // Use timestamp instead of Date object
       },
     ],
     { mode: 'create' }
