@@ -1,0 +1,553 @@
+openapi: 3.1.0
+info:
+  title: MemoryLoop Chat API
+  version: 1.0.0
+  description: |
+    Chat and conversation management endpoints for Claude LLM interactions.
+
+    **Functional Requirements**:
+    - FR-005: Chat interface for sending/receiving Claude messages
+    - FR-006: Maintain conversation context throughout session
+    - FR-007: Display complete conversation history chronologically
+    - FR-023: Persist conversation history across sessions indefinitely
+
+servers:
+  - url: https://memoryloop.nicholaspsmith.com/api
+    description: Production server
+  - url: http://localhost:3000/api
+    description: Development server
+
+tags:
+  - name: Conversations
+    description: Conversation management
+  - name: Messages
+    description: Chat message operations
+
+paths:
+  /chat/conversations:
+    get:
+      tags:
+        - Conversations
+      summary: List user's conversations
+      description: |
+        Returns all conversations for the authenticated user, sorted by most recent activity.
+
+        **Maps to**: FR-023 (persistent conversation history)
+      operationId: listConversations
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of conversations to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: Number of conversations to skip (pagination)
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Conversations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conversation'
+                  total:
+                    type: integer
+                    description: Total number of conversations for user
+                    example: 45
+                  hasMore:
+                    type: boolean
+                    description: Whether more conversations exist beyond this page
+                    example: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - Conversations
+      summary: Create new conversation
+      description: |
+        Creates a new conversation. Title is auto-generated from the first message.
+      operationId: createConversation
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 200
+                  nullable: true
+                  description: Optional custom title (defaults to first message preview)
+      responses:
+        '201':
+          description: Conversation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /chat/conversations/{conversationId}:
+    get:
+      tags:
+        - Conversations
+      summary: Get conversation details
+      description: |
+        Returns conversation metadata and summary.
+      operationId: getConversation
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/conversationId'
+      responses:
+        '200':
+          description: Conversation retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /chat/conversations/{conversationId}/messages:
+    get:
+      tags:
+        - Messages
+      summary: Get conversation messages
+      description: |
+        Returns messages for a conversation in chronological order.
+
+        **Maps to**: FR-007 (display complete conversation history), FR-006 (conversation context)
+      operationId: getMessages
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/conversationId'
+        - name: limit
+          in: query
+          description: Maximum number of messages to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: before
+          in: query
+          description: Return messages before this timestamp (for pagination)
+          required: false
+          schema:
+            type: integer
+            format: int64
+            description: Unix timestamp in milliseconds
+      responses:
+        '200':
+          description: Messages retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+                  hasMore:
+                    type: boolean
+                    description: Whether more messages exist before the oldest returned
+                    example: false
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags:
+        - Messages
+      summary: Send message to Claude
+      description: |
+        Sends a user message to Claude and returns the AI response. Maintains conversation context.
+
+        **Maps to**: FR-005 (chat interface), FR-006 (maintain context)
+
+        **Performance**: Expected response time < 10 seconds (SC-002)
+      operationId: sendMessage
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/conversationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - content
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 50000
+                  description: User's message to Claude
+                  example: Explain the concept of spaced repetition in learning.
+                stream:
+                  type: boolean
+                  default: false
+                  description: Whether to stream the response via Server-Sent Events
+      responses:
+        '200':
+          description: Message sent and response received
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userMessage:
+                    $ref: '#/components/schemas/Message'
+                  assistantMessage:
+                    $ref: '#/components/schemas/Message'
+                  conversationContext:
+                    type: object
+                    description: Metadata about conversation state
+                    properties:
+                      totalMessages:
+                        type: integer
+                        example: 12
+                      canGenerateFlashcards:
+                        type: boolean
+                        description: Whether assistant message is suitable for flashcard generation
+                        example: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          description: Rate limit exceeded (Claude API or application limit)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Too many messages. Please wait before sending another.
+                code: RATE_LIMIT_EXCEEDED
+                retryAfter: 60
+        '503':
+          description: Claude API unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Claude API is temporarily unavailable. Please try again.
+                code: SERVICE_UNAVAILABLE
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /chat/messages/{messageId}:
+    get:
+      tags:
+        - Messages
+      summary: Get specific message
+      description: |
+        Returns a single message by ID.
+      operationId: getMessage
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Message retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  schemas:
+    Conversation:
+      type: object
+      required:
+        - id
+        - userId
+        - createdAt
+        - updatedAt
+        - messageCount
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        userId:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        title:
+          type: string
+          nullable: true
+          maxLength: 200
+          example: Learning about spaced repetition
+          description: Auto-generated from first message or custom title
+        createdAt:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+          example: 1734192000000
+        updatedAt:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds (updated on new messages)
+          example: 1734195600000
+        messageCount:
+          type: integer
+          minimum: 0
+          example: 8
+          description: Total number of messages in conversation
+
+    Message:
+      type: object
+      required:
+        - id
+        - conversationId
+        - userId
+        - role
+        - content
+        - createdAt
+        - hasFlashcards
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 789e0123-e89b-12d3-a456-426614174001
+        conversationId:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        userId:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        role:
+          type: string
+          enum:
+            - user
+            - assistant
+          example: assistant
+          description: Who sent the message
+        content:
+          type: string
+          minLength: 1
+          maxLength: 50000
+          example: |
+            Spaced repetition is a learning technique that involves reviewing information at increasing intervals over time. This method leverages the psychological spacing effect, where learning is more effective when study sessions are spaced out rather than massed together.
+        createdAt:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+          example: 1734195600000
+        hasFlashcards:
+          type: boolean
+          description: Whether flashcards have been generated from this message (FR-017)
+          example: false
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          example: Conversation not found
+        code:
+          type: string
+          example: NOT_FOUND
+        retryAfter:
+          type: integer
+          nullable: true
+          description: Seconds to wait before retrying (for rate limits)
+          example: 60
+
+  parameters:
+    conversationId:
+      name: conversationId
+      in: path
+      required: true
+      description: Unique identifier for the conversation
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Unauthorized:
+      description: Not authenticated or session expired
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Authentication required
+            code: UNAUTHORIZED
+
+    Forbidden:
+      description: User does not have access to this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: You do not have permission to access this conversation
+            code: FORBIDDEN
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Conversation not found
+            code: NOT_FOUND
+
+    BadRequest:
+      description: Invalid request data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Message content cannot be empty
+            code: VALIDATION_ERROR
+
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+
+security:
+  - sessionCookie: []
+
+# Contract Testing Scenarios
+x-contract-tests:
+  - name: Create conversation and send message (FR-005, FR-006)
+    description: User can create conversation and send messages to Claude
+    steps:
+      - request: POST /chat/conversations
+        expect:
+          status: 201
+          body:
+            id: uuid
+            messageCount: 0
+      - request: POST /chat/conversations/{conversationId}/messages
+        body:
+          content: What is spaced repetition?
+        expect:
+          status: 200
+          body:
+            userMessage.role: user
+            userMessage.content: What is spaced repetition?
+            assistantMessage.role: assistant
+            assistantMessage.content: notEmpty
+            conversationContext.totalMessages: 2
+
+  - name: Conversation history persists (FR-023)
+    description: Conversation messages remain accessible across sessions
+    steps:
+      - request: GET /chat/conversations/{conversationId}/messages
+        expect:
+          status: 200
+          body:
+            messages: array
+            messages[0].role: user
+            messages[1].role: assistant
+
+  - name: Conversation context maintained (FR-006)
+    description: Subsequent messages maintain context of previous exchanges
+    steps:
+      - request: POST /chat/conversations/{conversationId}/messages
+        body:
+          content: Can you elaborate on that?
+        expect:
+          status: 200
+          body:
+            assistantMessage.content: contains_reference_to_previous_topic
+
+  - name: Message history chronological order (FR-007)
+    description: Messages returned in chronological order
+    steps:
+      - request: GET /chat/conversations/{conversationId}/messages
+        expect:
+          status: 200
+          body:
+            messages: array
+            messages: is_sorted_by_createdAt_ascending
+
+  - name: Rate limit protection
+    description: Excessive requests are rate-limited
+    steps:
+      - request: POST /chat/conversations/{conversationId}/messages (repeated 10 times)
+        expect:
+          status: 429
+          body:
+            code: RATE_LIMIT_EXCEEDED
+            retryAfter: positive_integer
+
+  - name: Unauthorized access blocked
+    description: Unauthenticated requests are rejected
+    steps:
+      - request: GET /chat/conversations
+        cookies: none
+        expect:
+          status: 401
+          body:
+            code: UNAUTHORIZED
+
+  - name: Cross-user conversation access blocked
+    description: Users cannot access other users' conversations
+    steps:
+      - request: GET /chat/conversations/{otherUserConversationId}
+        expect:
+          status: 403
+          body:
+            code: FORBIDDEN
