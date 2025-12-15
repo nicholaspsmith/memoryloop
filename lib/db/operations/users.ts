@@ -44,7 +44,7 @@ export async function createUser(data: {
 export async function getUserByEmail(email: string): Promise<User | null> {
   const normalizedEmail = email.toLowerCase().trim()
 
-  const users = await find<User>(USERS_TABLE, `email = '${normalizedEmail}'`, 1)
+  const users = await find<User>(USERS_TABLE, `"email" = '${normalizedEmail}'`, 1)
 
   return users.length > 0 ? users[0] : null
 }
