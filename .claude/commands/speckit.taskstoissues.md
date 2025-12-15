@@ -40,24 +40,28 @@ git config --get remote.origin.url
    - Typical groupings: by phase, by user story, by feature area, by component
 
 5. **For each high-level group**, create a GitHub issue:
-   - Title: High-level feature/phase name (e.g., "Phase 3: Implement User Interface for AI Chat")
+   - Title: High-level feature/phase name (e.g., "Phase 3: User Authentication (US1)")
    - Body: Include:
-     - Feature/phase description
-     - Task checklist with format: `- [ ] [memoryloop-X] Task title`
-     - Status summary: `X/Y tasks completed`
-   - Labels: Add appropriate labels (phase, feature, etc.)
+     - ## Overview section with feature/phase description
+     - ## Tasks section with FULL checklist of all individual tasks
+     - Each task in format: `- [ ] T### [P] [tags] Task title with full description`
+     - **Status:** `X/Y tasks completed` (with ✅ if all complete)
+     - ## Local Task Tracking section with bd commands
+   - Labels: Add appropriate labels (phase, feature, etc.) if available
 
 6. **For each individual task**, create a bd issue:
    ```bash
    bd create "Task title" --json --priority <0-4> --type <task|bug|feature>
    ```
    - Parse the JSON output to get the issue ID (e.g., `memoryloop-1`)
-   - Store the mapping between task and bd issue ID
+   - Store the mapping between task number and bd issue ID
 
-7. **Update GitHub issue** with the task checklist:
-   - Use the bd issue IDs in the checklist items
-   - Format: `- [ ] [memoryloop-1] Create authentication component`
-   - Include link to view all bd issues: `Run 'bd list' to see all tasks`
+7. **Checklist format requirements:**
+   - Use `- [ ]` for incomplete tasks and `- [x]` for completed tasks
+   - Include task number: `T001`, `T032`, etc.
+   - Include all tags from original task: `[P]` for parallel, `[US1]` for user story
+   - Include full task description with file paths when relevant
+   - Example: `- [ ] T032 [P] [US1] Contract test for POST /api/auth/signin in tests/contract/auth.test.ts`
 
 8. **Output summary**:
    - Total GitHub issues created
@@ -76,11 +80,11 @@ git config --get remote.origin.url
 Implement user authentication system with login, signup, and session management.
 
 ## Tasks
-- [ ] [memoryloop-32] Contract test for POST /api/auth/signin
-- [ ] [memoryloop-33] Contract test for POST /api/auth/signup
-- [ ] [memoryloop-34] Create LoginForm component
-- [ ] [memoryloop-35] Create SignupForm component
-- [ ] [memoryloop-36] Configure NextAuth.js
+- [ ] T032 [P] [US1] Contract test for POST /api/auth/signin in tests/contract/auth.test.ts
+- [ ] T033 [P] [US1] Contract test for POST /api/auth/signup in tests/contract/auth.test.ts
+- [ ] T034 [P] [US1] Create LoginForm component in components/auth/LoginForm.tsx
+- [ ] T035 [P] [US1] Create SignupForm component in components/auth/SignupForm.tsx
+- [ ] T036 [US1] Configure NextAuth.js 5 in auth.ts
 
 **Status:** 0/5 tasks completed
 
@@ -88,8 +92,8 @@ Implement user authentication system with login, signup, and session management.
 These tasks are tracked locally with beads. Run:
 - `bd list` - View all tasks
 - `bd ready` - View ready-to-work tasks
-- `bd show memoryloop-X` - View task details
-- `bd update memoryloop-X --status in_progress` - Claim a task
+- `bd show memoryloop-<id>` - View task details
+- `bd update memoryloop-<id> --status in_progress` - Claim a task
 ```
 
 **Labels:** phase-3, user-story-1, authentication
