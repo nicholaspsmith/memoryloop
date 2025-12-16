@@ -1,0 +1,670 @@
+openapi: 3.1.0
+info:
+  title: MemoryLoop Quiz API
+  version: 1.0.0
+  description: |
+    Quiz session and flashcard review endpoints with FSRS scheduling.
+
+    **Functional Requirements**:
+    - FR-011: Provide quiz interface for reviewing flashcards
+    - FR-012: Present flashcards one at a time
+    - FR-013: Initially show only question, hide answer
+    - FR-014: Provide mechanism to reveal answer
+    - FR-015: Allow navigation to next flashcard
+    - FR-020: Display progress through flashcard deck
+    - FR-021: Provide completion notification when all cards reviewed
+
+    **FSRS Integration**:
+    Uses ts-fsrs library for spaced repetition scheduling with 4-rating system:
+    - Again (1): Forgot completely
+    - Hard (2): Barely remembered
+    - Good (3): Recalled correctly
+    - Easy (4): Instant recall
+
+servers:
+  - url: https://memoryloop.nicholaspsmith.com/api
+    description: Production server
+  - url: http://localhost:3000/api
+    description: Development server
+
+tags:
+  - name: Quiz
+    description: Quiz session and flashcard review
+  - name: Stats
+    description: Progress and statistics
+
+paths:
+  /quiz/due:
+    get:
+      tags:
+        - Quiz
+      summary: Get flashcards due for review
+      description: |
+        Returns flashcards that are due for review based on FSRS scheduling.
+
+        **Maps to**: FR-011 (quiz interface), FR-012 (one at a time presentation)
+
+        **FSRS Logic**: Returns cards where `fsrsState.due <= now`
+      operationId: getDueFlashcards
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of due cards to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: includeNew
+          in: query
+          description: Include new (never reviewed) cards
+          required: false
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Due flashcards retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  flashcards:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/QuizFlashcard'
+                    description: Sorted by due date (oldest first)
+                  count:
+                    type: integer
+                    description: Number of cards returned
+                    example: 15
+                  totalDue:
+                    type: integer
+                    description: Total cards due (may be > count if limited)
+                    example: 23
+                  message:
+                    type: string
+                    nullable: true
+                    example: null
+                    description: Message if no cards available (FR-021)
+              examples:
+                has_due_cards:
+                  value:
+                    flashcards:
+                      - id: 333e4567-e89b-12d3-a456-426614174333
+                        question: What is spaced repetition?
+                        answer: A learning technique...
+                        fsrsState:
+                          due: "2025-12-14T08:00:00.000Z"
+                          state: 2
+                          reps: 3
+                    count: 15
+                    totalDue: 15
+                    message: null
+                no_due_cards:
+                  value:
+                    flashcards: []
+                    count: 0
+                    totalDue: 0
+                    message: Great work! No cards due for review. Check back later or generate more flashcards from the chat.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /quiz/rate:
+    post:
+      tags:
+        - Quiz
+      summary: Rate flashcard review and update FSRS state
+      description: |
+        Records a flashcard review with the user's rating. Updates FSRS scheduling state and creates a review log entry.
+
+        **Maps to**: FR-015 (navigate to next card after rating)
+
+        **FSRS Ratings**:
+        - 1 (Again): Forgot completely, restart learning
+        - 2 (Hard): Barely remembered, reduce interval
+        - 3 (Good): Recalled correctly, standard interval
+        - 4 (Easy): Instant recall, much longer interval
+
+        **Performance**: FSRS calculation < 50ms (SC-005)
+      operationId: rateFlashcard
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - flashcardId
+                - rating
+              properties:
+                flashcardId:
+                  type: string
+                  format: uuid
+                  example: 333e4567-e89b-12d3-a456-426614174333
+                rating:
+                  type: integer
+                  enum: [1, 2, 3, 4]
+                  example: 3
+                  description: |
+                    User's rating of recall difficulty:
+                    - 1: Again (forgot)
+                    - 2: Hard
+                    - 3: Good
+                    - 4: Easy
+      responses:
+        '200':
+          description: Rating recorded and FSRS state updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  updatedCard:
+                    $ref: '#/components/schemas/QuizFlashcard'
+                    description: Flashcard with updated FSRS state
+                  nextReviewDate:
+                    type: string
+                    format: date-time
+                    example: "2025-12-21T10:00:00.000Z"
+                    description: When this card is due next
+                  interval:
+                    type: integer
+                    description: Days until next review
+                    example: 7
+                  nextCard:
+                    allOf:
+                      - $ref: '#/components/schemas/QuizFlashcard'
+                    nullable: true
+                    description: Next due card to review (null if no more cards - FR-021)
+                  remainingDue:
+                    type: integer
+                    description: Number of cards still due (FR-020)
+                    example: 14
+        '400':
+          description: Invalid rating value
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Invalid rating. Must be 1 (Again), 2 (Hard), 3 (Good), or 4 (Easy).
+                code: INVALID_RATING
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /quiz/stats:
+    get:
+      tags:
+        - Stats
+      summary: Get user's quiz statistics
+      description: |
+        Returns comprehensive statistics about the user's flashcard review progress.
+
+        **Maps to**: FR-020 (progress tracking)
+      operationId: getQuizStats
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Statistics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /quiz/history:
+    get:
+      tags:
+        - Stats
+      summary: Get review history
+      description: |
+        Returns the user's review log entries for analytics.
+      operationId: getReviewHistory
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of review log entries to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+        - name: flashcardId
+          in: query
+          description: Filter by specific flashcard
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Review history retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reviews:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReviewLog'
+                  total:
+                    type: integer
+                    description: Total number of reviews for user
+                    example: 347
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  schemas:
+    QuizFlashcard:
+      type: object
+      required:
+        - id
+        - question
+        - answer
+        - fsrsState
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 333e4567-e89b-12d3-a456-426614174333
+        question:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          example: What is spaced repetition?
+          description: Front of flashcard (FR-013 - shown first)
+        answer:
+          type: string
+          minLength: 1
+          maxLength: 5000
+          example: A learning technique that involves reviewing information at increasing intervals over time.
+          description: Back of flashcard (FR-014 - revealed on user action)
+        fsrsState:
+          $ref: '#/components/schemas/FSRSCard'
+
+    FSRSCard:
+      type: object
+      description: FSRS scheduling state (from ts-fsrs library)
+      required:
+        - due
+        - stability
+        - difficulty
+        - elapsed_days
+        - scheduled_days
+        - reps
+        - lapses
+        - state
+      properties:
+        due:
+          type: string
+          format: date-time
+          example: "2025-12-20T10:00:00.000Z"
+          description: Next review date
+        stability:
+          type: number
+          format: float
+          minimum: 0
+          example: 4.5
+          description: Memory stability (days)
+        difficulty:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 10
+          example: 5.2
+          description: Item difficulty (0-10)
+        elapsed_days:
+          type: number
+          format: float
+          minimum: 0
+          example: 3
+          description: Days since last review
+        scheduled_days:
+          type: number
+          format: float
+          minimum: 0
+          example: 7
+          description: Days until next review
+        reps:
+          type: integer
+          minimum: 0
+          example: 2
+          description: Total reviews
+        lapses:
+          type: integer
+          minimum: 0
+          example: 0
+          description: Times marked "Again"
+        state:
+          type: integer
+          enum: [0, 1, 2, 3]
+          example: 2
+          description: |
+            0=New, 1=Learning, 2=Review, 3=Relearning
+        last_review:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2025-12-18T10:00:00.000Z"
+
+    QuizStats:
+      type: object
+      required:
+        - total
+        - dueToday
+        - reviewedToday
+        - byState
+      properties:
+        total:
+          type: integer
+          description: Total flashcards owned by user
+          example: 127
+        dueToday:
+          type: integer
+          description: Cards currently due for review (FR-020)
+          example: 15
+        reviewedToday:
+          type: integer
+          description: Cards reviewed today
+          example: 23
+        byState:
+          type: object
+          description: Breakdown by FSRS state
+          properties:
+            new:
+              type: integer
+              description: Never reviewed (state=0)
+              example: 35
+            learning:
+              type: integer
+              description: Initial learning phase (state=1)
+              example: 12
+            review:
+              type: integer
+              description: Long-term retention (state=2)
+              example: 75
+            relearning:
+              type: integer
+              description: Re-learning after forgetting (state=3)
+              example: 5
+        upcomingReviews:
+          type: array
+          description: Review forecast for next 7 days
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+                example: "2025-12-15"
+              count:
+                type: integer
+                example: 18
+        retentionRate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          nullable: true
+          example: 0.87
+          description: Percentage of cards rated Good or Easy (null if < 10 reviews)
+        averageInterval:
+          type: number
+          format: float
+          nullable: true
+          example: 12.5
+          description: Average days between reviews (null if < 10 reviews)
+
+    ReviewLog:
+      type: object
+      description: Historical record of a flashcard review event
+      required:
+        - id
+        - flashcardId
+        - rating
+        - state
+        - review
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 444e4567-e89b-12d3-a456-426614174444
+        flashcardId:
+          type: string
+          format: uuid
+          example: 333e4567-e89b-12d3-a456-426614174333
+        rating:
+          type: integer
+          enum: [1, 2, 3, 4]
+          example: 3
+          description: User's rating (1=Again, 2=Hard, 3=Good, 4=Easy)
+        state:
+          type: integer
+          enum: [0, 1, 2, 3]
+          example: 2
+          description: Card state before review
+        due:
+          type: string
+          format: date-time
+          example: "2025-12-14T10:00:00.000Z"
+          description: When card was due
+        stability:
+          type: number
+          format: float
+          example: 4.5
+          description: Stability before review
+        difficulty:
+          type: number
+          format: float
+          example: 5.2
+          description: Difficulty before review
+        elapsed_days:
+          type: number
+          format: float
+          example: 3
+          description: Days since last review
+        scheduled_days:
+          type: number
+          format: float
+          example: 7
+          description: Interval until next review
+        review:
+          type: string
+          format: date-time
+          example: "2025-12-14T10:15:30.000Z"
+          description: Timestamp of review event
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          example: Flashcard not found
+        code:
+          type: string
+          example: NOT_FOUND
+
+  responses:
+    Unauthorized:
+      description: Not authenticated or session expired
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Authentication required
+            code: UNAUTHORIZED
+
+    Forbidden:
+      description: User does not have access to this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: You do not have permission to access this flashcard
+            code: FORBIDDEN
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Flashcard not found
+            code: NOT_FOUND
+
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+
+security:
+  - sessionCookie: []
+
+# Contract Testing Scenarios
+x-contract-tests:
+  - name: Get due flashcards for quiz (FR-011, FR-012)
+    description: User can retrieve cards due for review
+    steps:
+      - request: GET /quiz/due?limit=20
+        expect:
+          status: 200
+          body:
+            flashcards: array
+            count: greaterThanOrEqual 0
+            totalDue: greaterThanOrEqual 0
+
+  - name: No cards due message (FR-021)
+    description: Appropriate message when no cards are due
+    steps:
+      - request: GET /quiz/due
+        expect:
+          status: 200
+          body:
+            flashcards: []
+            count: 0
+            totalDue: 0
+            message: contains "No cards due"
+
+  - name: Rate flashcard and get next (FR-015, FR-020)
+    description: User can rate a card and receive next card with progress
+    steps:
+      - request: POST /quiz/rate
+        body:
+          flashcardId: 333e4567-e89b-12d3-a456-426614174333
+          rating: 3
+        expect:
+          status: 200
+          body:
+            success: true
+            updatedCard.fsrsState.reps: greaterThan previous_reps
+            nextReviewDate: futureDate
+            interval: greaterThan 0
+            remainingDue: greaterThanOrEqual 0
+
+  - name: All four FSRS ratings work correctly
+    description: Each rating (Again, Hard, Good, Easy) produces valid FSRS update
+    steps:
+      - request: POST /quiz/rate
+        body:
+          rating: 1  # Again
+        expect:
+          status: 200
+          body:
+            updatedCard.fsrsState.lapses: incremented
+      - request: POST /quiz/rate
+        body:
+          rating: 2  # Hard
+        expect:
+          status: 200
+          body:
+            interval: lessThan good_interval
+      - request: POST /quiz/rate
+        body:
+          rating: 3  # Good
+        expect:
+          status: 200
+          body:
+            interval: greaterThan 0
+      - request: POST /quiz/rate
+        body:
+          rating: 4  # Easy
+        expect:
+          status: 200
+          body:
+            interval: greaterThan good_interval
+
+  - name: Quiz statistics track progress (FR-020)
+    description: Stats reflect review activity and due cards
+    steps:
+      - request: GET /quiz/stats
+        expect:
+          status: 200
+          body:
+            total: greaterThan 0
+            dueToday: greaterThanOrEqual 0
+            reviewedToday: greaterThanOrEqual 0
+            byState.new: greaterThanOrEqual 0
+            byState.learning: greaterThanOrEqual 0
+            byState.review: greaterThanOrEqual 0
+            byState.relearning: greaterThanOrEqual 0
+
+  - name: Review history persists
+    description: Review logs are created and retrievable
+    steps:
+      - request: POST /quiz/rate
+        body:
+          flashcardId: 333e4567-e89b-12d3-a456-426614174333
+          rating: 3
+      - request: GET /quiz/history?flashcardId=333e4567-e89b-12d3-a456-426614174333
+        expect:
+          status: 200
+          body:
+            reviews: array
+            reviews[0].flashcardId: 333e4567-e89b-12d3-a456-426614174333
+            reviews[0].rating: 3
+
+  - name: FSRS calculation performance (SC-005)
+    description: Rating and scheduling completes in under 50ms
+    steps:
+      - request: POST /quiz/rate
+        body:
+          flashcardId: 333e4567-e89b-12d3-a456-426614174333
+          rating: 3
+        expect:
+          status: 200
+          duration: lessThan 50  # milliseconds
+
+  - name: Navigation under 100ms (SC-004)
+    description: Quiz card transitions meet performance target
+    steps:
+      - request: GET /quiz/due?limit=1
+        expect:
+          status: 200
+          duration: lessThan 100  # milliseconds

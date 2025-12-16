@@ -1,0 +1,507 @@
+openapi: 3.1.0
+info:
+  title: MemoryLoop Flashcard Generation API
+  version: 1.0.0
+  description: |
+    Flashcard generation and management endpoints.
+
+    **Functional Requirements**:
+    - FR-008: Provide "Generate Flashcards" action for each Claude response
+    - FR-009: Automatically create multiple Q&A flashcard pairs from response
+    - FR-010: Persist generated flashcards for future quiz sessions
+    - FR-017: Prevent duplicate flashcard generation from same response
+    - FR-018: Provide feedback during flashcard generation
+    - FR-019: Handle cases with insufficient educational content
+
+servers:
+  - url: https://memoryloop.nicholaspsmith.com/api
+    description: Production server
+  - url: http://localhost:3000/api
+    description: Development server
+
+tags:
+  - name: Flashcards
+    description: Flashcard generation and management
+
+paths:
+  /flashcards/generate:
+    post:
+      tags:
+        - Flashcards
+      summary: Generate flashcards from Claude message
+      description: |
+        Analyzes a Claude (assistant) message and generates multiple question-answer flashcard pairs.
+
+        **Maps to**: FR-008, FR-009, FR-017, FR-018, FR-019
+
+        **Performance**: Expected completion < 15 seconds for 1000-word responses (SC-003)
+
+        **Output**: Typically generates 1 flashcard per 100-150 words of educational content (SC-006)
+      operationId: generateFlashcards
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - messageId
+              properties:
+                messageId:
+                  type: string
+                  format: uuid
+                  description: ID of the Claude (assistant) message to generate flashcards from
+                  example: 789e0123-e89b-12d3-a456-426614174001
+                maxFlashcards:
+                  type: integer
+                  minimum: 1
+                  maximum: 50
+                  default: 20
+                  description: Maximum number of flashcards to generate
+      responses:
+        '201':
+          description: Flashcards generated successfully (FR-018)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  flashcards:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Flashcard'
+                  count:
+                    type: integer
+                    description: Number of flashcards generated
+                    example: 7
+                  sourceMessage:
+                    type: object
+                    description: Reference to source message
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      conversationId:
+                        type: string
+                        format: uuid
+                      hasFlashcards:
+                        type: boolean
+                        example: true
+                        description: Flag indicating flashcards were generated (FR-017)
+        '400':
+          description: Invalid request or insufficient content (FR-019)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                insufficient_content:
+                  value:
+                    error: Insufficient educational content for flashcard generation
+                    code: INSUFFICIENT_CONTENT
+                    details: The message contains only conversational content without factual information suitable for flashcards.
+                not_assistant_message:
+                  value:
+                    error: Can only generate flashcards from Claude (assistant) messages
+                    code: INVALID_MESSAGE_ROLE
+        '409':
+          description: Flashcards already generated for this message (FR-017)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Flashcards have already been generated from this message
+                code: FLASHCARDS_ALREADY_EXIST
+                existingFlashcardIds:
+                  - 111e4567-e89b-12d3-a456-426614174111
+                  - 222e4567-e89b-12d3-a456-426614174222
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Claude API unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Flashcard generation service temporarily unavailable
+                code: SERVICE_UNAVAILABLE
+
+  /flashcards:
+    get:
+      tags:
+        - Flashcards
+      summary: List user's flashcards
+      description: |
+        Returns all flashcards for the authenticated user in chronological order.
+
+        **Maps to**: FR-024 (single chronological collection)
+      operationId: listFlashcards
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of flashcards to return
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+        - name: conversationId
+          in: query
+          description: Filter by conversation ID (future enhancement)
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Flashcards retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  flashcards:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Flashcard'
+                    description: Ordered by createdAt ascending (FR-024)
+                  total:
+                    type: integer
+                    description: Total number of flashcards for user
+                    example: 127
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /flashcards/{flashcardId}:
+    get:
+      tags:
+        - Flashcards
+      summary: Get specific flashcard
+      description: |
+        Returns a single flashcard by ID with FSRS scheduling state.
+      operationId: getFlashcard
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/flashcardId'
+      responses:
+        '200':
+          description: Flashcard retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Flashcard'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    delete:
+      tags:
+        - Flashcards
+      summary: Delete flashcard
+      description: |
+        Permanently deletes a flashcard and its review history.
+      operationId: deleteFlashcard
+      security:
+        - sessionCookie: []
+      parameters:
+        - $ref: '#/components/parameters/flashcardId'
+      responses:
+        '204':
+          description: Flashcard deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  schemas:
+    Flashcard:
+      type: object
+      required:
+        - id
+        - userId
+        - conversationId
+        - messageId
+        - question
+        - answer
+        - createdAt
+        - fsrsState
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 333e4567-e89b-12d3-a456-426614174333
+        userId:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        conversationId:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+          description: Source conversation
+        messageId:
+          type: string
+          format: uuid
+          example: 789e0123-e89b-12d3-a456-426614174001
+          description: Source Claude message
+        question:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          example: What is spaced repetition?
+          description: Front of flashcard
+        answer:
+          type: string
+          minLength: 1
+          maxLength: 5000
+          example: |
+            Spaced repetition is a learning technique that involves reviewing information at increasing intervals over time. This method leverages the psychological spacing effect for more effective long-term retention.
+          description: Back of flashcard
+        createdAt:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+          example: 1734195600000
+        fsrsState:
+          $ref: '#/components/schemas/FSRSCard'
+          description: FSRS scheduling state (see quiz.yaml for rating operations)
+
+    FSRSCard:
+      type: object
+      description: |
+        FSRS (Free Spaced Repetition Scheduler) Card state.
+        This is the complete scheduling state managed by the ts-fsrs library.
+      required:
+        - due
+        - stability
+        - difficulty
+        - elapsed_days
+        - scheduled_days
+        - reps
+        - lapses
+        - state
+      properties:
+        due:
+          type: string
+          format: date-time
+          example: "2025-12-20T10:00:00.000Z"
+          description: Next review date
+        stability:
+          type: number
+          format: float
+          minimum: 0
+          example: 4.5
+          description: Memory stability in days
+        difficulty:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 10
+          example: 5.2
+          description: Item difficulty (0-10 scale)
+        elapsed_days:
+          type: number
+          format: float
+          minimum: 0
+          example: 3
+          description: Days since last review
+        scheduled_days:
+          type: number
+          format: float
+          minimum: 0
+          example: 7
+          description: Days until next review (interval)
+        reps:
+          type: integer
+          minimum: 0
+          example: 2
+          description: Total number of reviews
+        lapses:
+          type: integer
+          minimum: 0
+          example: 0
+          description: Number of times marked as "Forgot"
+        state:
+          type: integer
+          enum: [0, 1, 2, 3]
+          example: 2
+          description: |
+            Learning state:
+            - 0: New (never reviewed)
+            - 1: Learning (initial learning phase)
+            - 2: Review (long-term retention)
+            - 3: Relearning (re-learning after forgetting)
+        last_review:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2025-12-18T10:00:00.000Z"
+          description: Date of last review (null if never reviewed)
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          example: Message not found
+        code:
+          type: string
+          example: NOT_FOUND
+        details:
+          type: string
+          nullable: true
+          description: Additional error context
+        existingFlashcardIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          nullable: true
+          description: IDs of existing flashcards (for duplicate prevention)
+
+  parameters:
+    flashcardId:
+      name: flashcardId
+      in: path
+      required: true
+      description: Unique identifier for the flashcard
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Unauthorized:
+      description: Not authenticated or session expired
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Authentication required
+            code: UNAUTHORIZED
+
+    Forbidden:
+      description: User does not have access to this resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: You do not have permission to access this flashcard
+            code: FORBIDDEN
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Message not found
+            code: NOT_FOUND
+
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+
+security:
+  - sessionCookie: []
+
+# Contract Testing Scenarios
+x-contract-tests:
+  - name: Generate flashcards from Claude message (FR-008, FR-009)
+    description: User can generate flashcards from assistant message
+    steps:
+      - request: POST /flashcards/generate
+        body:
+          messageId: 789e0123-e89b-12d3-a456-426614174001
+        expect:
+          status: 201
+          body:
+            success: true
+            count: greaterThan 0
+            flashcards: array
+            flashcards[0].question: notEmpty
+            flashcards[0].answer: notEmpty
+            flashcards[0].fsrsState.state: 0  # New
+            sourceMessage.hasFlashcards: true
+
+  - name: Prevent duplicate flashcard generation (FR-017)
+    description: Cannot generate flashcards twice from same message
+    steps:
+      - request: POST /flashcards/generate
+        body:
+          messageId: 789e0123-e89b-12d3-a456-426614174001
+        expect:
+          status: 409
+          body:
+            code: FLASHCARDS_ALREADY_EXIST
+            existingFlashcardIds: array
+
+  - name: Insufficient content handling (FR-019)
+    description: Graceful handling when message has no educational content
+    steps:
+      - request: POST /flashcards/generate
+        body:
+          messageId: conversational-message-id
+        expect:
+          status: 400
+          body:
+            code: INSUFFICIENT_CONTENT
+            details: contains "insufficient"
+
+  - name: List flashcards chronologically (FR-024)
+    description: Flashcards returned in chronological order by creation date
+    steps:
+      - request: GET /flashcards
+        expect:
+          status: 200
+          body:
+            flashcards: array
+            flashcards: is_sorted_by_createdAt_ascending
+
+  - name: Flashcard generation performance (SC-003)
+    description: Flashcards generated in under 15 seconds for 1000-word response
+    steps:
+      - request: POST /flashcards/generate
+        body:
+          messageId: long-message-id
+        expect:
+          status: 201
+          duration: lessThan 15000  # milliseconds
+
+  - name: Flashcard density (SC-006)
+    description: Generates average of 1 flashcard per 100-150 words
+    steps:
+      - request: POST /flashcards/generate
+        body:
+          messageId: 1000-word-message-id
+        expect:
+          status: 201
+          body:
+            count: between 7 and 10  # 1000 words / 100-150

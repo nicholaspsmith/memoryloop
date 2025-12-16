@@ -1,31 +1,32 @@
 <!--
-Sync Impact Report - Constitution v1.0.0
+Sync Impact Report - Constitution v1.1.0
 ========================================
 
-Version Change: Initial creation → 1.0.0 (MINOR version for initial constitution)
+Version Change: 1.0.0 → 1.1.0 (MINOR version for new principle addition)
 
 Modified Principles:
-- Created Principle I: Documentation-First Development
-- Created Principle II: Test-First Development (TDD)
-- Created Principle III: Modularity & Composability
-- Created Principle IV: Simplicity (YAGNI)
-- Created Principle V: Observability & Debugging
+- None (existing principles unchanged)
+
+Added Principles:
+- Created Principle VI: Atomic Commits & Version Control Discipline
 
 Added Sections:
-- Development Workflow
-- Quality Standards
-- Governance
+- None (new principle added to existing Core Principles section)
+
+Removed Sections:
+- None
 
 Templates Requiring Updates:
-✅ plan-template.md - Constitution Check section already present, aligned with principles
-✅ spec-template.md - User stories and requirements align with documentation-first approach
-✅ tasks-template.md - Task structure supports modular, testable implementation
+✅ plan-template.md - Constitution Check section updated to include commit discipline validation
+✅ spec-template.md - No changes needed (commit discipline applies during implementation, not specification)
+✅ tasks-template.md - No changes needed (commit discipline applies during implementation execution)
 
 Follow-up Items:
-- None - all placeholders filled
+- Constitution Check in plan-template.md now validates commit discipline
+- All commits must follow rules in .claude/rules.md
 
-Ratification Date: 2025-12-14 (Initial adoption)
-Last Amendment: 2025-12-14 (Same as ratification for initial version)
+Ratification Date: 2025-12-14 (Original adoption - unchanged)
+Last Amendment: 2025-12-16 (New principle addition)
 -->
 
 # memoryloop Constitution
@@ -92,6 +93,20 @@ Systems must be debuggable and transparent in their operation.
 
 **Rationale**: When (not if) things go wrong, observability determines recovery time. Text protocols and structured logs enable quick diagnosis without debuggers or production access.
 
+### VI. Atomic Commits & Version Control Discipline
+
+Every commit must have a single, clear responsibility. Commits MUST follow the rules defined in `.claude/rules.md`.
+
+- One logical change per commit (atomic commits)
+- Commit messages must be under 100 characters
+- Use imperative mood ("Add feature" not "Added feature")
+- No AI attribution in commit messages (no "Generated with Claude Code")
+- Co-Author tags allowed: "Co-Authored-By: Claude <noreply@anthropic.com>"
+- Reference issue/task numbers in commit body, not subject line
+- Keep commits focused and independently revertable
+
+**Rationale**: Atomic commits enable precise rollbacks, bisection for debugging, and clear project history. Single-responsibility commits make code review efficient and allow cherry-picking specific changes. Clean commit messages serve as executable documentation of intent.
+
 ## Development Workflow
 
 ### Feature Development Process
@@ -112,6 +127,7 @@ Every implementation plan MUST include a Constitution Check section that verifie
 - Modularity: User stories are independently testable
 - Simplicity: Complexity violations documented with justification
 - Observability: Logging and error handling included
+- Commit discipline: Implementation follows atomic commit guidelines from .claude/rules.md
 
 Plans with unjustified complexity violations MUST NOT proceed to implementation.
 
@@ -123,6 +139,7 @@ Plans with unjustified complexity violations MUST NOT proceed to implementation.
 - Tests must exist and pass before merge
 - Documentation must be updated with code changes
 - Complexity additions require explicit justification
+- Commits must follow atomic commit discipline (.claude/rules.md)
 
 ### Testing Requirements
 
@@ -137,6 +154,15 @@ Plans with unjustified complexity violations MUST NOT proceed to implementation.
 - Every implementation has a plan with constitution check
 - Every task references exact file paths
 - Unclear requirements marked "NEEDS CLARIFICATION"
+
+### Version Control Requirements
+
+- Follow commit rules defined in .claude/rules.md
+- One logical change per commit (atomic commits)
+- Commit messages under 100 characters
+- Imperative mood for commit messages
+- No AI attribution in commit messages
+- Issue/task references in commit body only
 
 ## Governance
 
@@ -167,4 +193,4 @@ Constitution follows semantic versioning (MAJOR.MINOR.PATCH). All changes must:
 - Templates must remain aligned with constitutional principles
 - Violations require documented justification or rejection
 
-**Version**: 1.0.0 | **Ratified**: 2025-12-14 | **Last Amended**: 2025-12-14
+**Version**: 1.1.0 | **Ratified**: 2025-12-14 | **Last Amended**: 2025-12-16

@@ -1,0 +1,429 @@
+openapi: 3.1.0
+info:
+  title: MemoryLoop Authentication API
+  version: 1.0.0
+  description: |
+    Authentication and session management endpoints for MemoryLoop application.
+
+    **Security Model**: Session-based authentication with NextAuth.js 5.x (Auth.js)
+
+    **Functional Requirements**:
+    - FR-001: System MUST authenticate users before granting access
+    - FR-002: System MUST display login screen for unauthenticated users
+    - FR-003: System MUST redirect authenticated users directly to main interface
+    - FR-022: System MUST handle session expiration gracefully
+
+servers:
+  - url: https://memoryloop.nicholaspsmith.com/api
+    description: Production server
+  - url: http://localhost:3000/api
+    description: Development server
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+
+paths:
+  /auth/signin:
+    post:
+      tags:
+        - Authentication
+      summary: Sign in user with credentials
+      description: |
+        Authenticates user with email and password. Creates a session cookie on success.
+
+        **Maps to**: FR-002 (login screen), FR-001 (authentication)
+      operationId: signIn
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  minLength: 3
+                  maxLength: 255
+                  example: user@example.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  maxLength: 100
+                  example: SecurePassword123!
+      responses:
+        '200':
+          description: Authentication successful
+          headers:
+            Set-Cookie:
+              description: Session cookie
+              schema:
+                type: string
+                example: next-auth.session-token=abc123; Path=/; HttpOnly; Secure; SameSite=Lax
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: '#/components/schemas/PublicUser'
+                  redirectUrl:
+                    type: string
+                    example: /chat
+                    description: URL to redirect authenticated user (FR-003)
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Invalid email or password
+                code: INVALID_CREDENTIALS
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '429':
+          description: Too many login attempts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Too many login attempts. Please try again later.
+                code: RATE_LIMIT_EXCEEDED
+
+  /auth/signup:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user account
+      description: |
+        Creates a new user account with email and password. Automatically signs in the user on success.
+      operationId: signUp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - name
+              properties:
+                email:
+                  type: string
+                  format: email
+                  minLength: 3
+                  maxLength: 255
+                  example: newuser@example.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  maxLength: 100
+                  description: Must contain at least one uppercase, one lowercase, one number
+                  example: SecurePassword123!
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  example: John Doe
+      responses:
+        '201':
+          description: User created successfully
+          headers:
+            Set-Cookie:
+              description: Session cookie
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: '#/components/schemas/PublicUser'
+                  redirectUrl:
+                    type: string
+                    example: /chat
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: An account with this email already exists
+                code: EMAIL_EXISTS
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /auth/signout:
+    post:
+      tags:
+        - Authentication
+      summary: Sign out current user
+      description: |
+        Invalidates the user's session and clears the session cookie.
+      operationId: signOut
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Sign out successful
+          headers:
+            Set-Cookie:
+              description: Cleared session cookie
+              schema:
+                type: string
+                example: next-auth.session-token=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  redirectUrl:
+                    type: string
+                    example: /login
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Not authenticated
+                code: UNAUTHENTICATED
+
+  /auth/session:
+    get:
+      tags:
+        - Authentication
+      summary: Get current session information
+      description: |
+        Returns the current user's session data if authenticated.
+
+        **Maps to**: FR-022 (session expiration handling)
+      operationId: getSession
+      security:
+        - sessionCookie: []
+      responses:
+        '200':
+          description: Session data retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/PublicUser'
+                  expires:
+                    type: string
+                    format: date-time
+                    example: "2025-12-15T10:00:00.000Z"
+                    description: Session expiration timestamp
+        '401':
+          description: Session expired or invalid (FR-022)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Session expired. Please log in again.
+                code: SESSION_EXPIRED
+
+components:
+  schemas:
+    PublicUser:
+      type: object
+      required:
+        - id
+        - email
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        name:
+          type: string
+          nullable: true
+          example: John Doe
+        createdAt:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+          example: 1734192000000
+
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: Invalid credentials
+        code:
+          type: string
+          description: Machine-readable error code
+          example: INVALID_CREDENTIALS
+          enum:
+            - INVALID_CREDENTIALS
+            - EMAIL_EXISTS
+            - UNAUTHENTICATED
+            - SESSION_EXPIRED
+            - RATE_LIMIT_EXCEEDED
+            - INTERNAL_ERROR
+
+    ValidationError:
+      type: object
+      required:
+        - error
+        - details
+      properties:
+        error:
+          type: string
+          example: Validation failed
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: email
+              message:
+                type: string
+                example: Invalid email format
+          example:
+            - field: email
+              message: Invalid email format
+            - field: password
+              message: Password must be at least 8 characters
+
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: next-auth.session-token
+      description: |
+        NextAuth.js session cookie. Automatically set by the server on successful authentication.
+
+        **Session Lifetime**: 30 days (configurable in NextAuth config)
+        **Renewal**: Session extends on each authenticated request
+
+security:
+  - sessionCookie: []
+
+# Contract Testing Scenarios
+x-contract-tests:
+  - name: Successful login flow
+    description: User can log in with valid credentials and receive session
+    steps:
+      - request: POST /auth/signin
+        body:
+          email: testuser@example.com
+          password: ValidPassword123!
+        expect:
+          status: 200
+          headers:
+            Set-Cookie: present
+          body:
+            success: true
+            user.email: testuser@example.com
+
+  - name: Invalid credentials rejection
+    description: Login fails with incorrect password
+    steps:
+      - request: POST /auth/signin
+        body:
+          email: testuser@example.com
+          password: WrongPassword
+        expect:
+          status: 401
+          body:
+            code: INVALID_CREDENTIALS
+
+  - name: Session expiration handling (FR-022)
+    description: Expired session returns 401 and prompts re-authentication
+    steps:
+      - request: GET /auth/session
+        cookies:
+          next-auth.session-token: expired-token
+        expect:
+          status: 401
+          body:
+            code: SESSION_EXPIRED
+
+  - name: Signup creates account and session
+    description: New user can register and is automatically authenticated
+    steps:
+      - request: POST /auth/signup
+        body:
+          email: newuser@example.com
+          password: SecurePassword123!
+          name: New User
+        expect:
+          status: 201
+          headers:
+            Set-Cookie: present
+          body:
+            success: true
+            user.id: uuid
+
+  - name: Duplicate email prevention
+    description: Cannot create account with existing email
+    steps:
+      - request: POST /auth/signup
+        body:
+          email: existing@example.com
+          password: Password123!
+          name: Duplicate User
+        expect:
+          status: 409
+          body:
+            code: EMAIL_EXISTS
+
+  - name: Sign out clears session
+    description: User can sign out and session is invalidated
+    steps:
+      - request: POST /auth/signout
+        cookies:
+          next-auth.session-token: valid-token
+        expect:
+          status: 200
+          headers:
+            Set-Cookie: contains "Expires=Thu, 01 Jan 1970"
+          body:
+            success: true
