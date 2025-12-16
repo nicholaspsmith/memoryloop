@@ -5,7 +5,7 @@
 1. **Maximum Commit Message Length**: 100 characters for commit message
 2. **No AI Attribution**: Do not mention "Generated with Claude Code" or similar AI attribution in commit messages
 3. **Co-Author Tags Allowed**: You may include "Co-Authored-By: Claude <noreply@anthropic.com>" tags
-4. **One Individual Change Per Commit**: a separate commit shall be made for each action performed. If multiple actions have been performed, create a separate commit for each.
+4. **One Individual Change Per Commit**: Each commit should have a single responsibility. If multiple actions have been performed, create a separate commit for each.
 
 ### Good Examples
 
