@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid'
-import { getDb } from '../client'
+import { getDbConnection } from '../client'
 import { Flashcard, FlashcardSchema } from '@/types/db'
 import { createEmptyCard, State } from 'ts-fsrs'
 
@@ -24,7 +24,7 @@ export interface CreateFlashcardInput {
 export async function createFlashcard(
   data: CreateFlashcardInput
 ): Promise<Flashcard> {
-  const db = await getDb()
+  const db = await getDbConnection()
 
   // Initialize FSRS card (new card state)
   const fsrsCard = createEmptyCard()
@@ -58,7 +58,7 @@ export async function createFlashcard(
 export async function getFlashcardById(
   flashcardId: string
 ): Promise<Flashcard | null> {
-  const db = await getDb()
+  const db = await getDbConnection()
 
   const table = await db.openTable('flashcards')
   const results = await table
@@ -67,11 +67,13 @@ export async function getFlashcardById(
     .limit(1)
     .execute()
 
-  if (results.length === 0) {
+  const resultArray = Array.from(results)
+
+  if (resultArray.length === 0) {
     return null
   }
 
-  return FlashcardSchema.parse(results[0])
+  return FlashcardSchema.parse(resultArray[0])
 }
 
 /**
@@ -80,7 +82,7 @@ export async function getFlashcardById(
 export async function getFlashcardsByUserId(
   userId: string
 ): Promise<Flashcard[]> {
-  const db = await getDb()
+  const db = await getDbConnection()
 
   const table = await db.openTable('flashcards')
   const results = await table
@@ -88,8 +90,10 @@ export async function getFlashcardsByUserId(
     .where(`\`userId\` = '${userId}'`)
     .execute()
 
+  const resultArray = Array.from(results)
+
   // Sort by createdAt ascending (oldest first)
-  const sorted = results.sort(
+  const sorted = resultArray.sort(
     (a: any, b: any) => a.createdAt - b.createdAt
   )
 
@@ -102,7 +106,7 @@ export async function getFlashcardsByUserId(
 export async function getFlashcardsByMessageId(
   messageId: string
 ): Promise<Flashcard[]> {
-  const db = await getDb()
+  const db = await getDbConnection()
 
   const table = await db.openTable('flashcards')
   const results = await table
@@ -110,7 +114,8 @@ export async function getFlashcardsByMessageId(
     .where(`\`messageId\` = '${messageId}'`)
     .execute()
 
-  return results.map((fc: any) => FlashcardSchema.parse(fc))
+  const resultArray = Array.from(results)
+  return resultArray.map((fc: any) => FlashcardSchema.parse(fc))
 }
 
 /**
@@ -119,7 +124,7 @@ export async function getFlashcardsByMessageId(
 export async function getFlashcardsByConversationId(
   conversationId: string
 ): Promise<Flashcard[]> {
-  const db = await getDb()
+  const db = await getDbConnection()
 
   const table = await db.openTable('flashcards')
   const results = await table
@@ -127,8 +132,10 @@ export async function getFlashcardsByConversationId(
     .where(`\`conversationId\` = '${conversationId}'`)
     .execute()
 
+  const resultArray = Array.from(results)
+
   // Sort by createdAt ascending
-  const sorted = results.sort(
+  const sorted = resultArray.sort(
     (a: any, b: any) => a.createdAt - b.createdAt
   )
 
@@ -139,7 +146,7 @@ export async function getFlashcardsByConversationId(
  * Get due flashcards for quiz (FSRS due date <= now)
  */
 export async function getDueFlashcards(userId: string): Promise<Flashcard[]> {
-  const db = await getDb()
+  const db = await getDbConnection()
 
   const table = await db.openTable('flashcards')
   const results = await table
@@ -147,9 +154,11 @@ export async function getDueFlashcards(userId: string): Promise<Flashcard[]> {
     .where(`\`userId\` = '${userId}'`)
     .execute()
 
+  const resultArray = Array.from(results)
+
   // Filter by due date in memory (LanceDB doesn't support date comparison in WHERE)
   const now = new Date()
-  const dueFlashcards = results.filter((fc: any) => {
+  const dueFlashcards = resultArray.filter((fc: any) => {
     const dueDate = new Date(fc.fsrsState.due)
     return dueDate <= now
   })
@@ -171,7 +180,7 @@ export async function getFlashcardsByState(
   userId: string,
   state: State
 ): Promise<Flashcard[]> {
-  const db = await getDb()
+  const db = await getDbConnection()
 
   const table = await db.openTable('flashcards')
   const results = await table
@@ -179,8 +188,10 @@ export async function getFlashcardsByState(
     .where(`\`userId\` = '${userId}'`)
     .execute()
 
+  const resultArray = Array.from(results)
+
   // Filter by state in memory
-  const filtered = results.filter(
+  const filtered = resultArray.filter(
     (fc: any) => fc.fsrsState.state === state
   )
 
@@ -196,7 +207,7 @@ export async function updateFlashcardFSRSState(
   flashcardId: string,
   fsrsState: any
 ): Promise<Flashcard> {
-  const db = await getDb()
+  const db = await getDbConnection()
 
   // Get existing flashcard
   const existing = await getFlashcardById(flashcardId)
@@ -232,7 +243,7 @@ export async function updateFlashcardEmbedding(
   flashcardId: string,
   embedding: number[]
 ): Promise<void> {
-  const db = await getDb()
+  const db = await getDbConnection()
 
   // Get existing flashcard
   const existing = await getFlashcardById(flashcardId)
@@ -263,7 +274,7 @@ export async function updateFlashcardEmbedding(
  * Delete flashcard
  */
 export async function deleteFlashcard(flashcardId: string): Promise<void> {
-  const db = await getDb()
+  const db = await getDbConnection()
 
   const table = await db.openTable('flashcards')
   await table.delete(`\`id\` = '${flashcardId}'`)

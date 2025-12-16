@@ -1,4 +1,4 @@
-import { getOllamaClient } from './client'
+import { OLLAMA_MODEL } from './client'
 
 /**
  * Flashcard Generation Module
@@ -18,25 +18,24 @@ export interface GenerateFlashcardsOptions {
   minContentLength?: number
 }
 
-const FLASHCARD_GENERATION_PROMPT = `You are a flashcard generator. Your task is to analyze the given content and extract multiple question-answer pairs suitable for spaced repetition learning.
+const FLASHCARD_GENERATION_PROMPT = `You are a flashcard generator. Extract question-answer pairs from the content.
 
-RULES:
-1. Generate ONLY factual, educational question-answer pairs
-2. Questions must be clear, specific, and answerable from the content
-3. Answers must be concise but complete (10-200 words)
-4. Focus on key concepts, definitions, relationships, and important details
-5. Questions should use interrogative format (What, How, Why, When, Where, Define, Explain)
-6. Avoid yes/no questions - prefer open-ended questions
-7. Each Q&A pair must be independent and self-contained
-8. Return ONLY the JSON array, no other text
+CRITICAL: Return ONLY a valid JSON array. Do not add any explanatory text before or after the JSON.
 
-OUTPUT FORMAT (JSON array):
+OUTPUT MUST BE EXACTLY THIS FORMAT:
 [
-  {"question": "What is quantum entanglement?", "answer": "A phenomenon where pairs of particles remain connected..."},
-  {"question": "What is Bell's theorem?", "answer": "Bell's theorem proves that..."}
+  {"question": "What is X?", "answer": "X is..."},
+  {"question": "What does Y do?", "answer": "Y does..."}
 ]
 
-CONTENT TO ANALYZE:`
+RULES:
+- Each object must have "question" and "answer" keys
+- Questions use interrogative format (What, How, Why, When, Where)
+- Answers are concise (10-200 words)
+- Focus on key concepts and definitions
+- Return ONLY the JSON array, nothing else
+
+CONTENT:`
 
 /**
  * Generate flashcards from educational content
@@ -70,33 +69,90 @@ export async function generateFlashcardsFromContent(
   }
 
   try {
-    const client = getOllamaClient()
-
     const prompt = `${FLASHCARD_GENERATION_PROMPT}\n\n${trimmedContent}\n\nGenerate up to ${maxFlashcards} flashcards as a JSON array:`
 
     console.log('[FlashcardGenerator] Generating flashcards...')
 
-    const response = await client.chat({
-      model: 'llama3.2',
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      format: 'json',
+    const ollamaUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
+    const response = await fetch(`${ollamaUrl}/api/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: OLLAMA_MODEL,
+        messages: [
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        stream: false,
+        format: 'json',
+      }),
     })
 
-    const rawResponse = response.message.content
+    if (!response.ok) {
+      throw new Error(`Ollama API error: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    const rawResponse = data.message?.content || ''
     console.log('[FlashcardGenerator] Raw response:', rawResponse.substring(0, 200))
 
     // Parse JSON response
     let flashcards: FlashcardPair[]
     try {
-      const parsed = JSON.parse(rawResponse)
-      flashcards = Array.isArray(parsed) ? parsed : []
+      let parsed: any
+
+      try {
+        parsed = JSON.parse(rawResponse)
+      } catch (firstParseError) {
+        // Try to fix common JSON issues
+        let fixed = rawResponse.trim()
+
+        // If it starts with { but isn't an array, try to wrap it
+        if (fixed.startsWith('{') && !fixed.startsWith('[')) {
+          // Try to extract individual Q&A objects and create an array
+          const questionMatches = fixed.matchAll(/["{]question["']?\s*:\s*["']([^"']+)["']/g)
+          const answerMatches = fixed.matchAll(/["{]answer["']?\s*:\s*["']([^"']+)["']/g)
+
+          const questions = Array.from(questionMatches).map(m => m[1])
+          const answers = Array.from(answerMatches).map(m => m[1])
+
+          if (questions.length > 0 && questions.length === answers.length) {
+            flashcards = questions.map((q, i) => ({
+              question: q,
+              answer: answers[i]
+            }))
+            console.log(`[FlashcardGenerator] Recovered ${flashcards.length} flashcards from malformed JSON`)
+          } else {
+            throw firstParseError
+          }
+        } else {
+          throw firstParseError
+        }
+      }
+
+      // Handle different response formats
+      if (!flashcards) {
+        if (Array.isArray(parsed)) {
+          flashcards = parsed
+        } else if (parsed && Array.isArray(parsed.questions)) {
+          flashcards = parsed.questions
+        } else if (parsed && Array.isArray(parsed.flashcards)) {
+          flashcards = parsed.flashcards
+        } else if (parsed && typeof parsed.question === 'string' && typeof parsed.answer === 'string') {
+          // Single flashcard object
+          flashcards = [parsed]
+        } else {
+          console.warn('[FlashcardGenerator] Unexpected JSON format:', parsed)
+          flashcards = []
+        }
+      }
     } catch (parseError) {
       console.error('[FlashcardGenerator] Failed to parse JSON:', parseError)
+      console.error('[FlashcardGenerator] Raw response was:', rawResponse)
       return []
     }
 
