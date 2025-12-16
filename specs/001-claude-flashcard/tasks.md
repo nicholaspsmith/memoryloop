@@ -460,7 +460,7 @@ With multiple developers:
 
 ---
 
-## Phase 5: CI/CD Pipeline & Deployment
+## Phase 8: CI/CD Pipeline & Deployment
 
 **Purpose**: Automate testing, building, and deployment to production
 
