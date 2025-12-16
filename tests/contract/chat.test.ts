@@ -50,9 +50,11 @@ describe('Chat API Contract Tests', () => {
       expect(response.status).toBe(200)
 
       const data = await response.json()
-      expect(data).toHaveProperty('conversations')
-      expect(Array.isArray(data.conversations)).toBe(true)
-      expect(data.conversations.length).toBe(0)
+      expect(data).toHaveProperty('success', true)
+      expect(data).toHaveProperty('data')
+      expect(data.data).toHaveProperty('conversations')
+      expect(Array.isArray(data.data.conversations)).toBe(true)
+      expect(data.data.conversations.length).toBe(0)
     })
 
     it('should return 401 for unauthenticated user', async () => {
@@ -78,16 +80,18 @@ describe('Chat API Contract Tests', () => {
       expect(response.status).toBe(201)
 
       const data = await response.json()
-      expect(data).toHaveProperty('conversation')
-      expect(data.conversation).toHaveProperty('id')
-      expect(data.conversation).toHaveProperty('title', 'Test Conversation')
-      expect(data.conversation).toHaveProperty('userId', testUserId)
-      expect(data.conversation).toHaveProperty('messageCount', 0)
-      expect(data.conversation).toHaveProperty('createdAt')
-      expect(data.conversation).toHaveProperty('updatedAt')
+      expect(data).toHaveProperty('success', true)
+      expect(data).toHaveProperty('data')
+      expect(data.data).toHaveProperty('conversation')
+      expect(data.data.conversation).toHaveProperty('id')
+      expect(data.data.conversation).toHaveProperty('title', 'Test Conversation')
+      expect(data.data.conversation).toHaveProperty('userId', testUserId)
+      expect(data.data.conversation).toHaveProperty('messageCount', 0)
+      expect(data.data.conversation).toHaveProperty('createdAt')
+      expect(data.data.conversation).toHaveProperty('updatedAt')
 
       // Store for subsequent tests
-      testConversationId = data.conversation.id
+      testConversationId = data.data.conversation.id
     })
 
     it('should return 401 for unauthenticated user', async () => {
@@ -113,8 +117,11 @@ describe('Chat API Contract Tests', () => {
       expect(response.status).toBe(201)
 
       const data = await response.json()
-      expect(data.conversation).toHaveProperty('title')
-      expect(data.conversation.title).toMatch(/^New Conversation/)
+      expect(data).toHaveProperty('success', true)
+      expect(data).toHaveProperty('data')
+      expect(data.data).toHaveProperty('conversation')
+      expect(data.data.conversation).toHaveProperty('title')
+      expect(data.data.conversation.title).toMatch(/^New Conversation/)
     })
   })
 
@@ -132,9 +139,11 @@ describe('Chat API Contract Tests', () => {
       expect(response.status).toBe(200)
 
       const data = await response.json()
-      expect(data).toHaveProperty('messages')
-      expect(Array.isArray(data.messages)).toBe(true)
-      expect(data.messages.length).toBe(0)
+      expect(data).toHaveProperty('success', true)
+      expect(data).toHaveProperty('data')
+      expect(data.data).toHaveProperty('messages')
+      expect(Array.isArray(data.data.messages)).toBe(true)
+      expect(data.data.messages.length).toBe(0)
     })
 
     it('should return 401 for unauthenticated user', async () => {
