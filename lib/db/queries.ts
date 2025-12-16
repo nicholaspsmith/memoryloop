@@ -72,6 +72,25 @@ export async function update<T extends { id: string }>(
 
   // Insert updated record
   const updated = { ...existing, ...updates }
+
+  // Clean up embedding field to remove any LanceDB internal properties
+  // LanceDB may return embeddings as objects with metadata - convert to plain array or null
+  if ('embedding' in updated) {
+    const emb = updated.embedding
+    if (emb === null || emb === undefined) {
+      updated.embedding = null
+    } else if (Array.isArray(emb)) {
+      // Already a plain array, keep as is
+      updated.embedding = emb
+    } else if (typeof emb === 'object' && 'toArray' in emb) {
+      // LanceDB vector type with toArray method
+      updated.embedding = (emb as any).toArray()
+    } else {
+      // Unknown type, set to null to avoid schema errors
+      updated.embedding = null
+    }
+  }
+
   await table.add([updated])
 }
 
