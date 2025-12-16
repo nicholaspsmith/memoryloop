@@ -268,7 +268,7 @@
 - [ ] T136 [P] Create seed data script npm run db:seed (test users, conversations, flashcards)
 - [ ] T137 Create database backup/restore scripts (export/import LanceDB data)
 - [x] T138 [P] Documentation: update README.md with setup instructions
-- [ ] T139 [P] Documentation: create CONTRIBUTING.md with development guidelines
+- [x] T139 [P] Documentation: create CONTRIBUTING.md with development guidelines
 - [ ] T140 Run full test suite and verify 70% coverage minimum (industry standard for web applications)
 - [ ] T141 Run Playwright E2E tests for all user journeys
 - [ ] T142 Validate quickstart.md instructions (fresh setup on clean machine)
