@@ -24,18 +24,18 @@ export default function RatingButtons({
   ]
 
   return (
-    <div className="space-y-3" role="group" aria-label="Rate your knowledge of this flashcard">
-      <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 text-center mb-4">
+    <div className="space-y-2 sm:space-y-3" role="group" aria-label="Rate your knowledge of this flashcard">
+      <p className="text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-400 text-center mb-3 sm:mb-4">
         How well did you know this?
       </p>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
         {ratings.map(({ value, label, color }) => (
           <button
             key={value}
             onClick={() => onRate(value)}
             disabled={disabled}
             aria-label={`Rate as ${label} - difficulty level ${value} of 4`}
-            className={`px-4 py-3 ${color} text-white font-medium rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white`}
+            className={`px-3 py-2 sm:px-4 sm:py-3 ${color} text-white text-sm sm:text-base font-medium rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white`}
           >
             {label}
           </button>

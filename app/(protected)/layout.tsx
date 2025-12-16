@@ -27,22 +27,24 @@ export default async function ProtectedLayout({
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-2xl font-bold text-gray-900">MemoryLoop</h1>
-              {session.user?.name && (
-                <span className="text-sm text-gray-600">
-                  Welcome, {session.user.name}
-                </span>
-              )}
+        <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
+          <div className="flex flex-col space-y-3 sm:space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">MemoryLoop</h1>
+                {session.user?.name && (
+                  <span className="text-xs sm:text-sm text-gray-600 hidden sm:inline">
+                    Welcome, {session.user.name}
+                  </span>
+                )}
+              </div>
+
+              <LogoutButton />
             </div>
 
-            <LogoutButton />
+            {/* Navigation Tabs */}
+            <Navigation />
           </div>
-
-          {/* Navigation Tabs */}
-          <Navigation />
         </div>
       </header>
 

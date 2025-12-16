@@ -53,20 +53,20 @@ export default function QuizCard({ flashcard, onRate }: QuizCardProps) {
 
   return (
     <div
-      className="flex flex-col items-center justify-center min-h-[400px] p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg"
+      className="flex flex-col items-center justify-center min-h-[300px] sm:min-h-[400px] p-4 sm:p-6 md:p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg"
       role="region"
       aria-label="Flashcard"
     >
       {/* Question Section */}
-      <div className="w-full max-w-2xl mb-8">
+      <div className="w-full max-w-2xl mb-6 sm:mb-8">
         <h2
           id="flashcard-question-label"
-          className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2"
+          className="text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2"
         >
           Question
         </h2>
         <p
-          className="text-2xl font-medium text-gray-900 dark:text-gray-100 leading-relaxed"
+          className="text-lg sm:text-xl md:text-2xl font-medium text-gray-900 dark:text-gray-100 leading-relaxed"
           aria-labelledby="flashcard-question-label"
         >
           {flashcard.question}
@@ -76,18 +76,18 @@ export default function QuizCard({ flashcard, onRate }: QuizCardProps) {
       {/* Answer Section - Only shown after reveal */}
       {isAnswerRevealed && (
         <div
-          className="w-full max-w-2xl mb-8 pt-8 border-t border-gray-200 dark:border-gray-700"
+          className="w-full max-w-2xl mb-6 sm:mb-8 pt-6 sm:pt-8 border-t border-gray-200 dark:border-gray-700"
           role="region"
           aria-live="polite"
         >
           <h2
             id="flashcard-answer-label"
-            className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2"
+            className="text-xs sm:text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2"
           >
             Answer
           </h2>
           <p
-            className="text-xl text-gray-700 dark:text-gray-300 leading-relaxed"
+            className="text-base sm:text-lg md:text-xl text-gray-700 dark:text-gray-300 leading-relaxed"
             aria-labelledby="flashcard-answer-label"
           >
             {flashcard.answer}
