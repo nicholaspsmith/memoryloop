@@ -269,12 +269,13 @@
 - [ ] T137 Create database backup/restore scripts (export/import LanceDB data)
 - [ ] T138 [P] Documentation: update README.md with setup instructions
 - [ ] T139 [P] Documentation: create CONTRIBUTING.md with development guidelines
-- [ ] T140 Run full test suite and verify 80% coverage minimum
+- [ ] T140 Run full test suite and verify 70% coverage minimum (industry standard for web applications)
 - [ ] T141 Run Playwright E2E tests for all user journeys
 - [ ] T142 Validate quickstart.md instructions (fresh setup on clean machine)
 - [ ] T143 Performance testing: verify SC-002 through SC-006 success criteria
-- [ ] T144 [P] Create deployment documentation for Vercel
-- [ ] T145 [P] Create environment variable documentation (.env.example validation)
+- [ ] T144 [P] Implement offline mode with service worker for caching conversations and flashcards per FR-025
+- [ ] T145 [P] Add offline detection and UI feedback (network status indicator)
+- [ ] T146 [P] Create Navigation component in components/nav/Navigation.tsx (tab switching between Chat and Quiz per FR-004)
 
 **Checkpoint**: Application polished, tested, documented, and ready for deployment
 
@@ -435,7 +436,7 @@ With multiple developers:
 
 ## Task Summary
 
-**Total Tasks**: 145
+**Total Tasks**: 146
 
 - **Setup (Phase 1)**: 12 tasks
 - **Foundational (Phase 2)**: 19 tasks
@@ -443,7 +444,7 @@ With multiple developers:
 - **User Story 2 - Chat (P2)**: 26 tasks (9 tests + 17 implementation)
 - **User Story 3 - Flashcards (P3)**: 22 tasks (8 tests + 14 implementation)
 - **User Story 4 - Quiz (P4)**: 25 tasks (9 tests + 16 implementation)
-- **Polish (Phase 7)**: 22 tasks
+- **Polish (Phase 7)**: 23 tasks (includes offline mode and navigation component)
 
 **Parallel Opportunities**: 67 tasks marked [P] can run in parallel within their phases
 

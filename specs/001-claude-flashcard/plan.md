@@ -80,7 +80,7 @@ MemoryLoop is a web application that enables users to learn through conversation
   - P2: Chat works with authenticated users
   - P3: Flashcard generation adds to chat capability
   - P4: Quiz mode consumes generated flashcards with FSRS scheduling
-- ✅ Clear entity boundaries (User, Conversation, Message, Flashcard, Quiz Session, FSRS Review State)
+- ✅ Clear entity boundaries (User, Conversation, Message, Flashcard, Review Session, FSRS Review State)
 - ✅ Component-based React architecture enables isolated development
 
 ### IV. Simplicity (YAGNI) ✅ PASS

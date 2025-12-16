@@ -21,7 +21,6 @@ A user visits memoryloop.nicholaspsmith.com and needs to access their account to
 2. **Given** a user enters valid credentials on the login screen, **When** they submit the login form, **Then** they are authenticated and redirected to the main application interface
 3. **Given** a user enters invalid credentials, **When** they submit the login form, **Then** they see an error message and remain on the login screen
 4. **Given** a user is already authenticated, **When** they navigate to https://memoryloop.nicholaspsmith.com, **Then** they bypass the login screen and see the main application interface
-5. **Given** a user's session expires, **When** they attempt to interact with the application, **Then** they are redirected to the login screen
 
 ---
 
@@ -118,9 +117,10 @@ A user wants to test their knowledge by reviewing previously generated flashcard
 - **FR-019**: System MUST handle cases where insufficient educational content exists in a response for flashcard generation
 - **FR-020**: System MUST display the user's progress through a flashcard deck during a quiz session (e.g., "Card 5 of 20")
 - **FR-021**: System MUST provide a completion notification when all flashcards in a quiz session have been reviewed
-- **FR-022**: System MUST handle session expiration gracefully by redirecting users to the login screen
+- **FR-022**: System MUST handle session expiration gracefully by redirecting users to the login screen when they attempt to interact with the application after session expiry
 - **FR-023**: System MUST persist chat conversation history across sessions indefinitely, allowing users to continue previous conversations after logout and re-login
-- **FR-024**: System MUST present flashcards as a single chronological collection ordered by creation date in the quiz interface
+- **FR-024**: System MUST present flashcards as a single chronological collection ordered by creation date (oldest first) in the quiz interface
+- **FR-025**: System MUST provide offline functionality allowing users to view cached conversations and flashcards, and complete quiz sessions using local data when network connectivity is unavailable
 
 ### Key Entities
 
@@ -132,7 +132,7 @@ A user wants to test their knowledge by reviewing previously generated flashcard
 
 - **Flashcard**: Represents a question-answer pair for study purposes. Contains a question (front side) and an answer (back side). Generated from a Claude response. Belongs to a specific user and references the source message it was created from.
 
-- **Quiz Session**: Represents an active flashcard review session. Tracks which flashcards are being reviewed, user's progress through the deck, and session state. Belongs to a specific user.
+- **Review Session**: Represents an active flashcard review session. Tracks which flashcards are being reviewed, user's progress through the deck, and session state. Belongs to a specific user.
 
 ## Success Criteria *(mandatory)*
 
@@ -143,7 +143,7 @@ A user wants to test their knowledge by reviewing previously generated flashcard
 - **SC-003**: Users can generate flashcards from a Claude response in under 15 seconds for responses up to 1000 words
 - **SC-004**: Users can navigate through flashcards in a quiz session with less than 1 second delay between card transitions
 - **SC-005**: The application maintains conversation context accurately across at least 20 message exchanges in a single session
-- **SC-006**: Flashcard generation produces an average of 1 flashcard per 100-150 words of educational content in a Claude response
+- **SC-006**: Flashcard generation produces an average of 1 flashcard per 75-100 words of educational content in a Claude response
 - **SC-007**: 90% of users can successfully complete their first flashcard generation and quiz session without errors or confusion
 - **SC-008**: The application handles at least 50 concurrent users without performance degradation
 - **SC-009**: Generated flashcards are persisted and remain available across multiple user sessions
