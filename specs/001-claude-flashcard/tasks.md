@@ -132,35 +132,35 @@
 
 ### Tests for User Story 2 (TDD - Write FIRST) ⚠️
 
-- [X] T051 [P] [US2] Contract test for GET /api/chat/conversations in tests/contract/chat.test.ts
-- [X] T052 [P] [US2] Contract test for POST /api/chat/conversations in tests/contract/chat.test.ts
-- [X] T053 [P] [US2] Contract test for GET /api/chat/conversations/{id}/messages in tests/contract/chat.test.ts
-- [X] T054 [P] [US2] Contract test for POST /api/chat/conversations/{id}/messages in tests/contract/chat.test.ts
-- [X] T055 [US2] Integration test for chat conversation flow in tests/integration/chat-flow.spec.ts
-- [X] T056 [P] [US2] Component test for ChatInterface in tests/unit/components/chat/ChatInterface.test.tsx
-- [X] T057 [P] [US2] Component test for MessageList in tests/unit/components/chat/MessageList.test.tsx
-- [X] T058 [P] [US2] Component test for MessageInput in tests/unit/components/chat/MessageInput.test.tsx
-- [X] T059 [P] [US2] Unit test for Claude client in tests/unit/lib/claude/client.test.ts
+- [x] T051 [P] [US2] Contract test for GET /api/chat/conversations in tests/contract/chat.test.ts
+- [x] T052 [P] [US2] Contract test for POST /api/chat/conversations in tests/contract/chat.test.ts
+- [x] T053 [P] [US2] Contract test for GET /api/chat/conversations/{id}/messages in tests/contract/chat.test.ts
+- [x] T054 [P] [US2] Contract test for POST /api/chat/conversations/{id}/messages in tests/contract/chat.test.ts
+- [x] T055 [US2] Integration test for chat conversation flow in tests/integration/chat-flow.spec.ts
+- [x] T056 [P] [US2] Component test for ChatInterface in tests/unit/components/chat/ChatInterface.test.tsx
+- [x] T057 [P] [US2] Component test for MessageList in tests/unit/components/chat/MessageList.test.tsx
+- [x] T058 [P] [US2] Component test for MessageInput in tests/unit/components/chat/MessageInput.test.tsx
+- [x] T059 [P] [US2] Unit test for Claude client in tests/unit/lib/claude/client.test.ts
 
 ### Implementation for User Story 2
 
-- [X] T060 [US2] Create Anthropic SDK client wrapper in lib/claude/client.ts (singleton, conversation context)
-- [X] T061 [P] [US2] Create Claude prompts in lib/claude/prompts.ts (system prompts, formatting)
-- [X] T062 [US2] Create conversation database operations in lib/db/operations/conversations.ts (create, get, list)
-- [X] T063 [US2] Create message database operations in lib/db/operations/messages.ts (create, get, list chronologically)
-- [X] T064 [US2] Create GET /api/chat/conversations route in app/api/chat/conversations/route.ts
-- [X] T065 [US2] Create POST /api/chat/conversations route in app/api/chat/conversations/route.ts
-- [X] T066 [US2] Create GET /api/chat/conversations/[conversationId]/messages route in app/api/chat/conversations/[conversationId]/messages/route.ts
-- [X] T067 [US2] Create POST /api/chat/conversations/[conversationId]/messages route in app/api/chat/conversations/[conversationId]/messages/route.ts (Claude API integration)
-- [X] T068 [P] [US2] Create MessageList component in components/chat/MessageList.tsx (chronological display per FR-007)
-- [X] T069 [P] [US2] Create MessageInput component in components/chat/MessageInput.tsx (send message UI)
-- [X] T070 [P] [US2] Create Message component in components/chat/Message.tsx (single message display, role-based styling)
-- [X] T071 [US2] Create ChatInterface component in components/chat/ChatInterface.tsx (orchestrate messages, input, conversation context)
-- [X] T072 [US2] Create chat page in app/(protected)/chat/page.tsx (2-tab layout per FR-004, chat tab active)
-- [X] T073 [US2] Add conversation context management in lib/claude/context.ts (maintain context per FR-006)
-- [X] T074 [US2] Add conversation history persistence per FR-023 (verify messages persist across sessions)
-- [X] T075 [US2] Create OpenAI embeddings client in lib/embeddings/openai.ts (for message embeddings)
-- [X] T076 [US2] Add embedding generation to message creation (async, graceful degradation)
+- [x] T060 [US2] Create Anthropic SDK client wrapper in lib/claude/client.ts (singleton, conversation context)
+- [x] T061 [P] [US2] Create Claude prompts in lib/claude/prompts.ts (system prompts, formatting)
+- [x] T062 [US2] Create conversation database operations in lib/db/operations/conversations.ts (create, get, list)
+- [x] T063 [US2] Create message database operations in lib/db/operations/messages.ts (create, get, list chronologically)
+- [x] T064 [US2] Create GET /api/chat/conversations route in app/api/chat/conversations/route.ts
+- [x] T065 [US2] Create POST /api/chat/conversations route in app/api/chat/conversations/route.ts
+- [x] T066 [US2] Create GET /api/chat/conversations/[conversationId]/messages route in app/api/chat/conversations/[conversationId]/messages/route.ts
+- [x] T067 [US2] Create POST /api/chat/conversations/[conversationId]/messages route in app/api/chat/conversations/[conversationId]/messages/route.ts (Claude API integration)
+- [x] T068 [P] [US2] Create MessageList component in components/chat/MessageList.tsx (chronological display per FR-007)
+- [x] T069 [P] [US2] Create MessageInput component in components/chat/MessageInput.tsx (send message UI)
+- [x] T070 [P] [US2] Create Message component in components/chat/Message.tsx (single message display, role-based styling)
+- [x] T071 [US2] Create ChatInterface component in components/chat/ChatInterface.tsx (orchestrate messages, input, conversation context)
+- [x] T072 [US2] Create chat page in app/(protected)/chat/page.tsx (2-tab layout per FR-004, chat tab active)
+- [x] T073 [US2] Add conversation context management in lib/claude/context.ts (maintain context per FR-006)
+- [x] T074 [US2] Add conversation history persistence per FR-023 (verify messages persist across sessions)
+- [x] T075 [US2] Create OpenAI embeddings client in lib/embeddings/openai.ts (for message embeddings)
+- [x] T076 [US2] Add embedding generation to message creation (async, graceful degradation)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently. Users can authenticate and have persistent conversations with Claude.
 
@@ -176,31 +176,31 @@
 
 ### Tests for User Story 3 (TDD - Write FIRST) ⚠️
 
-- [X] T077 [P] [US3] Contract test for POST /api/flashcards/generate in tests/contract/flashcards.test.ts
-- [X] T078 [P] [US3] Contract test for GET /api/flashcards in tests/contract/flashcards.test.ts
-- [X] T079 [P] [US3] Contract test for GET /api/flashcards/{id} in tests/contract/flashcards.test.ts
-- [X] T080 [P] [US3] Contract test for DELETE /api/flashcards/{id} in tests/contract/flashcards.test.ts
+- [x] T077 [P] [US3] Contract test for POST /api/flashcards/generate in tests/contract/flashcards.test.ts
+- [x] T078 [P] [US3] Contract test for GET /api/flashcards in tests/contract/flashcards.test.ts
+- [x] T079 [P] [US3] Contract test for GET /api/flashcards/{id} in tests/contract/flashcards.test.ts
+- [x] T080 [P] [US3] Contract test for DELETE /api/flashcards/{id} in tests/contract/flashcards.test.ts
 - [ ] T081 [US3] Integration test for flashcard generation flow in tests/integration/flashcard-generation.spec.ts
-- [X] T082 [P] [US3] Component test for GenerateFlashcardsButton in tests/unit/components/chat/GenerateFlashcardsButton.test.tsx
-- [X] T083 [P] [US3] Component test for FlashcardPreview in tests/unit/components/flashcards/FlashcardPreview.test.tsx
-- [X] T084 [P] [US3] Unit test for flashcard generator in tests/unit/lib/claude/flashcard-generator.test.ts
+- [x] T082 [P] [US3] Component test for GenerateFlashcardsButton in tests/unit/components/chat/GenerateFlashcardsButton.test.tsx
+- [x] T083 [P] [US3] Component test for FlashcardPreview in tests/unit/components/flashcards/FlashcardPreview.test.tsx
+- [x] T084 [P] [US3] Unit test for flashcard generator in tests/unit/lib/claude/flashcard-generator.test.ts
 
 ### Implementation for User Story 3
 
-- [X] T085 [US3] Create flashcard generation prompts in lib/claude/flashcard-generator.ts (Claude prompts for Q&A extraction)
-- [X] T086 [US3] Create flashcard database operations in lib/db/operations/flashcards.ts (create, get, list, delete)
-- [X] T087 [US3] Create FSRS scheduler wrapper in lib/fsrs/scheduler.ts (initialize new cards with ts-fsrs)
-- [X] T088 [US3] Create POST /api/flashcards/generate route in app/api/flashcards/generate/route.ts (Claude API call, FSRS init)
-- [X] T089 [US3] Create GET /api/flashcards route in app/api/flashcards/route.ts (list user flashcards chronologically per FR-024)
-- [X] T090 [US3] Create GET /api/flashcards/[flashcardId] route in app/api/flashcards/[flashcardId]/route.ts
-- [X] T091 [US3] Create DELETE /api/flashcards/[flashcardId] route in app/api/flashcards/[flashcardId]/route.ts
-- [X] T092 [P] [US3] Create GenerateFlashcardsButton component in components/chat/GenerateFlashcardsButton.tsx (button UI, loading state per FR-018, duplicate check per FR-017)
-- [X] T093 [P] [US3] Create FlashcardPreview component in components/flashcards/FlashcardPreview.tsx (show generated flashcards)
-- [X] T094 [US3] Update Message component to include GenerateFlashcardsButton for assistant messages (FR-008)
-- [X] T095 [US3] Add insufficient content handling per FR-019 (validate response has educational content)
-- [X] T096 [US3] Add flashcard generation feedback per FR-018 (loading spinner, progress, completion message with count)
-- [X] T097 [US3] Update message hasFlashcards flag after generation (prevent duplicates per FR-017)
-- [X] T098 [US3] Add question embedding generation for flashcards (async, graceful degradation)
+- [x] T085 [US3] Create flashcard generation prompts in lib/claude/flashcard-generator.ts (Claude prompts for Q&A extraction)
+- [x] T086 [US3] Create flashcard database operations in lib/db/operations/flashcards.ts (create, get, list, delete)
+- [x] T087 [US3] Create FSRS scheduler wrapper in lib/fsrs/scheduler.ts (initialize new cards with ts-fsrs)
+- [x] T088 [US3] Create POST /api/flashcards/generate route in app/api/flashcards/generate/route.ts (Claude API call, FSRS init)
+- [x] T089 [US3] Create GET /api/flashcards route in app/api/flashcards/route.ts (list user flashcards chronologically per FR-024)
+- [x] T090 [US3] Create GET /api/flashcards/[flashcardId] route in app/api/flashcards/[flashcardId]/route.ts
+- [x] T091 [US3] Create DELETE /api/flashcards/[flashcardId] route in app/api/flashcards/[flashcardId]/route.ts
+- [x] T092 [P] [US3] Create GenerateFlashcardsButton component in components/chat/GenerateFlashcardsButton.tsx (button UI, loading state per FR-018, duplicate check per FR-017)
+- [x] T093 [P] [US3] Create FlashcardPreview component in components/flashcards/FlashcardPreview.tsx (show generated flashcards)
+- [x] T094 [US3] Update Message component to include GenerateFlashcardsButton for assistant messages (FR-008)
+- [x] T095 [US3] Add insufficient content handling per FR-019 (validate response has educational content)
+- [x] T096 [US3] Add flashcard generation feedback per FR-018 (loading spinner, progress, completion message with count)
+- [x] T097 [US3] Update message hasFlashcards flag after generation (prevent duplicates per FR-017)
+- [x] T098 [US3] Add question embedding generation for flashcards (async, graceful degradation)
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should all work independently. Users can authenticate, chat with Claude, and generate flashcards.
 
@@ -314,46 +314,57 @@
 ### Parallel Opportunities
 
 **Setup (Phase 1)**:
+
 - T002-T004 (dependencies installation)
 - T006-T008 (configuration files)
 - T011-T012 (linting/formatting)
 
 **Foundational (Phase 2)**:
+
 - T016-T020 (Zod schemas - all entity types)
 - T028-T030 (UI infrastructure components)
 
 **User Story 1 Tests**:
+
 - T032-T035 (contract tests)
 - T037-T038 (component tests)
 
 **User Story 1 Implementation**:
+
 - T043-T044 (auth forms)
 - T045-T046 (auth pages)
 
 **User Story 2 Tests**:
+
 - T051-T054 (contract tests)
 - T056-T059 (component and unit tests)
 
 **User Story 2 Implementation**:
+
 - T060-T061 (Claude client and prompts)
 - T062-T063 (database operations)
 - T068-T070 (chat components)
 
 **User Story 3 Tests**:
+
 - T077-T080 (contract tests)
 - T082-T084 (component and unit tests)
 
 **User Story 3 Implementation**:
+
 - T092-T093 (flashcard components)
 
 **User Story 4 Tests**:
+
 - T099-T102 (contract tests)
 - T104-T107 (component and unit tests)
 
 **User Story 4 Implementation**:
+
 - T114-T117 (quiz components)
 
 **Polish (Phase 7)**:
+
 - T124-T135 (error handling, loading, accessibility, performance, security)
 - T136-T145 (documentation, testing, deployment)
 
@@ -425,6 +436,7 @@ With multiple developers:
 ## Task Summary
 
 **Total Tasks**: 145
+
 - **Setup (Phase 1)**: 12 tasks
 - **Foundational (Phase 2)**: 19 tasks
 - **User Story 1 - Authentication (P1)**: 19 tasks (7 tests + 12 implementation)
@@ -436,6 +448,7 @@ With multiple developers:
 **Parallel Opportunities**: 67 tasks marked [P] can run in parallel within their phases
 
 **Independent Test Criteria**:
+
 - **US1**: Can authenticate, sign up, log in, log out, and access control works
 - **US2**: Can have persistent conversations with Claude maintaining context
 - **US3**: Can generate flashcards from Claude responses with duplicate prevention
@@ -451,6 +464,6 @@ With multiple developers:
 - [Story] label maps task to specific user story for traceability
 - Each user story has independent test criteria
 - TDD REQUIRED: Write tests first, ensure they fail, then implement
-- Commit after each task or logical group
+- Commit after each task or logical group following rules in .claude/rules.md for commit messages
 - Stop at any checkpoint to validate story independently
 - Constitution compliance: Documentation-first ✅, TDD ✅, Modular ✅, Simple ✅, Observable ✅
