@@ -3,7 +3,7 @@ import { create, find, findById, update } from '../queries'
 import type { Message, MessageRole } from '@/types'
 import { MessageSchema } from '@/types'
 import { incrementMessageCount } from './conversations'
-import { generateEmbedding } from '@/lib/embeddings/openai'
+import { generateEmbedding } from '@/lib/embeddings/ollama'
 
 /**
  * Message Database Operations

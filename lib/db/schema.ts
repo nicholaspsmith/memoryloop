@@ -54,7 +54,7 @@ export async function initializeSchema() {
         userId: '00000000-0000-0000-0000-000000000000',
         role: 'user',
         content: 'Init message for schema creation',
-        embedding: new Array(1536).fill(0), // OpenAI text-embedding-3-small
+        embedding: new Array(768).fill(0), // Ollama nomic-embed-text
         createdAt: Date.now(),
         hasFlashcards: false,
       },
@@ -84,7 +84,7 @@ export async function initializeSchema() {
         messageId: '00000000-0000-0000-0000-000000000000',
         question: 'Init question',
         answer: 'Init answer',
-        questionEmbedding: new Array(1536).fill(0),
+        questionEmbedding: new Array(768).fill(0),
         createdAt: Date.now(),
         fsrsState: fsrsStateForSchema, // FSRS Card object with timestamps
       },

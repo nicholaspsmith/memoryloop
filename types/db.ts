@@ -48,7 +48,7 @@ export const MessageSchema = z.object({
   userId: z.string().uuid(),
   role: MessageRoleSchema,
   content: z.string().min(1).max(50000), // Max 50k characters
-  embedding: z.array(z.number()).length(1536).nullable(), // OpenAI text-embedding-3-small
+  embedding: z.array(z.number()).length(768).nullable(), // Ollama nomic-embed-text
   createdAt: z.number().int().positive(),
   hasFlashcards: z.boolean().default(false),
 })
@@ -82,7 +82,7 @@ export const FlashcardSchema = z.object({
   messageId: z.string().uuid(),
   question: z.string().min(1).max(1000),
   answer: z.string().min(1).max(5000),
-  questionEmbedding: z.array(z.number()).length(1536).nullable(),
+  questionEmbedding: z.array(z.number()).length(768).nullable(),
   createdAt: z.number().int().positive(),
   fsrsState: FSRSCardSchema,
 })
