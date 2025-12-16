@@ -267,7 +267,7 @@
 - [ ] T135 [P] Add monitoring and error tracking setup (Sentry integration or similar)
 - [ ] T136 [P] Create seed data script npm run db:seed (test users, conversations, flashcards)
 - [ ] T137 Create database backup/restore scripts (export/import LanceDB data)
-- [ ] T138 [P] Documentation: update README.md with setup instructions
+- [x] T138 [P] Documentation: update README.md with setup instructions
 - [ ] T139 [P] Documentation: create CONTRIBUTING.md with development guidelines
 - [ ] T140 Run full test suite and verify 70% coverage minimum (industry standard for web applications)
 - [ ] T141 Run Playwright E2E tests for all user journeys
