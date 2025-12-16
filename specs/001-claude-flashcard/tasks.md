@@ -180,7 +180,7 @@
 - [x] T078 [P] [US3] Contract test for GET /api/flashcards in tests/contract/flashcards.test.ts
 - [x] T079 [P] [US3] Contract test for GET /api/flashcards/{id} in tests/contract/flashcards.test.ts
 - [x] T080 [P] [US3] Contract test for DELETE /api/flashcards/{id} in tests/contract/flashcards.test.ts
-- [ ] T081 [US3] Integration test for flashcard generation flow in tests/integration/flashcard-generation.spec.ts
+- [x] T081 [US3] Integration test for flashcard generation flow in tests/integration/flashcard-generation.spec.ts
 - [x] T082 [P] [US3] Component test for GenerateFlashcardsButton in tests/unit/components/chat/GenerateFlashcardsButton.test.tsx
 - [x] T083 [P] [US3] Component test for FlashcardPreview in tests/unit/components/flashcards/FlashcardPreview.test.tsx
 - [x] T084 [P] [US3] Unit test for flashcard generator in tests/unit/lib/claude/flashcard-generator.test.ts
