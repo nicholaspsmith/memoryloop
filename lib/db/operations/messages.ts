@@ -61,7 +61,7 @@ export async function getMessagesByConversationId(
 ): Promise<Message[]> {
   const messages = await find<Message>(
     MESSAGES_TABLE,
-    `"conversationId" = '${conversationId}'`,
+    `\`conversationId\` = '${conversationId}'`,
     10000
   )
 
@@ -119,7 +119,7 @@ export async function searchMessages(
 ): Promise<Message[]> {
   // For now, simple text search
   // TODO: Implement vector search using embeddings
-  const messages = await find<Message>(MESSAGES_TABLE, `"userId" = '${userId}'`, 10000)
+  const messages = await find<Message>(MESSAGES_TABLE, `\`userId\` = '${userId}'`, 10000)
 
   // Filter by content matching
   const filtered = messages.filter((msg) =>
@@ -135,7 +135,7 @@ export async function searchMessages(
 export async function getMessagesWithFlashcards(userId: string): Promise<Message[]> {
   const messages = await find<Message>(
     MESSAGES_TABLE,
-    `"userId" = '${userId}' AND "hasFlashcards" = true`,
+    `\`userId\` = '${userId}' AND \`hasFlashcards\` = true`,
     10000
   )
 

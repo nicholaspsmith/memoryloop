@@ -50,7 +50,7 @@ export async function getConversationById(id: string): Promise<Conversation | nu
 export async function getConversationsByUserId(userId: string): Promise<Conversation[]> {
   const conversations = await find<Conversation>(
     CONVERSATIONS_TABLE,
-    `"userId" = '${userId}'`,
+    `\`userId\` = '${userId}'`,
     1000
   )
 

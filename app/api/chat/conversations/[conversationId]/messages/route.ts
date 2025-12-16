@@ -86,15 +86,18 @@ export async function POST(
     const data = validate(SendMessageSchema, body)
 
     // Create user message
-    await createMessage({
+    const userMessage = await createMessage({
       conversationId,
       userId,
       role: 'user',
       content: data.content,
     })
 
-    // Get conversation history for context
-    const conversationHistory = await getMessagesByConversationId(conversationId)
+    // Get conversation history for context (previous messages only)
+    const previousMessages = await getMessagesByConversationId(conversationId)
+
+    // Build complete conversation including the new user message
+    const conversationHistory = [...previousMessages, userMessage]
 
     // Convert to Claude format
     const claudeMessages = toClaudeMessages(conversationHistory)

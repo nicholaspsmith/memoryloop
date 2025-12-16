@@ -41,14 +41,11 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
    */
   const initializeConversation = async () => {
     try {
-      console.log('initializeConversation called')
       setIsLoading(true)
 
       // Get existing conversations
       const response = await fetch('/api/chat/conversations')
-      console.log('GET /api/chat/conversations response:', response.status)
       const data = await response.json()
-      console.log('GET /api/chat/conversations data:', data)
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch conversations')
@@ -56,10 +53,8 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
 
       // Use first conversation or create new one
       if (data.data.conversations && data.data.conversations.length > 0) {
-        console.log('Using existing conversation:', data.data.conversations[0])
         setConversation(data.data.conversations[0])
       } else {
-        console.log('Creating new conversation')
         // Create new conversation
         const createResponse = await fetch('/api/chat/conversations', {
           method: 'POST',
@@ -68,18 +63,15 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
         })
 
         const createData = await createResponse.json()
-        console.log('POST /api/chat/conversations response:', createResponse.status)
-        console.log('POST /api/chat/conversations data:', createData)
 
         if (!createResponse.ok) {
           throw new Error(createData.error || 'Failed to create conversation')
         }
 
-        console.log('Setting conversation to:', createData.data.conversation)
         setConversation(createData.data.conversation)
       }
     } catch (err) {
-      console.error('initializeConversation error:', err)
+      console.error('Failed to initialize chat:', err)
       setError(err instanceof Error ? err.message : 'Failed to initialize chat')
     } finally {
       setIsLoading(false)
@@ -113,14 +105,7 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
    */
   const sendMessage = useCallback(
     async (content: string) => {
-      console.log('sendMessage called with:', content)
-      console.log('conversation:', conversation)
-      console.log('isSending:', isSending)
-
-      if (!conversation || isSending) {
-        console.log('Returning early - conversation:', conversation, 'isSending:', isSending)
-        return
-      }
+      if (!conversation || isSending) return
 
       try {
         setIsSending(true)
@@ -215,6 +200,7 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
                   )
                   setStreamingMessageId(null)
                 } else if (data.type === 'error') {
+                  console.error('SSE error:', data.error)
                   throw new Error(data.error)
                 }
               }
@@ -225,6 +211,7 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
         // Refresh messages to get actual IDs from server
         await fetchMessages()
       } catch (err) {
+        console.error('Failed to send message:', err)
         setError(err instanceof Error ? err.message : 'Failed to send message')
         // Remove temporary messages on error
         setMessages((prev) =>

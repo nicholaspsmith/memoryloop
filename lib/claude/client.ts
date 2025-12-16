@@ -102,14 +102,14 @@ export async function streamChatCompletion(params: {
               fullText += text
               onChunk(text)
             }
-          } catch {
-            // Skip invalid JSON lines
+          } catch (e) {
+            // Ignore parse errors for incomplete lines
           }
         }
       }
     }
 
-    onComplete(fullText)
+    await onComplete(fullText)
   } catch (error) {
     onError(error instanceof Error ? error : new Error('Unknown error'))
   }
