@@ -21,6 +21,21 @@ export const users = pgTable('users', {
 })
 
 // ============================================================================
+// API Keys Table (Claude API Integration)
+// ============================================================================
+
+export const apiKeys = pgTable('api_keys', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().unique().references(() => users.id, { onDelete: 'cascade' }),
+  encryptedKey: text('encrypted_key').notNull(),
+  keyPreview: varchar('key_preview', { length: 20 }).notNull(),
+  isValid: boolean('is_valid').notNull().default(true),
+  lastValidatedAt: timestamp('last_validated_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+})
+
+// ============================================================================
 // Conversations Table
 // ============================================================================
 
@@ -46,6 +61,9 @@ export const messages = pgTable('messages', {
   // pgvector column for semantic search (768 dimensions for nomic-embed-text)
   embedding: vector('embedding', { dimensions: 768 }),
   hasFlashcards: boolean('has_flashcards').notNull().default(false),
+  // AI provider tracking (Claude API Integration)
+  aiProvider: varchar('ai_provider', { length: 20 }), // 'claude' | 'ollama' | null
+  apiKeyId: uuid('api_key_id').references(() => apiKeys.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
@@ -93,6 +111,9 @@ export const reviewLogs = pgTable('review_logs', {
 
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
+
+export type ApiKey = typeof apiKeys.$inferSelect
+export type NewApiKey = typeof apiKeys.$inferInsert
 
 export type Conversation = typeof conversations.$inferSelect
 export type NewConversation = typeof conversations.$inferInsert
