@@ -10,11 +10,13 @@ import {
   getConversationById,
   conversationBelongsToUser,
 } from '@/lib/db/operations/conversations'
+import { getUserApiKey, getUserApiKeyRecord } from '@/lib/db/operations/api-keys'
 import { success, error as errorResponse } from '@/lib/api/response'
 import { validate } from '@/lib/validation/helpers'
 import { AuthenticationError, AuthorizationError, NotFoundError } from '@/lib/errors'
 import { streamChatCompletion, toClaudeMessages } from '@/lib/claude/client'
 import { getSystemPrompt } from '@/lib/claude/prompts'
+import type { AIProvider } from '@/lib/types/api-key'
 
 /**
  * GET /api/chat/conversations/[conversationId]/messages
@@ -101,6 +103,14 @@ export async function POST(
     const body = await request.json()
     const data = validate(SendMessageSchema, body)
 
+    // Fetch user's API key if available (T031)
+    const userApiKey = await getUserApiKey(userId)
+    const apiKeyRecord = await getUserApiKeyRecord(userId)
+
+    // Determine AI provider and API key ID
+    const aiProvider: AIProvider = userApiKey ? 'claude' : 'ollama'
+    const apiKeyId = apiKeyRecord?.id || null
+
     // Create user message
     const userMessage = await createMessage({
       conversationId,
@@ -127,6 +137,7 @@ export async function POST(
           await streamChatCompletion({
             messages: claudeMessages,
             systemPrompt: getSystemPrompt('chat'),
+            userApiKey, // Pass user's API key to route to Claude or Ollama
             onChunk: (text) => {
               // Send text chunk via SSE
               controller.enqueue(
@@ -134,12 +145,14 @@ export async function POST(
               )
             },
             onComplete: async (text) => {
-              // Save assistant message to database
+              // Save assistant message to database with provider info (T034)
               const assistantMessage = await createMessage({
                 conversationId,
                 userId,
                 role: 'assistant',
                 content: text,
+                aiProvider,
+                apiKeyId,
               })
 
               // Send completion event
