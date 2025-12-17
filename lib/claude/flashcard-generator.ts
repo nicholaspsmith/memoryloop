@@ -1,4 +1,4 @@
-import { OLLAMA_MODEL } from './client'
+import { getChatCompletion, OLLAMA_MODEL } from './client'
 
 /**
  * Flashcard Generation Module
@@ -16,6 +16,7 @@ export interface FlashcardPair {
 export interface GenerateFlashcardsOptions {
   maxFlashcards?: number
   minContentLength?: number
+  userApiKey?: string | null
 }
 
 const FLASHCARD_GENERATION_PROMPT = `
@@ -56,7 +57,7 @@ export async function generateFlashcardsFromContent(
   content: string,
   options: GenerateFlashcardsOptions = {}
 ): Promise<FlashcardPair[]> {
-  const { maxFlashcards = 20, minContentLength = 50 } = options
+  const { maxFlashcards = 20, minContentLength = 50, userApiKey = null } = options
 
   // Validate content length
   const trimmedContent = content.trim()
@@ -76,40 +77,16 @@ export async function generateFlashcardsFromContent(
 
     console.log('[FlashcardGenerator] Generating flashcards...')
 
-    const ollamaUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
-    const response = await fetch(`${ollamaUrl}/api/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are a flashcard generator. You MUST generate MULTIPLE flashcards from educational content. MINIMUM 3 flashcards, preferably 5-10. Each important concept should have its own flashcard. Always return a JSON array with multiple flashcard objects, never just a single flashcard.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        stream: false,
-        format: 'json',
-        options: {
-          temperature: 0.7,
-          num_predict: 2048,
-        },
-      }),
+    const systemPrompt =
+      'You are a flashcard generator. You MUST generate MULTIPLE flashcards from educational content. MINIMUM 3 flashcards, preferably 5-10. Each important concept should have its own flashcard. Always return a JSON array with multiple flashcard objects, never just a single flashcard. Return ONLY valid JSON, no additional text.'
+
+    // Use the unified client that routes based on userApiKey
+    const rawResponse = await getChatCompletion({
+      messages: [{ role: 'user', content: prompt }],
+      systemPrompt,
+      userApiKey,
     })
 
-    if (!response.ok) {
-      throw new Error(`Ollama API error: ${response.statusText}`)
-    }
-
-    const data = await response.json()
-    const rawResponse = data.message?.content || ''
     console.log('[FlashcardGenerator] Raw response:', rawResponse.substring(0, 200))
 
     // Parse JSON response
