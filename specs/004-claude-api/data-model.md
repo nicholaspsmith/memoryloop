@@ -66,7 +66,7 @@ Extend existing `messages` table to track which AI provider generated each messa
 
 | Field | Type | Constraints | Description |
 |-------|------|-------------|-------------|
-| `aiProvider` | varchar(20) | NULL | Which provider generated this message: "claude-api" or "ollama" |
+| `aiProvider` | varchar(20) | NULL | Which provider generated this message: "claude" or "ollama" |
 | `apiKeyId` | uuid | NULL, FOREIGN KEY → api_keys(id) ON DELETE SET NULL | Which API key was used (if Claude API) |
 
 **Rationale**:
@@ -111,13 +111,13 @@ api_keys (1) ──< messages (many)   # API key can generate many messages
 ### Message Provider Tracking
 
 1. **Provider Values** (FR-014):
-   - Valid values: `"claude-api"`, `"ollama"`, or NULL
+   - Valid values: `"claude"`, `"ollama"`, or NULL
    - NULL for legacy messages (before this feature)
    - Set during message creation based on which client was used
 
 2. **API Key Reference**:
    - Must be NULL if `aiProvider` is "ollama"
-   - Should reference valid `api_keys.id` if `aiProvider` is "claude-api"
+   - Should reference valid `api_keys.id` if `aiProvider` is "claude"
    - Orphaned references (deleted key) set to NULL automatically
 
 ## State Transitions
@@ -140,7 +140,7 @@ api_keys (1) ──< messages (many)   # API key can generate many messages
 [User sends chat message]
     ↓
 [Check if user has valid API key]
-    ↓ YES → Use Claude API, set aiProvider="claude-api", apiKeyId=<id>
+    ↓ YES → Use Claude API, set aiProvider="claude", apiKeyId=<id>
     ↓ NO  → Use Ollama, set aiProvider="ollama", apiKeyId=NULL
 [Message created with provider metadata]
 ```
@@ -272,7 +272,7 @@ export const messages = pgTable('messages', {
 
 **Handling**:
 - `ON DELETE SET NULL` on messages.api_key_id foreign key
-- Messages preserve `aiProvider="claude-api"` metadata
+- Messages preserve `aiProvider="claude"` metadata
 - UI shows "Claude API (key deleted)" for orphaned references
 
 ### Key Validation Failure During Active Session

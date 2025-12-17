@@ -227,7 +227,7 @@ export type ClaudeMessage = {
   content: string
 }
 
-export type AIProvider = 'claude-api' | 'ollama'
+export type AIProvider = 'claude' | 'ollama'
 
 export interface StreamParams {
   messages: ClaudeMessage[]
@@ -259,7 +259,7 @@ export async function streamChatCompletion(params: StreamParams): Promise<AIProv
   if (userApiKey) {
     try {
       await streamClaudeAPI(userApiKey, messages, systemPrompt, onChunk, onComplete, onError)
-      return 'claude-api'
+      return 'claude'
     } catch (error) {
       console.error('[Claude] API error, falling back to Ollama:', error)
       // Fall through to Ollama on error
@@ -419,7 +419,7 @@ export async function getChatCompletion(params: {
         .map(block => block.text)
         .join('')
 
-      return { content: textContent, provider: 'claude-api' }
+      return { content: textContent, provider: 'claude' }
     } catch (error) {
       console.error('[Claude] API error in non-streaming call:', error)
       // Fall through to Ollama
@@ -735,7 +735,7 @@ export const messages = pgTable('messages', {
   embedding: vector('embedding', { dimensions: 768 }),
   hasFlashcards: boolean('has_flashcards').notNull().default(false),
   // NEW: Track which AI provider generated this message
-  provider: varchar('provider', { length: 20 }), // 'claude-api' | 'ollama' | NULL (for user messages)
+  provider: varchar('provider', { length: 20 }), // 'claude' | 'ollama' | NULL (for user messages)
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 ```
@@ -752,7 +752,7 @@ export async function streamChatCompletion(params: StreamParams): Promise<AIProv
   if (userApiKey) {
     try {
       await streamClaudeAPI(...)
-      return 'claude-api'
+      return 'claude'
     } catch (error) {
       console.error('[Claude] Falling back to Ollama:', error)
       // Fall through to Ollama
@@ -775,7 +775,7 @@ export async function createMessage(data: {
   userId: string
   role: 'user' | 'assistant'
   content: string
-  provider?: 'claude-api' | 'ollama' | null
+  provider?: 'claude' | 'ollama' | null
 }): Promise<Message> {
   const db = getDb()
 
@@ -813,7 +813,7 @@ const provider = await streamChatCompletion({
       userId,
       role: 'assistant',
       content: fullText,
-      provider: provider // 'claude-api' or 'ollama'
+      provider: provider // 'claude' or 'ollama'
     })
   },
   onError: (error) => { /* handle error */ },
@@ -827,14 +827,14 @@ Create `components/settings/ProviderBadge.tsx`:
 
 ```typescript
 interface ProviderBadgeProps {
-  provider: 'claude-api' | 'ollama' | null
+  provider: 'claude' | 'ollama' | null
 }
 
 export function ProviderBadge({ provider }: ProviderBadgeProps) {
   if (!provider) return null // Don't show for user messages
 
   const config = {
-    'claude-api': {
+    'claude': {
       label: 'Claude API',
       icon: '🤖',
       className: 'bg-purple-100 text-purple-800'
@@ -872,7 +872,7 @@ Usage in message display:
 #### Persistence Strategy
 
 - **User messages**: `provider` field is NULL (users don't generate content via API)
-- **Assistant messages**: Always set `provider` to either 'claude-api' or 'ollama'
+- **Assistant messages**: Always set `provider` to either 'claude' or 'ollama'
 - **Flashcards**: Track provider in separate metadata if needed, or infer from source message
 - **Analytics**: Can query messages table to track API usage per user
 

@@ -85,7 +85,7 @@ Next.js App Router structure:
 
 **Goal**: Route chat and flashcard generation requests through Claude API when user has a saved API key
 
-**Independent Test**: With an API key saved from User Story 1, start a new chat conversation, send a message, and receive a response from Claude API. Check message in database has aiProvider='claude-api'. Generate flashcards and verify they also use Claude API. Check logs confirm user's API key was used (not system key).
+**Independent Test**: With an API key saved from User Story 1, start a new chat conversation, send a message, and receive a response from Claude API. Check message in database has aiProvider='claude'. Generate flashcards and verify they also use Claude API. Check logs confirm user's API key was used (not system key).
 
 ### Tests for User Story 2 (TDD - Write these FIRST, ensure they FAIL)
 
