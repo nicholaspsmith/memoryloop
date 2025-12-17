@@ -18,6 +18,7 @@ interface NavLink {
 const navLinks: NavLink[] = [
   { href: '/chat', label: 'Chat' },
   { href: '/quiz', label: 'Quiz' },
+  { href: '/settings', label: 'Settings' },
 ]
 
 export default function Navigation() {
