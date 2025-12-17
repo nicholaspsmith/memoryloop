@@ -131,8 +131,9 @@ export async function POST(request: NextRequest) {
       })
     )
 
-    // Mark message as having flashcards (FR-017)
-    await markMessageWithFlashcards(messageId)
+    // Note: We don't need to mark the message with hasFlashcards flag
+    // Duplicate prevention (FR-017) is handled by checking existing flashcards above
+    // The hasFlashcards field can be populated when fetching messages if needed for UI optimization
 
     console.log(
       `[FlashcardGenerate] Created ${flashcards.length} flashcards from message ${messageId}`
