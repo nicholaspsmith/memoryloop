@@ -64,7 +64,7 @@ describe('ApiKeyDisplay Component', () => {
         />
       )
 
-      expect(screen.getByText(/invalid|expired/i)).toBeInTheDocument()
+      expect(screen.getAllByText(/invalid|expired/i)[0]).toBeInTheDocument()
     })
   })
 
@@ -171,8 +171,8 @@ describe('ApiKeyDisplay Component', () => {
       const confirmButton = screen.getByRole('button', { name: /confirm|yes/i })
       await user.click(confirmButton)
 
-      const status = await screen.findByRole('status')
-      expect(status).toBeInTheDocument()
+      const successMessage = await screen.findByText(/deleted successfully/i)
+      expect(successMessage).toBeInTheDocument()
     })
   })
 })

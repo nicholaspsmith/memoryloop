@@ -75,7 +75,8 @@ describe('ApiKeyForm Component', () => {
       render(<ApiKeyForm onSave={mockOnSave} />)
 
       const input = screen.getByLabelText(/API Key/i)
-      await user.type(input, 'invalid-key')
+      // Use a long key that doesn't start with sk-ant- to trigger the prefix error
+      await user.type(input, 'invalid-key-that-is-long-enough-to-pass-length-check-xxxxxxxxxxxxxxxxxxxx')
       await user.tab() // Trigger blur event
 
       expect(await screen.findByText(/must start with "sk-ant-"/i)).toBeInTheDocument()
@@ -179,7 +180,7 @@ describe('ApiKeyForm Component', () => {
       const deleteButton = screen.getByRole('button', { name: /delete|remove/i })
       await user.click(deleteButton)
 
-      expect(screen.getByText(/confirm|sure/i)).toBeInTheDocument()
+      expect(screen.getByText(/are you sure you want to delete/i)).toBeInTheDocument()
     })
 
     it('should call onDelete when deletion is confirmed', async () => {
