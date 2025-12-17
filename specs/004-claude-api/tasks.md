@@ -68,7 +68,7 @@ Next.js App Router structure:
 
 ### Implementation for User Story 1
 
-- [ ] T016 [P] [US1] Create database operations for API keys (CRUD) in lib/db/operations/api-keys.ts
+- [X] T016 [P] [US1] Create database operations for API keys (CRUD) in lib/db/operations/api-keys.ts
 - [ ] T017 [US1] Implement GET /api/settings/api-key route handler in app/api/settings/api-key/route.ts
 - [ ] T018 [US1] Implement POST /api/settings/api-key route handler in app/api/settings/api-key/route.ts
 - [ ] T019 [US1] Implement DELETE /api/settings/api-key route handler in app/api/settings/api-key/route.ts
