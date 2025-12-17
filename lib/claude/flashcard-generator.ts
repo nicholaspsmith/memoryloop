@@ -27,7 +27,7 @@ CRITICAL INSTRUCTIONS:
 2. Return ONLY a valid JSON array - no other text
 3. Each flashcard must have "question" and "answer" keys
 4. Questions should use interrogative format (What, How, Why, When, Where)
-5. Answers should be concise (10-200 words)
+5. Answers should be concise but should answer question completely (10-500 words)
 6. Cover ALL key concepts in the content
 
 REQUIRED OUTPUT FORMAT (must be a JSON array with multiple objects):
