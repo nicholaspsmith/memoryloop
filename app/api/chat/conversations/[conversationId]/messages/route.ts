@@ -5,6 +5,7 @@ import {
   getMessagesByConversationId,
   createMessage,
 } from '@/lib/db/operations/messages'
+import { getFlashcardsByMessageId } from '@/lib/db/operations/flashcards'
 import {
   getConversationById,
   conversationBelongsToUser,
@@ -46,7 +47,22 @@ export async function GET(
 
     const messages = await getMessagesByConversationId(conversationId)
 
-    return success({ messages })
+    // Populate hasFlashcards field by checking for existing flashcards
+    const messagesWithFlashcards = await Promise.all(
+      messages.map(async (message) => {
+        // Only check for assistant messages
+        if (message.role === 'assistant') {
+          const flashcards = await getFlashcardsByMessageId(message.id)
+          return {
+            ...message,
+            hasFlashcards: flashcards.length > 0,
+          }
+        }
+        return message
+      })
+    )
+
+    return success({ messages: messagesWithFlashcards })
   } catch (err) {
     return errorResponse(err)
   }
