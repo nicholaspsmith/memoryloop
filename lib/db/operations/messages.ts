@@ -137,11 +137,29 @@ export async function updateMessage(
 
 /**
  * Mark message as having flashcards
+ *
+ * Note: Uses a workaround to avoid the embedding field update issue
+ * Instead of using the generic update, we delete and re-add with a fresh read
  */
 export async function markMessageWithFlashcards(messageId: string): Promise<void> {
-  await updateMessage(messageId, {
+  const db = await getDbConnection()
+  const table = await db.openTable(MESSAGES_TABLE)
+
+  // Get the message first
+  const message = await getMessageById(messageId)
+  if (!message) {
+    throw new Error(`Message not found: ${messageId}`)
+  }
+
+  // Delete the old record
+  await table.delete(`id = '${messageId}'`)
+
+  // Re-add with updated hasFlashcards, but without embedding to avoid schema issues
+  await table.add([{
+    ...message,
     hasFlashcards: true,
-  })
+    embedding: null, // Reset embedding to null to avoid LanceDB type issues
+  }])
 }
 
 /**

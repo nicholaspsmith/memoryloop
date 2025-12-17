@@ -70,34 +70,14 @@ export async function update<T extends { id: string }>(
   // Delete old record
   await table.delete(`id = '${id}'`)
 
-  // Insert updated record
-  const updated = { ...existing, ...updates }
+  // Insert updated record - exclude embedding from existing to avoid LanceDB type issues
+  const { embedding: _, ...existingWithoutEmbedding } = existing as any
+  const updated = { ...existingWithoutEmbedding, ...updates }
 
-  // Clean up embedding field to remove any LanceDB internal properties
-  // LanceDB may return embeddings as objects with metadata - convert to plain array or null
-  if ('embedding' in updated) {
-    const emb = updated.embedding
-    if (emb === null || emb === undefined) {
-      updated.embedding = null
-    } else if (Array.isArray(emb)) {
-      // Convert to plain array to avoid LanceDB vector type issues
-      updated.embedding = [...emb]
-    } else if (typeof emb === 'object') {
-      // Try to convert object-like embeddings to arrays
-      if ('toArray' in emb && typeof (emb as any).toArray === 'function') {
-        updated.embedding = (emb as any).toArray()
-      } else if ('length' in emb) {
-        // Array-like object with length - convert to plain array
-        updated.embedding = Array.from(emb as any)
-      } else {
-        // Unknown type, set to null to avoid schema errors
-        console.warn('[DB] Unknown embedding type, setting to null:', typeof emb)
-        updated.embedding = null
-      }
-    } else {
-      // Primitive type, set to null
-      updated.embedding = null
-    }
+  // Ensure embedding field exists in the record (set to null if not in updates)
+  // This preserves the schema structure while avoiding LanceDB internal type issues
+  if (!('embedding' in updates)) {
+    updated.embedding = null
   }
 
   await table.add([updated])
