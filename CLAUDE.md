@@ -39,11 +39,13 @@ Follow the project principles defined in `.specify/memory/constitution.md`:
 - Modularity & Composability
 - Simplicity (YAGNI)
 - Observability & Debugging
-- Atomic Commits & Version Control Discipline
+- Atomic Commits & Version Control Discipline. Adhere to .claude/rules.md
 
 ## Active Technologies
+
 - TypeScript 5.7 (strict mode), Next.js 16.0.10 App Router (004-claude-api)
 - PostgreSQL on Supabase with pgvector (0.2.1) for vector embeddings (768 dimensions) (004-claude-api)
 
 ## Recent Changes
+
 - 004-claude-api: Added TypeScript 5.7 (strict mode), Next.js 16.0.10 App Router

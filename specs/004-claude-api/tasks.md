@@ -16,6 +16,7 @@
 ## Path Conventions
 
 Next.js App Router structure:
+
 - `app/(protected)/` - Protected routes
 - `app/api/` - API route handlers
 - `components/` - React components
@@ -28,9 +29,9 @@ Next.js App Router structure:
 
 **Purpose**: Project initialization and environment configuration
 
-- [X] T001 Enable pgcrypto extension in PostgreSQL database
-- [X] T002 [P] Generate and configure API_KEY_ENCRYPTION_SECRET environment variable in .env.local
-- [X] T003 [P] Verify @anthropic-ai/sdk package is installed (already in package.json v0.71.2)
+- [x] T001 Enable pgcrypto extension in PostgreSQL database
+- [x] T002 [P] Generate and configure API_KEY_ENCRYPTION_SECRET environment variable in .env.local
+- [x] T003 [P] Verify @anthropic-ai/sdk package is installed (already in package.json v0.71.2)
 
 ---
 
@@ -40,13 +41,13 @@ Next.js App Router structure:
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [X] T004 Create database migration to add api_keys table with pgcrypto encryption in drizzle/migrations/
-- [X] T005 Update Drizzle schema to add apiKeys table in lib/db/drizzle-schema.ts
-- [X] T006 Update Drizzle schema to add aiProvider and apiKeyId fields to messages table in lib/db/drizzle-schema.ts
-- [X] T007 Run database migration to apply schema changes
-- [X] T008 [P] Create encryption service module in lib/encryption/api-key.ts
-- [X] T009 [P] Create API key validation utilities in lib/validation/api-key.ts
-- [X] T010 [P] Create types for API keys in lib/types/api-key.ts
+- [x] T004 Create database migration to add api_keys table with pgcrypto encryption in drizzle/migrations/
+- [x] T005 Update Drizzle schema to add apiKeys table in lib/db/drizzle-schema.ts
+- [x] T006 Update Drizzle schema to add aiProvider and apiKeyId fields to messages table in lib/db/drizzle-schema.ts
+- [x] T007 Run database migration to apply schema changes
+- [x] T008 [P] Create encryption service module in lib/encryption/api-key.ts
+- [x] T009 [P] Create API key validation utilities in lib/validation/api-key.ts
+- [x] T010 [P] Create types for API keys in lib/types/api-key.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -68,7 +69,7 @@ Next.js App Router structure:
 
 ### Implementation for User Story 1
 
-- [X] T016 [P] [US1] Create database operations for API keys (CRUD) in lib/db/operations/api-keys.ts
+- [x] T016 [P] [US1] Create database operations for API keys (CRUD) in lib/db/operations/api-keys.ts
 - [ ] T017 [US1] Implement GET /api/settings/api-key route handler in app/api/settings/api-key/route.ts
 - [ ] T018 [US1] Implement POST /api/settings/api-key route handler in app/api/settings/api-key/route.ts
 - [ ] T019 [US1] Implement DELETE /api/settings/api-key route handler in app/api/settings/api-key/route.ts
@@ -199,9 +200,9 @@ Next.js App Router structure:
 - [ ] T063 [P] Add structured logging for provider routing in lib/claude/client.ts
 - [ ] T064 [P] Add structured logging for validation attempts in lib/claude/validation.ts
 - [ ] T065 [P] Update CLAUDE.md with feature implementation notes
-- [ ] T066 [P] Add dark mode styling for settings components in components/settings/*.tsx
+- [ ] T066 [P] Add dark mode styling for settings components in components/settings/\*.tsx
 - [ ] T067 [P] Add loading skeletons for settings page in components/settings/
-- [ ] T068 [P] Add accessibility labels (aria-*) to settings forms in components/settings/ApiKeyForm.tsx
+- [ ] T068 [P] Add accessibility labels (aria-\*) to settings forms in components/settings/ApiKeyForm.tsx
 - [ ] T068a [P] [FR-012] [SC-005] Security audit: Verify API keys are NOT exposed in client-side code, logs, or error messages
 - [ ] T069 Run full test suite and verify all tests pass (npm test && npm run test:e2e)
 - [ ] T070 Validate against quickstart.md verification checklist in specs/004-claude-api/quickstart.md
@@ -321,10 +322,12 @@ Each increment adds value without breaking previous functionality.
 With multiple developers after Foundational phase completes:
 
 **Scenario 1: 2 Developers**
+
 - Developer A: User Story 1 (Phase 3)
 - Developer B: User Story 2 (Phase 4) - **BLOCKS on US1 completion**
 
 **Scenario 2: 3+ Developers**
+
 - Developer A: User Story 1 (Phase 3)
 - Developer B: User Story 2 (Phase 4) - **BLOCKS on US1 completion**
 - Developer C: User Story 3 (Phase 5) - Can start immediately after Foundational
@@ -337,6 +340,7 @@ With multiple developers after Foundational phase completes:
 ## Task Summary
 
 **Total Tasks**: 71
+
 - Phase 1 (Setup): 3 tasks
 - Phase 2 (Foundational): 7 tasks ⚠️ **BLOCKS all user stories**
 - Phase 3 (US1 - P1): 13 tasks 🎯 **MVP Core**
@@ -350,11 +354,13 @@ With multiple developers after Foundational phase completes:
 **Parallel Opportunities**: 37 tasks marked [P] can run in parallel (52% parallelizable)
 
 **MVP Scope** (Recommended first delivery):
+
 - Phases 1-4 only (36 tasks)
 - Delivers User Stories 1 + 2 (complete core value)
 - Estimated completion: Foundation + Core stories
 
 **Independent Test Criteria Met**:
+
 - ✅ User Story 1: Settings page CRUD operations testable standalone
 - ✅ User Story 2: Chat with Claude API testable standalone (requires US1)
 - ✅ User Story 3: Validation feedback testable standalone
@@ -369,7 +375,7 @@ With multiple developers after Foundational phase completes:
 - [Story] label maps task to specific user story for traceability
 - Each user story should be independently completable and testable
 - **TDD Required**: Verify all tests FAIL before implementing (Principle II)
-- Commit after each task or logical group (Principle VI - Atomic commits)
+- Commit after each task or logical group, adhering to rules in .claude/rules.md (Principle VI - Atomic commits)
 - Stop at any checkpoint to validate story independently
 - User Story 2 depends on User Story 1 (needs API key storage)
 - **Foundation phase (Phase 2) BLOCKS everything** - complete this first
