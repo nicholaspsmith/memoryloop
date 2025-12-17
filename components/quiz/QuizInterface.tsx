@@ -51,32 +51,36 @@ export default function QuizInterface({
   const [error, setError] = useState<string | null>(null)
   const [isCompleted, setIsCompleted] = useState(false)
   const [isSubmittingRating, setIsSubmittingRating] = useState(false)
+  const [mode, setMode] = useState<'due' | 'all'>('due')
+  const [totalCards, setTotalCards] = useState(0)
 
   // Fetch due flashcards on mount if not provided
   useEffect(() => {
     if (initialFlashcards.length === 0) {
-      fetchDueFlashcards()
+      fetchFlashcards('due')
     }
   }, [])
 
-  const fetchDueFlashcards = async () => {
+  const fetchFlashcards = async (fetchMode: 'due' | 'all' = 'due') => {
     try {
       setIsLoading(true)
       setError(null)
+      setMode(fetchMode)
 
-      const response = await fetch('/api/quiz/due')
+      const response = await fetch(`/api/quiz/due?mode=${fetchMode}`)
 
       if (!response.ok) {
-        throw new Error('Failed to fetch due flashcards')
+        throw new Error('Failed to fetch flashcards')
       }
 
       const data = await response.json()
 
       if (data.success && data.flashcards) {
         setFlashcards(data.flashcards)
+        setTotalCards(data.totalCards || 0)
 
         if (data.flashcards.length === 0) {
-          // No cards due - show empty state
+          // No cards - show empty state
           setIsCompleted(false)
         }
       } else {
@@ -127,7 +131,13 @@ export default function QuizInterface({
   const handleRestart = () => {
     setCurrentIndex(0)
     setIsCompleted(false)
-    fetchDueFlashcards()
+    fetchFlashcards(mode)
+  }
+
+  const handlePracticeAll = () => {
+    setCurrentIndex(0)
+    setIsCompleted(false)
+    fetchFlashcards('all')
   }
 
   // Loading state
@@ -169,7 +179,7 @@ export default function QuizInterface({
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
           <button
-            onClick={fetchDueFlashcards}
+            onClick={() => fetchFlashcards(mode)}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
           >
             Try Again
@@ -203,15 +213,26 @@ export default function QuizInterface({
             All Caught Up!
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            You have no flashcards due for review right now. Great job keeping
-            up with your studies!
+            {mode === 'due'
+              ? 'You have no flashcards due for review right now. Great job keeping up with your studies!'
+              : 'You have no flashcards yet. Start chatting to generate some!'}
           </p>
-          <button
-            onClick={fetchDueFlashcards}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
-          >
-            Refresh
-          </button>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => fetchFlashcards('due')}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
+            >
+              Refresh
+            </button>
+            {mode === 'due' && totalCards > 0 && (
+              <button
+                onClick={handlePracticeAll}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200"
+              >
+                Practice All ({totalCards})
+              </button>
+            )}
+          </div>
         </div>
       </div>
     )
@@ -238,7 +259,7 @@ export default function QuizInterface({
             </svg>
           </div>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-            Quiz Complete!
+            {mode === 'due' ? 'Quiz Complete!' : 'Practice Session Complete!'}
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             You've reviewed all {flashcards.length} flashcard
@@ -251,6 +272,14 @@ export default function QuizInterface({
             >
               Review Again
             </button>
+            {mode === 'all' && (
+              <button
+                onClick={() => fetchFlashcards('due')}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors duration-200"
+              >
+                Back to Due Cards
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -262,6 +291,15 @@ export default function QuizInterface({
 
   return (
     <div className="max-w-4xl mx-auto">
+      {/* Practice mode indicator */}
+      {mode === 'all' && (
+        <div className="mb-4 text-center">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+            Practice Mode - All Cards
+          </span>
+        </div>
+      )}
+
       {/* Progress indicator */}
       <div className="mb-8">
         <QuizProgress
