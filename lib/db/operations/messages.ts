@@ -26,6 +26,8 @@ export async function createMessage(data: {
   role: MessageRole
   content: string
   embedding?: number[] | null
+  aiProvider?: 'claude' | 'ollama' | null
+  apiKeyId?: string | null
 }): Promise<Message> {
   const now = Date.now()
 
@@ -38,6 +40,8 @@ export async function createMessage(data: {
     embedding: data.embedding || null,
     createdAt: now,
     hasFlashcards: false,
+    aiProvider: data.aiProvider || null,
+    apiKeyId: data.apiKeyId || null,
   }
 
   // Validate before inserting
