@@ -48,7 +48,7 @@ export default function ChatInterface({ userId }: ChatInterfaceProps) {
       const response = await fetch('/api/settings/api-key')
       if (response.ok) {
         const data = await response.json()
-        setHasApiKey(!!data.apiKey)
+        setHasApiKey(data.data?.exists || false)
       } else {
         setHasApiKey(false)
       }
