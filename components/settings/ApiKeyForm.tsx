@@ -18,13 +18,16 @@ export default function ApiKeyForm({ onSave, onDelete, existingKeyPreview }: Api
   const [apiKey, setApiKey] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isValidating, setIsValidating] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [validationMessage, setValidationMessage] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setApiKey(e.target.value)
     setError(null)
     setSuccessMessage(null)
+    setValidationMessage(null)
   }
 
   const handleBlur = () => {
@@ -33,6 +36,43 @@ export default function ApiKeyForm({ onSave, onDelete, existingKeyPreview }: Api
       if (!validation.valid) {
         setError(validation.error || 'Invalid API key')
       }
+    }
+  }
+
+  const handleValidate = async () => {
+    setError(null)
+    setSuccessMessage(null)
+    setValidationMessage(null)
+
+    // Basic format validation first
+    const formatValidation = validateApiKey(apiKey)
+    if (!formatValidation.valid) {
+      setError(formatValidation.error || 'Invalid API key format')
+      return
+    }
+
+    setIsValidating(true)
+
+    try {
+      const response = await fetch('/api/settings/api-key/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ apiKey }),
+      })
+
+      const data = await response.json()
+
+      if (response.ok && data.valid) {
+        setValidationMessage('API key is valid and working correctly!')
+      } else {
+        setError(data.error || 'API key validation failed')
+      }
+    } catch (err) {
+      setError('Failed to validate API key. Please try again.')
+    } finally {
+      setIsValidating(false)
     }
   }
 
@@ -119,8 +159,16 @@ export default function ApiKeyForm({ onSave, onDelete, existingKeyPreview }: Api
 
       <div className="flex gap-2">
         <button
+          onClick={handleValidate}
+          disabled={!apiKey.trim() || isLoading || isValidating}
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isValidating ? 'Validating...' : 'Validate'}
+        </button>
+
+        <button
           onClick={handleSave}
-          disabled={!isValid || isLoading}
+          disabled={!isValid || isLoading || isValidating}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? 'Saving...' : 'Save'}
@@ -129,13 +177,19 @@ export default function ApiKeyForm({ onSave, onDelete, existingKeyPreview }: Api
         {existingKeyPreview && onDelete && (
           <button
             onClick={handleDeleteClick}
-            disabled={isLoading}
+            disabled={isLoading || isValidating}
             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Delete
           </button>
         )}
       </div>
+
+      {validationMessage && (
+        <div role="status" className="text-green-600 text-sm">
+          {validationMessage}
+        </div>
+      )}
 
       {successMessage && (
         <div role="status" className="text-green-600 text-sm">
