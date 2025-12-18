@@ -61,22 +61,22 @@ Next.js App Router structure:
 
 ### Tests for User Story 1 (TDD - Write these FIRST, ensure they FAIL)
 
-- [ ] T011 [P] [US1] Contract test for GET /api/settings/api-key in tests/contract/settings/api-key.test.ts
-- [ ] T012 [P] [US1] Contract test for POST /api/settings/api-key in tests/contract/settings/api-key.test.ts
-- [ ] T013 [P] [US1] Contract test for DELETE /api/settings/api-key in tests/contract/settings/api-key.test.ts
-- [ ] T014 [P] [US1] Component test for ApiKeyForm in tests/component/settings/ApiKeyForm.test.tsx
-- [ ] T015 [P] [US1] Component test for ApiKeyDisplay in tests/component/settings/ApiKeyDisplay.test.tsx
+- [x] T011 [P] [US1] Contract test for GET /api/settings/api-key in tests/contract/settings/api-key.test.ts
+- [x] T012 [P] [US1] Contract test for POST /api/settings/api-key in tests/contract/settings/api-key.test.ts
+- [x] T013 [P] [US1] Contract test for DELETE /api/settings/api-key in tests/contract/settings/api-key.test.ts
+- [x] T014 [P] [US1] Component test for ApiKeyForm in tests/component/settings/ApiKeyForm.test.tsx
+- [x] T015 [P] [US1] Component test for ApiKeyDisplay in tests/component/settings/ApiKeyDisplay.test.tsx
 
 ### Implementation for User Story 1
 
 - [x] T016 [P] [US1] Create database operations for API keys (CRUD) in lib/db/operations/api-keys.ts
-- [ ] T017 [US1] Implement GET /api/settings/api-key route handler in app/api/settings/api-key/route.ts
-- [ ] T018 [US1] Implement POST /api/settings/api-key route handler in app/api/settings/api-key/route.ts
-- [ ] T019 [US1] Implement DELETE /api/settings/api-key route handler in app/api/settings/api-key/route.ts
-- [ ] T020 [P] [US1] Create ApiKeyForm component in components/settings/ApiKeyForm.tsx
-- [ ] T021 [P] [US1] Create ApiKeyDisplay component in components/settings/ApiKeyDisplay.tsx
-- [ ] T022 [US1] Create settings page at app/(protected)/settings/page.tsx
-- [ ] T023 [US1] Add navigation link to settings page in components/nav/Navigation.tsx
+- [x] T017 [US1] Implement GET /api/settings/api-key route handler in app/api/settings/api-key/route.ts
+- [x] T018 [US1] Implement POST /api/settings/api-key route handler in app/api/settings/api-key/route.ts
+- [x] T019 [US1] Implement DELETE /api/settings/api-key route handler in app/api/settings/api-key/route.ts
+- [x] T020 [P] [US1] Create ApiKeyForm component in components/settings/ApiKeyForm.tsx
+- [x] T021 [P] [US1] Create ApiKeyDisplay component in components/settings/ApiKeyDisplay.tsx
+- [x] T022 [US1] Create settings page at app/(protected)/settings/page.tsx
+- [x] T023 [US1] Add navigation link to settings page in components/nav/Navigation.tsx
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - users can enter, save, view, and delete their API keys
 
@@ -90,22 +90,22 @@ Next.js App Router structure:
 
 ### Tests for User Story 2 (TDD - Write these FIRST, ensure they FAIL)
 
-- [ ] T024 [P] [US2] Integration test for Claude client with user API keys in tests/integration/claude/user-keys.test.ts
-- [ ] T025 [P] [US2] Integration test for flashcard generation with user API keys in tests/integration/claude/flashcard-user-keys.test.ts
-- [ ] T026 [P] [US2] Component test for ProviderBadge in tests/component/settings/ProviderBadge.test.tsx
+- [x] T024 [P] [US2] Integration test for Claude client with user API keys in tests/integration/claude/user-keys.test.ts
+- [x] T025 [P] [US2] Integration test for flashcard generation with user API keys in tests/integration/claude/flashcard-user-keys.test.ts
+- [x] T026 [P] [US2] Component test for ProviderBadge in tests/component/settings/ProviderBadge.test.tsx
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] Update Claude client to support per-request API key initialization in lib/claude/client.ts
-- [ ] T028 [US2] Add createAnthropicClient function in lib/claude/client.ts
-- [ ] T029 [US2] Add streamClaudeAPI function for Anthropic SDK streaming in lib/claude/client.ts
-- [ ] T030 [US2] Add getChatCompletion function with user API key support in lib/claude/client.ts
-- [ ] T031 [US2] Update chat API route to fetch and use user API key in app/api/chat/conversations/[id]/messages/route.ts
-- [ ] T032 [US2] Update flashcard generator to accept user API key parameter in lib/claude/flashcard-generator.ts
-- [ ] T033 [US2] Update flashcard generation API to use user API key in app/api/flashcards/generate/route.ts
-- [ ] T034 [US2] Update message creation to include aiProvider and apiKeyId in lib/db/operations/messages.ts
-- [ ] T035 [P] [US2] Create ProviderBadge component in components/settings/ProviderBadge.tsx
-- [ ] T036 [US2] Update Message component to display ProviderBadge in components/chat/Message.tsx
+- [x] T027 [US2] Update Claude client to support per-request API key initialization in lib/claude/client.ts
+- [x] T028 [US2] Add createAnthropicClient function in lib/claude/client.ts
+- [x] T029 [US2] Add streamClaudeAPI function for Anthropic SDK streaming in lib/claude/client.ts
+- [x] T030 [US2] Add getChatCompletion function with user API key support in lib/claude/client.ts
+- [x] T031 [US2] Update chat API route to fetch and use user API key in app/api/chat/conversations/[id]/messages/route.ts
+- [x] T032 [US2] Update flashcard generator to accept user API key parameter in lib/claude/flashcard-generator.ts
+- [x] T033 [US2] Update flashcard generation API to use user API key in app/api/flashcards/generate/route.ts
+- [x] T034 [US2] Update message creation to include aiProvider and apiKeyId in lib/db/operations/messages.ts
+- [x] T035 [P] [US2] Create ProviderBadge component in components/settings/ProviderBadge.tsx
+- [x] T036 [US2] Update Message component to display ProviderBadge in components/chat/Message.tsx
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work - users can configure their API key and it's used for all AI requests with provider attribution
 
@@ -119,16 +119,16 @@ Next.js App Router structure:
 
 ### Tests for User Story 3 (TDD - Write these FIRST, ensure they FAIL)
 
-- [ ] T037 [P] [US3] Contract test for POST /api/settings/api-key/validate in tests/contract/settings/api-key-validate.test.ts
-- [ ] T038 [P] [US3] Unit test for validation logic in tests/unit/lib/claude/validation.test.ts
+- [x] T037 [P] [US3] Contract test for POST /api/settings/api-key/validate in tests/contract/settings/api-key-validate.test.ts
+- [x] T038 [P] [US3] Unit test for validation logic in tests/unit/lib/claude/validation.test.ts
 
 ### Implementation for User Story 3
 
-- [ ] T039 [US3] Create validation module with validateClaudeApiKey function in lib/claude/validation.ts
-- [ ] T040 [US3] Implement POST /api/settings/api-key/validate route handler in app/api/settings/api-key/validate/route.ts
-- [ ] T041 [US3] Update ApiKeyForm component to add validation button and feedback UI in components/settings/ApiKeyForm.tsx
-- [ ] T042 [US3] Add validation state management to ApiKeyForm (loading, success, error states) in components/settings/ApiKeyForm.tsx
-- [ ] T042a [US3] Performance test for SC-004: Verify API key validation feedback within 3 seconds in tests/integration/settings/api-key-validation-performance.test.ts
+- [x] T039 [US3] Create validation module with validateClaudeApiKey function in lib/claude/validation.ts
+- [x] T040 [US3] Implement POST /api/settings/api-key/validate route handler in app/api/settings/api-key/validate/route.ts
+- [x] T041 [US3] Update ApiKeyForm component to add validation button and feedback UI in components/settings/ApiKeyForm.tsx
+- [x] T042 [US3] Add validation state management to ApiKeyForm (loading, success, error states) in components/settings/ApiKeyForm.tsx
+- [x] T042a [US3] Performance test for SC-004: Verify API key validation feedback within 3 seconds in tests/integration/settings/api-key-validation-performance.test.ts
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should all work independently - validation enhances the key entry experience
 
