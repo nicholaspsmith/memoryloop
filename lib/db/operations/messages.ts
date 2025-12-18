@@ -3,34 +3,30 @@ import { messages } from '@/lib/db/drizzle-schema'
 import { eq } from 'drizzle-orm'
 import type { Message, MessageRole } from '@/types'
 import { incrementMessageCount } from './conversations'
-import { generateEmbedding } from '@/lib/embeddings/ollama'
+import { syncMessageToLanceDB, updateMessageHasFlashcardsInLanceDB } from './messages-lancedb'
 
 /**
  * Message Database Operations
  *
  * Provides CRUD operations for messages in PostgreSQL.
+ * Messages are also synced to LanceDB for vector search capabilities.
  */
 
 /**
  * Create a new message
  *
- * Messages are created immediately with embedding: null.
- * Embeddings are generated asynchronously and updated after creation.
- * This ensures fast message creation with graceful degradation if embedding fails.
+ * Messages are created in PostgreSQL and synced to LanceDB for vector search.
+ * LanceDB sync happens asynchronously and doesn't block message creation.
  */
 export async function createMessage(data: {
   conversationId: string
   userId: string
   role: MessageRole
   content: string
-  embedding?: number[] | null
   aiProvider?: 'claude' | 'ollama' | null
   apiKeyId?: string | null
 }): Promise<Message> {
   const db = getDb()
-
-  // Convert embedding array to pgvector string format if provided
-  const embeddingString = data.embedding ? `[${data.embedding.join(',')}]` : null
 
   const [message] = await db
     .insert(messages)
@@ -39,7 +35,6 @@ export async function createMessage(data: {
       userId: data.userId,
       role: data.role,
       content: data.content,
-      embedding: embeddingString as any,
       hasFlashcards: false,
       aiProvider: data.aiProvider || null,
       apiKeyId: data.apiKeyId || null,
@@ -49,12 +44,20 @@ export async function createMessage(data: {
   // Increment conversation message count
   await incrementMessageCount(data.conversationId)
 
-  // Generate embedding asynchronously (fire and forget)
-  // This doesn't block message creation and gracefully degrades on failure
+  // Sync to LanceDB asynchronously (fire and forget)
+  // This generates the embedding and stores it in LanceDB
   // Skip in test environment to avoid race conditions
-  if (!data.embedding && process.env.NODE_ENV !== 'test') {
-    generateMessageEmbeddingAsync(message.id, data.content).catch((error) => {
-      console.error(`[Messages] Failed to generate embedding for message ${message.id}:`, error)
+  if (process.env.NODE_ENV !== 'test') {
+    syncMessageToLanceDB({
+      id: message.id,
+      conversationId: message.conversationId,
+      userId: message.userId,
+      role: message.role as 'user' | 'assistant',
+      content: message.content,
+      createdAt: message.createdAt.getTime(),
+      hasFlashcards: message.hasFlashcards,
+    }).catch((error) => {
+      console.error(`[Messages] Failed to sync message ${message.id} to LanceDB:`, error)
     })
   }
 
@@ -64,7 +67,7 @@ export async function createMessage(data: {
     userId: message.userId,
     role: message.role as MessageRole,
     content: message.content,
-    embedding: null, // Don't return embedding in API responses
+    embedding: null, // Embeddings stored in LanceDB, not returned in API
     createdAt: message.createdAt.getTime(),
     hasFlashcards: message.hasFlashcards,
     aiProvider: message.aiProvider as 'claude' | 'ollama' | null,
@@ -72,27 +75,6 @@ export async function createMessage(data: {
   }
 }
 
-/**
- * Generate and update message embedding asynchronously
- *
- * This runs in the background and doesn't block message creation.
- * Failures are logged but don't affect the message.
- */
-async function generateMessageEmbeddingAsync(
-  messageId: string,
-  content: string
-): Promise<void> {
-  try {
-    const embedding = await generateEmbedding(content)
-
-    if (embedding) {
-      await updateMessage(messageId, { embedding })
-    }
-  } catch (error) {
-    // Graceful degradation - message exists without embedding
-    console.error(`[Messages] Error in async embedding generation:`, error)
-  }
-}
 
 /**
  * Get message by ID
@@ -180,28 +162,26 @@ export async function getRecentMessages(
 }
 
 /**
- * Update message
+ * Mark message as having flashcards
  */
-export async function updateMessage(
-  id: string,
-  updates: Partial<Pick<Message, 'embedding' | 'hasFlashcards'>>
-): Promise<Message> {
+export async function markMessageWithFlashcards(id: string): Promise<Message> {
   const db = getDb()
-
-  // Convert embedding array to pgvector string format if provided
-  const updateData: any = { ...updates }
-  if (updates.embedding) {
-    updateData.embedding = `[${updates.embedding.join(',')}]`
-  }
 
   const [updatedMessage] = await db
     .update(messages)
-    .set(updateData)
+    .set({ hasFlashcards: true })
     .where(eq(messages.id, id))
     .returning()
 
   if (!updatedMessage) {
     throw new Error(`Message not found: ${id}`)
+  }
+
+  // Update in LanceDB asynchronously
+  if (process.env.NODE_ENV !== 'test') {
+    updateMessageHasFlashcardsInLanceDB(id).catch((error) => {
+      console.error(`[Messages] Failed to update hasFlashcards in LanceDB:`, error)
+    })
   }
 
   return {
@@ -210,7 +190,7 @@ export async function updateMessage(
     userId: updatedMessage.userId,
     role: updatedMessage.role as MessageRole,
     content: updatedMessage.content,
-    embedding: null, // Don't return embedding in API responses
+    embedding: null, // Embeddings stored in LanceDB
     createdAt: updatedMessage.createdAt.getTime(),
     hasFlashcards: updatedMessage.hasFlashcards,
     aiProvider: updatedMessage.aiProvider as 'claude' | 'ollama' | null,

@@ -13,7 +13,7 @@ MemoryLoop uses a **hybrid database architecture** with PostgreSQL and LanceDB w
 ### Tables
 - **users** - User accounts and authentication
 - **conversations** - Chat conversations
-- **messages** - Chat messages with vector embeddings (768-dim for semantic search)
+- **messages** - Chat message metadata (content, role, timestamps)
 - **api_keys** - Encrypted Claude API keys (using pgcrypto)
 
 ### Why PostgreSQL?
@@ -21,8 +21,8 @@ MemoryLoop uses a **hybrid database architecture** with PostgreSQL and LanceDB w
 - ✅ **Foreign keys** - Referential integrity enforced at DB level
 - ✅ **Proper UPDATE** - No delete+add workarounds needed
 - ✅ **Row-level security** - Built-in with Supabase
-- ✅ **pgvector extension** - Vector similarity search for messages
 - ✅ **Encrypted storage** - API keys encrypted with pgcrypto
+- ✅ **Fast CRUD operations** - Optimized for transactional workloads
 
 ### Client
 ```typescript
@@ -44,15 +44,17 @@ const db = getDb() // Drizzle ORM instance
 
 ## LanceDB
 
-**Purpose:** Machine learning data optimized for vector search and high-frequency updates
+**Purpose:** Vector storage and semantic search for messages and flashcards
 
 ### Tables
-- **flashcards** - User flashcards with question embeddings
+- **messages** - Full message copies with vector embeddings (768-dim)
+- **flashcards** - User flashcards with question embeddings (768-dim)
 - **review_logs** - FSRS spaced repetition history
 
 ### Why LanceDB?
 - ✅ **Zero cost** - Local file-based, no hosting fees
 - ✅ **Fast vector search** - Optimized for ANN (Approximate Nearest Neighbor)
+- ✅ **Columnar storage** - Efficient compression for vector data
 - ✅ **No network latency** - Local disk I/O only
 - ✅ **FSRS-friendly** - Handles frequent review log writes efficiently
 - ✅ **Flexible schema** - Easy to store FSRS state as nested objects
@@ -75,13 +77,15 @@ const db = await getDbConnection() // LanceDB instance
 
 ## Data Flow
 
-### Chat Flow (PostgreSQL)
+### Chat Flow (Both Databases)
 ```
 User sends message
   → POST /api/chat/conversations/[id]/messages
-  → createMessage() → PostgreSQL.messages
+  → createMessage() → PostgreSQL.messages (immediate)
+  → syncMessageToLanceDB() → LanceDB.messages (async, with embedding)
   → Stream Claude/Ollama response
-  → createMessage() → PostgreSQL.messages
+  → createMessage() → PostgreSQL.messages (immediate)
+  → syncMessageToLanceDB() → LanceDB.messages (async, with embedding)
 ```
 
 ### Flashcard Generation Flow (Both Databases)
@@ -90,8 +94,9 @@ User clicks "Generate Flashcards"
   → POST /api/flashcards/generate
   → getMessageById() → PostgreSQL.messages (fetch message content)
   → generateFlashcardsFromContent() → Claude/Ollama API
-  → createFlashcard() → LanceDB.flashcards (save each flashcard)
+  → createFlashcard() → LanceDB.flashcards (save with embedding)
   → markMessageWithFlashcards() → PostgreSQL.messages (update flag)
+  → updateMessageHasFlashcardsInLanceDB() → LanceDB.messages (async sync)
 ```
 
 ### Quiz Flow (LanceDB)
