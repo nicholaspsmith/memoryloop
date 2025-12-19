@@ -162,6 +162,8 @@ export default function ApiKeyForm({ onSave, onDelete, existingKeyPreview }: Api
           onClick={handleValidate}
           disabled={!apiKey.trim() || isLoading || isValidating}
           className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-busy={isValidating}
+          title="Validate your Claude API key"
         >
           {isValidating ? 'Validating...' : 'Validate'}
         </button>
@@ -170,6 +172,8 @@ export default function ApiKeyForm({ onSave, onDelete, existingKeyPreview }: Api
           onClick={handleSave}
           disabled={!isValid || isLoading || isValidating}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-busy={isLoading}
+          title={existingKeyPreview ? 'Update your Claude API key' : 'Save your Claude API key'}
         >
           {isLoading ? 'Saving...' : 'Save'}
         </button>
@@ -179,6 +183,7 @@ export default function ApiKeyForm({ onSave, onDelete, existingKeyPreview }: Api
             onClick={handleDeleteClick}
             disabled={isLoading || isValidating}
             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Delete your Claude API key"
           >
             Delete
           </button>
@@ -198,13 +203,22 @@ export default function ApiKeyForm({ onSave, onDelete, existingKeyPreview }: Api
       )}
 
       {showDeleteConfirm && (
-        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-          <p className="text-sm mb-3">Are you sure you want to delete your API key?</p>
+        <div
+          role="dialog"
+          aria-labelledby="delete-dialog-title"
+          aria-describedby="delete-dialog-description"
+          className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg"
+        >
+          <p id="delete-dialog-description" className="text-sm mb-3">
+            Are you sure you want to delete your API key?
+          </p>
           <div className="flex gap-2">
             <button
               onClick={handleDeleteConfirm}
               disabled={isLoading}
               className="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 disabled:opacity-50"
+              aria-label="Confirm deletion"
+              aria-busy={isLoading}
             >
               {isLoading ? 'Deleting...' : 'Confirm'}
             </button>
@@ -212,6 +226,7 @@ export default function ApiKeyForm({ onSave, onDelete, existingKeyPreview }: Api
               onClick={handleDeleteCancel}
               disabled={isLoading}
               className="px-3 py-1 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 text-sm rounded hover:bg-gray-400 dark:hover:bg-gray-500 disabled:opacity-50"
+              aria-label="Cancel deletion"
             >
               Cancel
             </button>

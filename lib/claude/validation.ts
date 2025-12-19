@@ -21,7 +21,7 @@ const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
 const ANTHROPIC_VERSION = '2023-06-01'
 
 /**
- * Validate a Claude API key
+ * Validate a Claude API key (T064 - with structured logging)
  *
  * @param apiKey - The API key to validate
  * @returns Validation result with success/error details
@@ -29,9 +29,23 @@ const ANTHROPIC_VERSION = '2023-06-01'
 export async function validateClaudeApiKey(
   apiKey: string | null | undefined
 ): Promise<ValidationResult> {
+  const startTime = Date.now()
+
   // Step 1: Format validation
   const formatResult = validateFormat(apiKey)
   if (!formatResult.valid) {
+    // Structured logging for validation failure (T064)
+    console.log(
+      JSON.stringify({
+        event: 'api_key_validation',
+        stage: 'format',
+        valid: false,
+        code: formatResult.code,
+        executionTimeMs: Date.now() - startTime,
+        timestamp: new Date().toISOString(),
+      })
+    )
+
     return formatResult
   }
 
@@ -40,12 +54,33 @@ export async function validateClaudeApiKey(
   // Step 2: API authentication validation
   try {
     const authResult = await testApiAuthentication(trimmedKey)
+
+    // Structured logging for validation result (T064)
+    console.log(
+      JSON.stringify({
+        event: 'api_key_validation',
+        stage: 'authentication',
+        valid: authResult.valid,
+        code: authResult.code,
+        executionTimeMs: Date.now() - startTime,
+        timestamp: new Date().toISOString(),
+      })
+    )
+
     return authResult
   } catch (error) {
-    console.error('[Validation] Error during API key validation:', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      // Never log the actual API key
-    })
+    // Structured logging for network error (T064)
+    console.log(
+      JSON.stringify({
+        event: 'api_key_validation',
+        stage: 'authentication',
+        valid: false,
+        code: 'NETWORK_ERROR',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        executionTimeMs: Date.now() - startTime,
+        timestamp: new Date().toISOString(),
+      })
+    )
 
     return {
       valid: false,

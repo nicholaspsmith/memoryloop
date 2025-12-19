@@ -54,6 +54,7 @@ describe('Ollama Fallback Behavior', () => {
       // Create a user message
       const userMessage = await createMessage({
         conversationId: testConversationId,
+        userId: testUserId,
         role: 'user',
         content: 'Hello, this is a test message',
       })
@@ -61,26 +62,29 @@ describe('Ollama Fallback Behavior', () => {
       expect(userMessage).toBeDefined()
 
       // Get chat completion without API key (should fall back to Ollama)
-      const response = await getChatCompletion(
-        [{ role: 'user', content: 'Hello' }],
-        null // No API key provided
-      )
+      const response = await getChatCompletion({
+        messages: [{ role: 'user', content: 'Hello' }],
+        systemPrompt: 'You are a helpful assistant.',
+        userApiKey: null, // No API key provided
+      })
 
       expect(response).toBeDefined()
-      expect(response.content).toBeTruthy()
-      expect(typeof response.content).toBe('string')
+      expect(typeof response).toBe('string')
+      expect(response.length).toBeGreaterThan(0)
     }, 30000) // 30 second timeout for Ollama
 
     it('should set aiProvider to "ollama" when using fallback', async () => {
       // Create messages using Ollama
       const userMessage = await createMessage({
         conversationId: testConversationId,
+        userId: testUserId,
         role: 'user',
         content: 'Test message for provider tracking',
       })
 
       const assistantMessage = await createMessage({
         conversationId: testConversationId,
+        userId: testUserId,
         role: 'assistant',
         content: 'Response from Ollama',
         aiProvider: 'ollama', // Should be set when using Ollama
@@ -107,10 +111,9 @@ describe('Ollama Fallback Behavior', () => {
       `
 
       // Generate flashcards without API key (should fall back to Ollama)
-      const flashcards = await generateFlashcardsFromContent(
-        educationalContent,
-        null // No API key provided
-      )
+      const flashcards = await generateFlashcardsFromContent(educationalContent, {
+        userApiKey: null, // No API key provided
+      })
 
       expect(flashcards).toBeDefined()
       expect(Array.isArray(flashcards)).toBe(true)
@@ -130,23 +133,27 @@ describe('Ollama Fallback Behavior', () => {
 
   describe('Fallback behavior verification', () => {
     it('should handle null API key gracefully', async () => {
-      const response = await getChatCompletion(
-        [{ role: 'user', content: 'Test with null key' }],
-        null
-      )
+      const response = await getChatCompletion({
+        messages: [{ role: 'user', content: 'Test with null key' }],
+        systemPrompt: 'You are a helpful assistant.',
+        userApiKey: null,
+      })
 
       expect(response).toBeDefined()
-      expect(response.content).toBeTruthy()
+      expect(typeof response).toBe('string')
+      expect(response.length).toBeGreaterThan(0)
     }, 30000)
 
     it('should handle undefined API key gracefully', async () => {
-      const response = await getChatCompletion(
-        [{ role: 'user', content: 'Test with undefined key' }],
-        undefined
-      )
+      const response = await getChatCompletion({
+        messages: [{ role: 'user', content: 'Test with undefined key' }],
+        systemPrompt: 'You are a helpful assistant.',
+        userApiKey: undefined,
+      })
 
       expect(response).toBeDefined()
-      expect(response.content).toBeTruthy()
+      expect(typeof response).toBe('string')
+      expect(response.length).toBeGreaterThan(0)
     }, 30000)
 
     it('should work for users without saved API keys', async () => {
@@ -155,13 +162,15 @@ describe('Ollama Fallback Behavior', () => {
       expect(userApiKey).toBeNull()
 
       // Both chat and flashcards should work via Ollama
-      const chatResponse = await getChatCompletion(
-        [{ role: 'user', content: 'Hello without API key' }],
-        null
-      )
+      const chatResponse = await getChatCompletion({
+        messages: [{ role: 'user', content: 'Hello without API key' }],
+        systemPrompt: 'You are a helpful assistant.',
+        userApiKey: null,
+      })
 
       expect(chatResponse).toBeDefined()
-      expect(chatResponse.content).toBeTruthy()
+      expect(typeof chatResponse).toBe('string')
+      expect(chatResponse.length).toBeGreaterThan(0)
     }, 30000)
   })
 })

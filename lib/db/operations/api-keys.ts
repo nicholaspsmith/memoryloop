@@ -11,7 +11,7 @@ import type { ApiKey } from '@/lib/db/drizzle-schema'
  */
 
 /**
- * Save or update user's API key
+ * Save or update user's API key (T062 - with structured logging)
  *
  * @param userId - User ID
  * @param apiKey - Plaintext API key
@@ -19,6 +19,7 @@ import type { ApiKey } from '@/lib/db/drizzle-schema'
  */
 export async function saveUserApiKey(userId: string, apiKey: string): Promise<ApiKey> {
   const db = getDb()
+  const startTime = Date.now()
 
   // Encrypt the API key
   const encryptedKey = await encryptApiKey(apiKey)
@@ -41,6 +42,17 @@ export async function saveUserApiKey(userId: string, apiKey: string): Promise<Ap
       .where(eq(apiKeys.userId, userId))
       .returning()
 
+    // Structured logging (T062)
+    console.log(
+      JSON.stringify({
+        event: 'api_key_updated',
+        userId,
+        keyPreview: updated.keyPreview,
+        executionTimeMs: Date.now() - startTime,
+        timestamp: new Date().toISOString(),
+      })
+    )
+
     return updated
   } else {
     // Insert new key
@@ -54,6 +66,17 @@ export async function saveUserApiKey(userId: string, apiKey: string): Promise<Ap
         lastValidatedAt: null,
       })
       .returning()
+
+    // Structured logging (T062)
+    console.log(
+      JSON.stringify({
+        event: 'api_key_created',
+        userId,
+        keyPreview: created.keyPreview,
+        executionTimeMs: Date.now() - startTime,
+        timestamp: new Date().toISOString(),
+      })
+    )
 
     return created
   }
@@ -94,24 +117,38 @@ export async function getUserApiKeyRecord(userId: string): Promise<ApiKey | null
 }
 
 /**
- * Delete user's API key
+ * Delete user's API key (T062 - with structured logging)
  *
  * @param userId - User ID
  * @returns True if deleted, false if not found
  */
 export async function deleteUserApiKey(userId: string): Promise<boolean> {
   const db = getDb()
+  const startTime = Date.now()
 
   const result = await db
     .delete(apiKeys)
     .where(eq(apiKeys.userId, userId))
     .returning()
 
-  return result.length > 0
+  const deleted = result.length > 0
+
+  // Structured logging (T062)
+  console.log(
+    JSON.stringify({
+      event: 'api_key_deleted',
+      userId,
+      success: deleted,
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+    })
+  )
+
+  return deleted
 }
 
 /**
- * Update API key validation status
+ * Update API key validation status (T062 - with structured logging)
  *
  * @param userId - User ID
  * @param isValid - Validation status
@@ -121,6 +158,7 @@ export async function updateApiKeyValidation(
   isValid: boolean
 ): Promise<void> {
   const db = getDb()
+  const startTime = Date.now()
 
   await db
     .update(apiKeys)
@@ -130,4 +168,15 @@ export async function updateApiKeyValidation(
       updatedAt: new Date(),
     })
     .where(eq(apiKeys.userId, userId))
+
+  // Structured logging (T062)
+  console.log(
+    JSON.stringify({
+      event: 'api_key_validation_updated',
+      userId,
+      isValid,
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+    })
+  )
 }
