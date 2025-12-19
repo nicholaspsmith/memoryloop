@@ -47,12 +47,12 @@
 
 ### Implementation
 
-- [ ] T007 [US2] Create Dockerfile for Next.js production build in repository root (multi-stage build for optimization)
-- [ ] T008 [US2] Create docker-compose.yml for local development in repository root (app, ollama, nginx)
-- [ ] T009 [US2] Create docker-compose.prod.yml for production deployment in repository root (app, ollama, nginx, volumes)
-- [ ] T010 [P] [US2] Create .dockerignore file in repository root (node_modules, .git, .next, tests, etc.)
-- [ ] T011 [P] [US2] Add health check endpoint in app/api/health/route.ts (check DB, Ollama, Anthropic API)
-- [ ] T012 [P] [US2] Create Docker entrypoint script in scripts/docker-entrypoint.sh (DB init, migrations, startup)
+- [x] T007 [US2] Create Dockerfile for Next.js production build in repository root (multi-stage build for optimization)
+- [x] T008 [US2] Create docker-compose.yml for local development in repository root (app, ollama, nginx)
+- [x] T009 [US2] Create docker-compose.prod.yml for production deployment in repository root (app, ollama, nginx, volumes)
+- [x] T010 [P] [US2] Create .dockerignore file in repository root (node_modules, .git, .next, tests, etc.)
+- [x] T011 [P] [US2] Add health check endpoint in app/api/health/route.ts (check DB, Ollama, Anthropic API)
+- [x] T012 [P] [US2] Create Docker entrypoint script in scripts/docker-entrypoint.sh (DB init, migrations, startup)
 
 **Checkpoint**: Docker builds successfully, app runs in container locally
 
