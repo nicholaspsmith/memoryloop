@@ -28,12 +28,12 @@
 
 ### Implementation
 
-- [ ] T001 [P] [US1] Create GitHub Actions workflow for CI in .github/workflows/ci.yml (lint, type-check, unit tests)
-- [ ] T002 [P] [US1] Create GitHub Actions workflow for integration tests in .github/workflows/integration.yml (Playwright E2E)
-- [ ] T003 [P] [US1] Create GitHub Actions workflow for deployment in .github/workflows/deploy.yml (build, push Docker image, deploy)
-- [ ] T004 [P] [US1] Add build caching to CI workflow in .github/workflows/ci.yml (npm cache, Docker layer cache)
-- [ ] T005 [US1] Configure GitHub Actions secrets (ANTHROPIC_API_KEY, VPS_SSH_KEY, DOCKER_REGISTRY_TOKEN)
-- [ ] T006 [US1] Add branch protection rules requiring CI checks to pass before merge
+- [x] T001 [P] [US1] Create GitHub Actions workflow for CI in .github/workflows/ci.yml (lint, type-check, unit tests)
+- [x] T002 [P] [US1] Create GitHub Actions workflow for integration tests in .github/workflows/integration.yml (Playwright E2E)
+- [x] T003 [P] [US1] Create GitHub Actions workflow for deployment in .github/workflows/deploy.yml (build, push Docker image, deploy)
+- [x] T004 [P] [US1] Add build caching to CI workflow in .github/workflows/ci.yml (npm cache, Docker layer cache)
+- [ ] T005 [US1] Configure GitHub Actions secrets (ANTHROPIC_API_KEY, VPS_SSH_KEY, DOCKER_REGISTRY_TOKEN) - See docs/github-secrets-setup.md
+- [ ] T006 [US1] Add branch protection rules requiring CI checks to pass before merge - See docs/github-branch-protection.md
 
 **Checkpoint**: CI pipeline running on all PRs and merges to main
 
