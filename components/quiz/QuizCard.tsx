@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import RatingButtons from './RatingButtons'
 
 /**
@@ -41,12 +41,9 @@ interface QuizCardProps {
 }
 
 export default function QuizCard({ flashcard, onRate }: QuizCardProps) {
+  // Use key prop pattern instead of useEffect to reset state when flashcard changes
+  // The parent component should pass key={flashcard.id} to this component
   const [isAnswerRevealed, setIsAnswerRevealed] = useState(false)
-
-  // Reset answer visibility when flashcard changes
-  useEffect(() => {
-    setIsAnswerRevealed(false)
-  }, [flashcard.id])
 
   const handleRevealAnswer = () => {
     setIsAnswerRevealed(true)

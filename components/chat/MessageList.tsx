@@ -39,7 +39,7 @@ export default function MessageList({
             Start a conversation
           </h2>
           <p className="text-gray-500">
-            Ask me anything! I'm here to help you learn and understand new concepts.
+            Ask me anything! I&apos;m here to help you learn and understand new concepts.
           </p>
         </div>
       </div>
