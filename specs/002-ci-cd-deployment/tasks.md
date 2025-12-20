@@ -32,8 +32,8 @@
 - [x] T002 [P] [US1] Create GitHub Actions workflow for integration tests in .github/workflows/integration.yml (Playwright E2E)
 - [x] T003 [P] [US1] Create GitHub Actions workflow for deployment in .github/workflows/deploy.yml (build, push Docker image, deploy)
 - [x] T004 [P] [US1] Add build caching to CI workflow in .github/workflows/ci.yml (npm cache, Docker layer cache)
-- [ ] T005 [US1] Configure GitHub Actions secrets (ANTHROPIC_API_KEY, VPS_SSH_KEY, DOCKER_REGISTRY_TOKEN) - See docs/github-secrets-setup.md
-- [ ] T006 [US1] Add branch protection rules requiring CI checks to pass before merge - See docs/github-branch-protection.md
+- [x] T005 [US1] Configure GitHub Actions secrets (ANTHROPIC_API_KEY, VPS_SSH_KEY, DOCKER_REGISTRY_TOKEN) - See docs/github-secrets-setup.md
+- [x] T006 [US1] Add branch protection rules requiring CI checks to pass before merge - See docs/github-branch-protection.md
 
 **Checkpoint**: CI pipeline running on all PRs and merges to main
 
@@ -66,12 +66,12 @@
 
 ### Implementation
 
-- [ ] T013 [US3] Provision VPS (Hetzner CX22 or DigitalOcean Droplet - 4GB RAM, 2 vCPU)
-- [ ] T014 [US3] Configure firewall (UFW) - allow ports 22 (SSH), 80 (HTTP), 443 (HTTPS)
-- [ ] T015 [US3] Install Docker and Docker Compose on VPS
-- [ ] T016 [US3] Create deploy user with sudo access and SSH key authentication
-- [ ] T017 [US3] Configure SSH hardening (disable password auth, change port, fail2ban)
-- [ ] T018 [US3] Create directory structure on VPS (/opt/memoryloop, /opt/memoryloop/data, etc.)
+- [x] T013 [US3] Provision VPS (Hetzner CPX21 - 4GB RAM, 3 vCPU, IP: 5.161.53.66)
+- [x] T014 [US3] Configure firewall (UFW) - allow ports 22 (SSH), 80 (HTTP), 443 (HTTPS)
+- [x] T015 [US3] Install Docker and Docker Compose on VPS
+- [x] T016 [US3] Create deploy user with sudo access and SSH key authentication
+- [x] T017 [US3] Configure SSH hardening (disable password auth, fail2ban)
+- [x] T018 [US3] Create directory structure on VPS (/opt/memoryloop, /opt/memoryloop/data, etc.)
 - [ ] T019 [P] [US3] Create VPS setup script in scripts/setup-vps.sh (automate server configuration)
 
 **Checkpoint**: VPS accessible, Docker ready, secure SSH configured
@@ -86,12 +86,12 @@
 
 ### Implementation
 
-- [ ] T020 [P] [US4] Create Nginx configuration for reverse proxy in nginx/memoryloop.conf
-- [ ] T021 [US4] Install Certbot on VPS for Let's Encrypt SSL certificates
-- [ ] T022 [US4] Configure DNS A record for memoryloop.nicholaspsmith.com pointing to VPS IP
-- [ ] T023 [US4] Obtain SSL certificate using Certbot (certbot --nginx -d memoryloop.nicholaspsmith.com)
-- [ ] T024 [P] [US4] Configure Nginx SSL settings (TLS 1.3, HSTS, security headers)
-- [ ] T025 [US4] Set up automatic SSL certificate renewal (certbot renew --nginx)
+- [x] T020 [P] [US4] Create Nginx configuration for reverse proxy in nginx/memoryloop.conf
+- [x] T021 [US4] Install Certbot on VPS for Let's Encrypt SSL certificates
+- [x] T022 [US4] Configure DNS A record for memoryloop.nicholaspsmith.com pointing to VPS IP
+- [x] T023 [US4] Obtain SSL certificate using Certbot (certbot --nginx -d memoryloop.nicholaspsmith.com)
+- [x] T024 [P] [US4] Configure Nginx SSL settings (TLS 1.3, HSTS, security headers)
+- [x] T025 [US4] Set up automatic SSL certificate renewal (certbot renew --nginx)
 
 **Checkpoint**: HTTPS working, SSL certificate valid, automatic renewal configured
 
