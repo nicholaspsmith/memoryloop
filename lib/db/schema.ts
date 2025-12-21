@@ -28,47 +28,9 @@ async function performInitialization() {
   const db = await getDbConnection()
   const existingTables = await db.tableNames()
 
-  console.log('🔨 Creating database schema...')
+  console.log('🔨 Creating LanceDB schema...')
 
-  // 1. Users table
-  if (!existingTables.includes('users')) {
-    await db.createTable(
-      'users',
-      [
-        {
-          id: '00000000-0000-0000-0000-000000000000',
-          email: 'init@example.com',
-          name: 'Init User',
-          passwordHash: '$2b$10$INIT_PLACEHOLDER_HASH_FOR_SCHEMA_CREATION_ONLY',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-      ],
-      { mode: 'create' }
-    )
-    console.log('✅ Created users table')
-  }
-
-  // 2. Conversations table
-  if (!existingTables.includes('conversations')) {
-    await db.createTable(
-      'conversations',
-      [
-        {
-          id: '00000000-0000-0000-0000-000000000000',
-          userId: '00000000-0000-0000-0000-000000000000',
-          title: 'Init Conversation',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          messageCount: 0,
-        },
-      ],
-      { mode: 'create' }
-    )
-    console.log('✅ Created conversations table')
-  }
-
-  // 3. Messages table (with vector column for embeddings)
+  // 1. Messages table (with vector column for embeddings)
   if (!existingTables.includes('messages')) {
     await db.createTable(
       'messages',
@@ -89,7 +51,7 @@ async function performInitialization() {
     console.log('✅ Created messages table')
   }
 
-  // 4. Flashcards table (with vector column and FSRS state)
+  // 2. Flashcards table (with vector column and FSRS state)
   if (!existingTables.includes('flashcards')) {
     const emptyFSRSCard = createEmptyCard()
 
@@ -121,7 +83,7 @@ async function performInitialization() {
     console.log('✅ Created flashcards table')
   }
 
-  // 5. ReviewLogs table
+  // 3. ReviewLogs table
   if (!existingTables.includes('review_logs')) {
     await db.createTable(
       'review_logs',
@@ -168,7 +130,7 @@ export async function isSchemaInitialized(): Promise<boolean> {
   try {
     const db = await getDbConnection()
     const tableNames = await db.tableNames()
-    const requiredTables = ['users', 'conversations', 'messages', 'flashcards', 'review_logs']
+    const requiredTables = ['messages', 'flashcards', 'review_logs']
 
     return requiredTables.every((table) => tableNames.includes(table))
   } catch (error) {
