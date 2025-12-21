@@ -45,7 +45,7 @@ jobs:
 
       - name: Create test environment file
         run: |
-          cat > .env.test.local << EOF
+          cat > .env.local << EOF
           DATABASE_URL=postgresql://postgres:postgres@localhost:5432/memoryloop_test
           NEXTAUTH_SECRET=test-secret-key-for-ci-pipeline
           NEXTAUTH_URL=http://localhost:3000
@@ -74,6 +74,8 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/memoryloop_test
           API_KEY_ENCRYPTION_SECRET: test-api-key-encryption-secret-32
+          NEXTAUTH_SECRET: test-secret-key-for-ci-pipeline
+          NEXTAUTH_URL: http://localhost:3000
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
