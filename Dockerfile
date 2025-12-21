@@ -14,6 +14,10 @@ RUN npm ci --only=production
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Build arguments for Next.js build
+ARG API_KEY_ENCRYPTION_SECRET
+ARG NEXT_PUBLIC_APP_URL
+
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -24,6 +28,7 @@ RUN npm ci
 # Build Next.js application
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV NODE_ENV production
+ENV API_KEY_ENCRYPTION_SECRET=$API_KEY_ENCRYPTION_SECRET
 RUN npm run build
 
 # Stage 3: Runner
