@@ -5,7 +5,6 @@ import { getMessageById } from '@/lib/db/operations/messages'
 import { generateFlashcardsFromContent } from '@/lib/claude/flashcard-generator'
 import { createFlashcard, getFlashcardsByMessageId } from '@/lib/db/operations/flashcards'
 import { getUserApiKey } from '@/lib/db/operations/api-keys'
-import { generateEmbedding } from '@/lib/embeddings/ollama'
 
 /**
  * POST /api/flashcards/generate
@@ -98,28 +97,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Create flashcard records in database (FR-010)
+    // Note: createFlashcard handles embedding generation via syncFlashcardToLanceDB
     const flashcards = await Promise.all(
       flashcardPairs.map(async (pair) => {
-        const flashcard = await createFlashcard({
+        return createFlashcard({
           userId,
           conversationId: message.conversationId,
           messageId: message.id,
           question: pair.question,
           answer: pair.answer,
         })
-
-        // Generate question embedding asynchronously (fire and forget)
-        // Skip in test environment to avoid race conditions
-        if (process.env.NODE_ENV !== 'test') {
-          generateQuestionEmbeddingAsync(flashcard.id, pair.question).catch((error) => {
-            console.error(
-              `[FlashcardGenerate] Failed to generate embedding for flashcard ${flashcard.id}:`,
-              error
-            )
-          })
-        }
-
-        return flashcard
       })
     )
 
@@ -168,31 +155,5 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     )
-  }
-}
-
-/**
- * Generate question embedding asynchronously
- * (Fire and forget - don't block flashcard creation)
- */
-async function generateQuestionEmbeddingAsync(
-  flashcardId: string,
-  question: string
-): Promise<void> {
-  try {
-    const { updateFlashcardEmbedding } = await import('@/lib/db/operations/flashcards')
-
-    const embedding = await generateEmbedding(question)
-
-    if (embedding) {
-      await updateFlashcardEmbedding(flashcardId, embedding)
-      console.log(`[FlashcardGenerate] Generated embedding for flashcard ${flashcardId}`)
-    }
-  } catch (error) {
-    console.error(
-      `[FlashcardGenerate] Error generating embedding for flashcard ${flashcardId}:`,
-      error
-    )
-    // Don't throw - this is fire-and-forget
   }
 }
