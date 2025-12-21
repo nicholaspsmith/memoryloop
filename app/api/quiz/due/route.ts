@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { z } from 'zod'
 import { getFlashcardsByUserId } from '@/lib/db/operations/flashcards'
 
 /**
@@ -66,6 +67,19 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('[QuizDue] Error:', error)
+
+    // Log detailed Zod validation errors for debugging
+    if (error instanceof z.ZodError) {
+      console.error('[QuizDue] Validation errors:', JSON.stringify(error.issues, null, 2))
+      return NextResponse.json(
+        {
+          error: 'Data validation error',
+          code: 'VALIDATION_ERROR',
+          details: error.issues,
+        },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json(
       {
