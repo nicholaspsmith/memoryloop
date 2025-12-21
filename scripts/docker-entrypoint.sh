@@ -20,11 +20,9 @@ done
 
 echo "PostgreSQL is ready!"
 
-# Run database migrations if needed
-if [ "$RUN_MIGRATIONS" = "true" ]; then
-  echo "Running database migrations..."
-  npm run db:push || echo "Warning: Database migration failed or already up to date"
-fi
+# Run database schema initialization (idempotent)
+echo "Initializing database schema..."
+PGPASSWORD="${POSTGRES_PASSWORD}" psql -h "${DATABASE_HOST:-postgres}" -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-memoryloop}" -f /app/scripts/init-db.sql || echo "Warning: Schema initialization had issues (may be OK if tables exist)"
 
 # Initialize LanceDB directory
 echo "Ensuring LanceDB directory exists..."
