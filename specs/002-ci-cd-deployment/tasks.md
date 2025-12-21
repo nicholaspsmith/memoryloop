@@ -124,11 +124,11 @@
 
 ### Implementation
 
-- [ ] T032 [P] [US6] Set up application logging in lib/logger.ts (structured logs to stdout)
-- [ ] T033 [P] [US6] Configure Docker log aggregation (send to external service or local file)
-- [ ] T034 [P] [US6] Add error tracking with Sentry in next.config.ts (optional, can be added later)
-- [ ] T035 [US6] Set up uptime monitoring (UptimeRobot, Pingdom, or self-hosted)
-- [ ] T036 [P] [US6] Create monitoring dashboard script in scripts/monitor.sh (check health, disk usage, memory)
+- [x] T032 [P] [US6] Set up application logging in lib/logger.ts (structured logs to stdout)
+- [x] T033 [P] [US6] Configure Docker log aggregation (send to external service or local file)
+- [x] T034 [P] [US6] ~~Add error tracking with Sentry~~ Moved to 007-sentry-error-tracking
+- [x] T035 [US6] Set up uptime monitoring (UptimeRobot, Pingdom, or self-hosted) - see docs/uptime-monitoring.md
+- [x] T036 [P] [US6] Create monitoring dashboard script in scripts/monitor.sh (check health, disk usage, memory)
 
 **Checkpoint**: Application deployed, monitored, and accessible at memoryloop.nicholaspsmith.com
 
