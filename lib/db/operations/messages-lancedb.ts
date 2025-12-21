@@ -59,16 +59,14 @@ export async function syncMessageToLanceDB(message: {
  *
  * Called when flashcards are generated for a message.
  */
-export async function updateMessageHasFlashcardsInLanceDB(
-  messageId: string
-): Promise<void> {
+export async function updateMessageHasFlashcardsInLanceDB(messageId: string): Promise<void> {
   try {
     const db = await getDbConnection()
     const table = await db.openTable('messages')
 
     // LanceDB doesn't have UPDATE - need to delete and re-add
     // First, get the existing message
-    const results = await table.filter(`id = '${messageId}'`).limit(1).toArray()
+    const results = await table.query().where(`id = '${messageId}'`).limit(1).toArray()
 
     if (results.length === 0) {
       console.warn(`[LanceDB] Message ${messageId} not found for update`)
@@ -90,10 +88,7 @@ export async function updateMessageHasFlashcardsInLanceDB(
 
     console.log(`[LanceDB] Updated hasFlashcards for message ${messageId}`)
   } catch (error) {
-    console.error(
-      `[LanceDB] Failed to update hasFlashcards for message ${messageId}:`,
-      error
-    )
+    console.error(`[LanceDB] Failed to update hasFlashcards for message ${messageId}:`, error)
   }
 }
 

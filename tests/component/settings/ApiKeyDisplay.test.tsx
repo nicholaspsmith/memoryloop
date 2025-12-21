@@ -43,13 +43,7 @@ describe('ApiKeyDisplay Component', () => {
 
     it('should show validation status indicator', () => {
       const mockOnDelete = vi.fn()
-      render(
-        <ApiKeyDisplay
-          keyPreview="sk-ant-...abc123"
-          onDelete={mockOnDelete}
-          isValid={true}
-        />
-      )
+      render(<ApiKeyDisplay keyPreview="sk-ant-...abc123" onDelete={mockOnDelete} isValid={true} />)
 
       expect(screen.getByRole('status')).toBeInTheDocument()
     })
@@ -57,11 +51,7 @@ describe('ApiKeyDisplay Component', () => {
     it('should show warning when API key is invalid', () => {
       const mockOnDelete = vi.fn()
       render(
-        <ApiKeyDisplay
-          keyPreview="sk-ant-...abc123"
-          onDelete={mockOnDelete}
-          isValid={false}
-        />
+        <ApiKeyDisplay keyPreview="sk-ant-...abc123" onDelete={mockOnDelete} isValid={false} />
       )
 
       expect(screen.getAllByText(/invalid|expired/i)[0]).toBeInTheDocument()
@@ -110,7 +100,9 @@ describe('ApiKeyDisplay Component', () => {
 
     it('should show loading state while deleting', async () => {
       const user = userEvent.setup()
-      const mockOnDelete = vi.fn(() => new Promise(resolve => setTimeout(resolve, 100)))
+      const mockOnDelete = vi.fn(
+        (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 100))
+      )
       render(<ApiKeyDisplay keyPreview="sk-ant-...abc123" onDelete={mockOnDelete} />)
 
       const deleteButton = screen.getByRole('button', { name: /delete|remove/i })

@@ -1,4 +1,4 @@
-import { getChatCompletion, OLLAMA_MODEL } from './client'
+import { getChatCompletion } from './client'
 
 /**
  * Flashcard Generation Module

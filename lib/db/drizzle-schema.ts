@@ -8,7 +8,6 @@ import {
   boolean,
   jsonb,
 } from 'drizzle-orm/pg-core'
-import { sql } from 'drizzle-orm'
 
 /**
  * Drizzle ORM Schema for MemoryLoop with PostgreSQL

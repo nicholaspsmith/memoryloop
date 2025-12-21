@@ -12,7 +12,6 @@ import { initializeSchema } from '@/lib/db/schema'
  */
 
 const BASE_URL = 'http://localhost:3000'
-let testUserId: string
 let authCookie: string
 
 describe('API Key Settings Contract Tests', () => {
@@ -31,8 +30,8 @@ describe('API Key Settings Contract Tests', () => {
       }),
     })
 
-    const signupData = await signupResponse.json()
-    testUserId = signupData.data.user.id
+    // Parse the response to confirm signup succeeded
+    await signupResponse.json()
 
     // Get auth cookie from response
     authCookie = signupResponse.headers.get('set-cookie') || ''
