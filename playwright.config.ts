@@ -3,8 +3,9 @@ import { defineConfig, devices } from '@playwright/test'
 export default defineConfig({
   testDir: './tests/e2e',
 
-  // Run tests in files in parallel
-  fullyParallel: true,
+  // Run tests sequentially since they share user state (API key)
+  // Individual files use serial mode within describe blocks
+  fullyParallel: false,
 
   // Fail the build on CI if you accidentally left test.only in the source code
   forbidOnly: !!process.env.CI,
@@ -31,19 +32,41 @@ export default defineConfig({
 
   // Configure projects for major browsers
   projects: [
+    // Setup project - runs first to authenticate
+    {
+      name: 'setup',
+      testMatch: /auth\.setup\.ts/,
+    },
+
+    // Authenticated tests - depend on setup
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/e2e/.auth/user.json',
+      },
+      dependencies: ['setup'],
+      testIgnore: /auth\.setup\.ts/,
     },
 
     {
       name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
+      use: {
+        ...devices['Desktop Firefox'],
+        storageState: 'tests/e2e/.auth/user.json',
+      },
+      dependencies: ['setup'],
+      testIgnore: /auth\.setup\.ts/,
     },
 
     {
       name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
+      use: {
+        ...devices['Desktop Safari'],
+        storageState: 'tests/e2e/.auth/user.json',
+      },
+      dependencies: ['setup'],
+      testIgnore: /auth\.setup\.ts/,
     },
   ],
 
