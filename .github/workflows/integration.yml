@@ -51,7 +51,12 @@ jobs:
           NEXTAUTH_URL=http://localhost:3000
           OLLAMA_BASE_URL=http://localhost:11434
           ENCRYPTION_KEY=test-encryption-key-32-chars-long
+          API_KEY_ENCRYPTION_SECRET=test-api-key-encryption-secret-32
           EOF
+
+      - name: Install pgcrypto extension
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d memoryloop_test -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
 
       - name: Run database migrations
         run: npm run db:push
@@ -62,11 +67,13 @@ jobs:
         run: npm run build
         env:
           SKIP_ENV_VALIDATION: true
+          API_KEY_ENCRYPTION_SECRET: ${{ secrets.API_KEY_ENCRYPTION_SECRET }}
 
       - name: Run E2E tests
         run: npm run test:e2e
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/memoryloop_test
+          API_KEY_ENCRYPTION_SECRET: test-api-key-encryption-secret-32
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
