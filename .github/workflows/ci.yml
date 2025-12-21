@@ -88,6 +88,10 @@ jobs:
           API_KEY_ENCRYPTION_SECRET=test-api-key-encryption-secret-32
           EOF
 
+      - name: Install pgcrypto extension
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d memoryloop_test -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
+
       - name: Run database migrations
         run: npm run db:push
         env:
