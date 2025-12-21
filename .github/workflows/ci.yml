@@ -97,6 +97,7 @@ jobs:
         run: npm test
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/memoryloop_test
+          API_KEY_ENCRYPTION_SECRET: test-api-key-encryption-secret-32
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
