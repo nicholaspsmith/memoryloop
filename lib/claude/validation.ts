@@ -85,7 +85,8 @@ export async function validateClaudeApiKey(
     return {
       valid: false,
       code: 'NETWORK_ERROR',
-      error: 'Network error: Unable to validate API key. Please check your internet connection and try again.',
+      error:
+        'Network error: Unable to validate API key. Please check your internet connection and try again.',
     }
   }
 }
@@ -93,9 +94,7 @@ export async function validateClaudeApiKey(
 /**
  * Validate API key format
  */
-function validateFormat(
-  apiKey: string | null | undefined
-): ValidationResult {
+function validateFormat(apiKey: string | null | undefined): ValidationResult {
   // Check for null/undefined
   if (apiKey === null || apiKey === undefined) {
     return {
@@ -129,7 +128,8 @@ function validateFormat(
     return {
       valid: false,
       code: 'INVALID_FORMAT',
-      error: 'Invalid API key format. Claude API keys should be in the format: sk-ant-api03-{95+ characters}.',
+      error:
+        'Invalid API key format. Claude API keys should be in the format: sk-ant-api03-{95+ characters}.',
     }
   }
 
@@ -148,9 +148,7 @@ function validateFormat(
 /**
  * Test API key authentication by making a minimal API call
  */
-async function testApiAuthentication(
-  apiKey: string
-): Promise<ValidationResult> {
+async function testApiAuthentication(apiKey: string): Promise<ValidationResult> {
   try {
     // Make minimal API call to test authentication
     // Using max_tokens: 1 to minimize cost

@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createUser } from '@/lib/db/operations/users'
-import { saveUserApiKey, getUserApiKey, getUserApiKeyRecord, deleteUserApiKey } from '@/lib/db/operations/api-keys'
+import {
+  saveUserApiKey,
+  getUserApiKey,
+  getUserApiKeyRecord,
+  deleteUserApiKey,
+} from '@/lib/db/operations/api-keys'
 import { hashPassword } from '@/lib/auth/helpers'
 import { getDb } from '@/lib/db/pg-client'
 import { users } from '@/lib/db/drizzle-schema'
@@ -42,11 +47,7 @@ describe('API Key Save Integration Tests', () => {
   describe('User Creation and Verification', () => {
     it('should create user in PostgreSQL', async () => {
       const db = getDb()
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, testUserId))
-        .limit(1)
+      const [user] = await db.select().from(users).where(eq(users.id, testUserId)).limit(1)
 
       expect(user).toBeDefined()
       expect(user.id).toBe(testUserId)
@@ -118,10 +119,7 @@ describe('API Key Save Integration Tests', () => {
       // There should be only one record for this user
       const db = getDb()
       const { apiKeys } = await import('@/lib/db/drizzle-schema')
-      const records = await db
-        .select()
-        .from(apiKeys)
-        .where(eq(apiKeys.userId, testUserId))
+      const records = await db.select().from(apiKeys).where(eq(apiKeys.userId, testUserId))
 
       expect(records).toHaveLength(1)
     })
@@ -194,17 +192,13 @@ describe('API Key Save Integration Tests', () => {
     it('should handle invalid user ID gracefully', async () => {
       const invalidUserId = 'not-a-uuid'
 
-      await expect(
-        saveUserApiKey(invalidUserId, testApiKey)
-      ).rejects.toThrow()
+      await expect(saveUserApiKey(invalidUserId, testApiKey)).rejects.toThrow()
     })
 
     it('should handle non-existent user ID', async () => {
       const fakeUserId = '12345678-1234-1234-1234-123456789012'
 
-      await expect(
-        saveUserApiKey(fakeUserId, testApiKey)
-      ).rejects.toThrow()
+      await expect(saveUserApiKey(fakeUserId, testApiKey)).rejects.toThrow()
     })
   })
 })

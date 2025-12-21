@@ -30,12 +30,14 @@
 ## Current Architecture
 
 ### PostgreSQL Tables (via Drizzle ORM)
+
 - ✅ users
 - ✅ conversations
 - ✅ messages
 - ✅ api_keys
 
 ### LanceDB Tables (vector-optimized)
+
 - ✅ flashcards
 - ✅ review_logs
 

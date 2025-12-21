@@ -1,15 +1,9 @@
 import { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { auth } from '@/auth'
-import {
-  getMessagesByConversationId,
-  createMessage,
-} from '@/lib/db/operations/messages'
+import { getMessagesByConversationId, createMessage } from '@/lib/db/operations/messages'
 import { getFlashcardsByMessageId } from '@/lib/db/operations/flashcards'
-import {
-  getConversationById,
-  conversationBelongsToUser,
-} from '@/lib/db/operations/conversations'
+import { getConversationById, conversationBelongsToUser } from '@/lib/db/operations/conversations'
 import {
   getUserApiKey,
   getUserApiKeyRecord,
@@ -18,11 +12,7 @@ import {
 import { success, error as errorResponse } from '@/lib/api/response'
 import { validate } from '@/lib/validation/helpers'
 import { AuthenticationError, AuthorizationError, NotFoundError } from '@/lib/errors'
-import {
-  streamChatCompletion,
-  toClaudeMessages,
-  type ClassifiedError,
-} from '@/lib/claude/client'
+import { streamChatCompletion, toClaudeMessages, type ClassifiedError } from '@/lib/claude/client'
 import { getSystemPrompt } from '@/lib/claude/prompts'
 import { buildRAGContext, shouldUseRAG } from '@/lib/claude/rag'
 import type { AIProvider } from '@/lib/types/api-key'
@@ -200,9 +190,7 @@ export async function POST(
               const classifiedError = error as ClassifiedError
 
               // Send error event with appropriate message
-              const errorMessage = isClassifiedError
-                ? classifiedError.message
-                : error.message
+              const errorMessage = isClassifiedError ? classifiedError.message : error.message
 
               controller.enqueue(
                 encoder.encode(

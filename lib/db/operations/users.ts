@@ -45,11 +45,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   const db = getDb()
   const normalizedEmail = email.toLowerCase().trim()
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, normalizedEmail))
-    .limit(1)
+  const [user] = await db.select().from(users).where(eq(users.email, normalizedEmail)).limit(1)
 
   if (!user) {
     return null
@@ -71,11 +67,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
 export async function getUserById(id: string): Promise<User | null> {
   const db = getDb()
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, id))
-    .limit(1)
+  const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1)
 
   if (!user) {
     return null

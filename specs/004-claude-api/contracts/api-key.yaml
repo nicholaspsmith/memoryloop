@@ -39,12 +39,12 @@ paths:
                   value:
                     success: true
                     data:
-                      id: "550e8400-e29b-41d4-a716-446655440000"
-                      keyPreview: "sk-ant-...xyz123"
+                      id: '550e8400-e29b-41d4-a716-446655440000'
+                      keyPreview: 'sk-ant-...xyz123'
                       isValid: true
-                      lastValidatedAt: "2025-12-17T10:30:00Z"
-                      createdAt: "2025-12-15T14:22:00Z"
-                      updatedAt: "2025-12-17T09:15:00Z"
+                      lastValidatedAt: '2025-12-17T10:30:00Z'
+                      createdAt: '2025-12-15T14:22:00Z'
+                      updatedAt: '2025-12-17T09:15:00Z'
         '404':
           description: No API key found for user
           content:
@@ -53,7 +53,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 success: false
-                error: "No API key found"
+                error: 'No API key found'
         '401':
           description: Unauthorized - user not authenticated
           content:
@@ -62,7 +62,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 success: false
-                error: "Unauthorized"
+                error: 'Unauthorized'
 
     post:
       summary: Create or update API key
@@ -83,12 +83,12 @@ paths:
               withValidation:
                 summary: Save key with validation
                 value:
-                  apiKey: "sk-ant-api03-1234567890abcdef"
+                  apiKey: 'sk-ant-api03-1234567890abcdef'
                   validate: true
               withoutValidation:
                 summary: Save key without validation (faster)
                 value:
-                  apiKey: "sk-ant-api03-1234567890abcdef"
+                  apiKey: 'sk-ant-api03-1234567890abcdef'
                   validate: false
       responses:
         '200':
@@ -100,12 +100,12 @@ paths:
               example:
                 success: true
                 data:
-                  id: "550e8400-e29b-41d4-a716-446655440000"
-                  keyPreview: "sk-ant-...cdef"
+                  id: '550e8400-e29b-41d4-a716-446655440000'
+                  keyPreview: 'sk-ant-...cdef'
                   isValid: true
-                  lastValidatedAt: "2025-12-17T10:35:00Z"
-                  createdAt: "2025-12-17T10:35:00Z"
-                  updatedAt: "2025-12-17T10:35:00Z"
+                  lastValidatedAt: '2025-12-17T10:35:00Z'
+                  createdAt: '2025-12-17T10:35:00Z'
+                  updatedAt: '2025-12-17T10:35:00Z'
         '400':
           description: Invalid API key format or validation failed
           content:
@@ -122,10 +122,10 @@ paths:
                   summary: Validation failed
                   value:
                     success: false
-                    error: "API key validation failed: Authentication error"
+                    error: 'API key validation failed: Authentication error'
                     details:
-                      validationError: "invalid_api_key"
-                      message: "The API key provided is invalid"
+                      validationError: 'invalid_api_key'
+                      message: 'The API key provided is invalid'
         '401':
           description: Unauthorized - user not authenticated
           content:
@@ -151,7 +151,7 @@ paths:
                 $ref: '#/components/schemas/SuccessResponse'
               example:
                 success: true
-                message: "API key deleted successfully"
+                message: 'API key deleted successfully'
         '404':
           description: No API key found to delete
           content:
@@ -160,7 +160,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
               example:
                 success: false
-                error: "No API key found"
+                error: 'No API key found'
         '401':
           description: Unauthorized - user not authenticated
           content:
@@ -185,7 +185,7 @@ paths:
             schema:
               $ref: '#/components/schemas/ValidateApiKeyRequest'
             example:
-              apiKey: "sk-ant-api03-1234567890abcdef"
+              apiKey: 'sk-ant-api03-1234567890abcdef'
       responses:
         '200':
           description: Validation result
@@ -199,14 +199,14 @@ paths:
                   value:
                     success: true
                     valid: true
-                    message: "API key is valid"
+                    message: 'API key is valid'
                 invalid:
                   summary: Invalid API key
                   value:
                     success: true
                     valid: false
-                    message: "Authentication failed"
-                    error: "invalid_api_key"
+                    message: 'Authentication failed'
+                    error: 'invalid_api_key'
         '400':
           description: Invalid request format
           content:
@@ -256,7 +256,7 @@ components:
               type: string
               pattern: '^sk-ant-\.\.\..{4}$'
               description: Masked API key showing first 7 and last 4 characters
-              example: "sk-ant-...xyz123"
+              example: 'sk-ant-...xyz123'
             isValid:
               type: boolean
               description: Whether the key is currently valid (not failed auth)
@@ -266,17 +266,17 @@ components:
               format: date-time
               nullable: true
               description: When the key was last successfully validated
-              example: "2025-12-17T10:30:00Z"
+              example: '2025-12-17T10:30:00Z'
             createdAt:
               type: string
               format: date-time
               description: When the key was first saved
-              example: "2025-12-15T14:22:00Z"
+              example: '2025-12-15T14:22:00Z'
             updatedAt:
               type: string
               format: date-time
               description: When the key was last updated
-              example: "2025-12-17T09:15:00Z"
+              example: '2025-12-17T09:15:00Z'
 
     SaveApiKeyRequest:
       type: object
@@ -288,7 +288,7 @@ components:
           pattern: '^sk-ant-'
           minLength: 20
           description: Claude API key to save (must start with 'sk-ant-')
-          example: "sk-ant-api03-1234567890abcdef"
+          example: 'sk-ant-api03-1234567890abcdef'
         validate:
           type: boolean
           default: true
@@ -305,7 +305,7 @@ components:
           pattern: '^sk-ant-'
           minLength: 20
           description: Claude API key to validate
-          example: "sk-ant-api03-1234567890abcdef"
+          example: 'sk-ant-api03-1234567890abcdef'
 
     ValidationResponse:
       type: object
@@ -324,12 +324,12 @@ components:
         message:
           type: string
           description: Human-readable validation result
-          example: "API key is valid"
+          example: 'API key is valid'
         error:
           type: string
           nullable: true
           description: Error code if validation failed
-          example: "invalid_api_key"
+          example: 'invalid_api_key'
 
     SuccessResponse:
       type: object
@@ -342,7 +342,7 @@ components:
         message:
           type: string
           description: Success message
-          example: "Operation completed successfully"
+          example: 'Operation completed successfully'
 
     ErrorResponse:
       type: object
@@ -356,7 +356,7 @@ components:
         error:
           type: string
           description: Error message
-          example: "Invalid API key format"
+          example: 'Invalid API key format'
         details:
           type: object
           nullable: true

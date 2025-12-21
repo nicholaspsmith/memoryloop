@@ -75,7 +75,6 @@ export async function createMessage(data: {
   }
 }
 
-
 /**
  * Get message by ID
  */
@@ -105,9 +104,7 @@ export async function getMessageById(id: string): Promise<Message | null> {
 /**
  * Get all messages for a conversation
  */
-export async function getMessagesByConversationId(
-  conversationId: string
-): Promise<Message[]> {
+export async function getMessagesByConversationId(conversationId: string): Promise<Message[]> {
   const db = getDb()
 
   const results = await db

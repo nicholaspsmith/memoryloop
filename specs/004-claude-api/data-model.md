@@ -35,23 +35,25 @@ Stores encrypted Claude API keys associated with user accounts.
 
 **Table**: `api_keys`
 
-| Field | Type | Constraints | Description |
-|-------|------|-------------|-------------|
-| `id` | uuid | PRIMARY KEY, DEFAULT gen_random_uuid() | Unique identifier for the API key record |
-| `userId` | varchar(255) | NOT NULL, FOREIGN KEY → users(id), UNIQUE | User who owns this API key (one-to-one relationship) |
-| `encryptedKey` | text | NOT NULL | Encrypted API key using pgcrypto |
-| `keyPreview` | varchar(20) | NOT NULL | Masked preview (e.g., "sk-ant-...xyz123") for UI display |
-| `isValid` | boolean | NOT NULL, DEFAULT true | Validation status (set to false on repeated auth failures) |
-| `lastValidatedAt` | timestamp | NULL | Timestamp of last successful validation |
-| `createdAt` | timestamp | NOT NULL, DEFAULT now() | When the key was first added |
-| `updatedAt` | timestamp | NOT NULL, DEFAULT now() | When the key was last updated |
+| Field             | Type         | Constraints                               | Description                                                |
+| ----------------- | ------------ | ----------------------------------------- | ---------------------------------------------------------- |
+| `id`              | uuid         | PRIMARY KEY, DEFAULT gen_random_uuid()    | Unique identifier for the API key record                   |
+| `userId`          | varchar(255) | NOT NULL, FOREIGN KEY → users(id), UNIQUE | User who owns this API key (one-to-one relationship)       |
+| `encryptedKey`    | text         | NOT NULL                                  | Encrypted API key using pgcrypto                           |
+| `keyPreview`      | varchar(20)  | NOT NULL                                  | Masked preview (e.g., "sk-ant-...xyz123") for UI display   |
+| `isValid`         | boolean      | NOT NULL, DEFAULT true                    | Validation status (set to false on repeated auth failures) |
+| `lastValidatedAt` | timestamp    | NULL                                      | Timestamp of last successful validation                    |
+| `createdAt`       | timestamp    | NOT NULL, DEFAULT now()                   | When the key was first added                               |
+| `updatedAt`       | timestamp    | NOT NULL, DEFAULT now()                   | When the key was last updated                              |
 
 **Indexes**:
+
 - Primary key on `id`
 - Unique index on `userId` (one key per user)
 - Index on `userId` for fast lookup
 
 **Encryption**:
+
 - `encryptedKey` field uses PostgreSQL pgcrypto `pgp_sym_encrypt()` function
 - Encryption key stored in environment variable `API_KEY_ENCRYPTION_SECRET`
 - Decryption only happens server-side, never exposed to client
@@ -64,12 +66,13 @@ Extend existing `messages` table to track which AI provider generated each messa
 
 **New Fields**:
 
-| Field | Type | Constraints | Description |
-|-------|------|-------------|-------------|
-| `aiProvider` | varchar(20) | NULL | Which provider generated this message: "claude" or "ollama" |
-| `apiKeyId` | uuid | NULL, FOREIGN KEY → api_keys(id) ON DELETE SET NULL | Which API key was used (if Claude API) |
+| Field        | Type        | Constraints                                         | Description                                                 |
+| ------------ | ----------- | --------------------------------------------------- | ----------------------------------------------------------- |
+| `aiProvider` | varchar(20) | NULL                                                | Which provider generated this message: "claude" or "ollama" |
+| `apiKeyId`   | uuid        | NULL, FOREIGN KEY → api_keys(id) ON DELETE SET NULL | Which API key was used (if Claude API)                      |
 
 **Rationale**:
+
 - `aiProvider` enables per-message attribution (FR-009, FR-014)
 - `apiKeyId` provides audit trail for which user key generated the response
 - `ON DELETE SET NULL` preserves message history even if API key is deleted
@@ -205,7 +208,10 @@ import { pgCrypto } from 'drizzle-orm/pg-core'
 // New table
 export const apiKeys = pgTable('api_keys', {
   id: uuid('id').primaryKey().defaultRandom(),
-  userId: varchar('user_id', { length: 255 }).notNull().unique().references(() => users.id, { onDelete: 'cascade' }),
+  userId: varchar('user_id', { length: 255 })
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: 'cascade' }),
   encryptedKey: text('encrypted_key').notNull(),
   keyPreview: varchar('key_preview', { length: 20 }).notNull(),
   isValid: boolean('is_valid').notNull().default(true),
@@ -225,12 +231,14 @@ export const messages = pgTable('messages', {
 ## Data Volume & Scale
 
 **Expected Scale** (from spec SC-001, SC-002):
+
 - Users: Initially 10-100 users
 - API keys: At most 1 per user (one-to-one relationship)
 - Messages: Existing volume plus new messages with provider metadata
 - Storage impact: ~100 bytes per encrypted key + 40 bytes per message for provider fields
 
 **Performance Considerations**:
+
 - API key decryption: O(1) per request, cached in-memory during request lifecycle
 - Provider lookup: Indexed queries on `userId` and `api_key_id`
 - No N+1 queries: Join messages with api_keys when fetching conversation history
@@ -262,6 +270,7 @@ export const messages = pgTable('messages', {
 **Scenario**: User updates API key in two browser tabs simultaneously
 
 **Handling**:
+
 - Database-level UNIQUE constraint on `userId` prevents duplicates
 - Last write wins (updated_at timestamp)
 - Front-end should refresh after successful update
@@ -271,6 +280,7 @@ export const messages = pgTable('messages', {
 **Scenario**: User deletes API key; old messages reference deleted key
 
 **Handling**:
+
 - `ON DELETE SET NULL` on messages.api_key_id foreign key
 - Messages preserve `aiProvider="claude"` metadata
 - UI shows "Claude API (key deleted)" for orphaned references
@@ -280,6 +290,7 @@ export const messages = pgTable('messages', {
 **Scenario**: User's API key becomes invalid mid-conversation (quota exceeded, key revoked)
 
 **Handling**:
+
 - Set `isValid=false` in database
 - Return error to client with actionable message
 - User must either fix key or acknowledge fallback

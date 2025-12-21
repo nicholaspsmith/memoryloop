@@ -59,9 +59,9 @@ export default function QuizCard({ flashcard, onRate, onDelete }: QuizCardProps)
     onRate(flashcard.id, rating)
   }
 
-  const handleDeleteClick = () => {
-    setShowDeleteConfirm(true)
-  }
+  // const handleDeleteClick = () => {
+  //   setShowDeleteConfirm(true)
+  // }
 
   const handleDeleteConfirm = () => {
     if (onDelete) {

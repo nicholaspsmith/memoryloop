@@ -25,9 +25,7 @@ export default function SettingsError({
     <div className="flex min-h-screen flex-col items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6 rounded-lg border border-red-200 bg-white p-8 shadow-md dark:border-red-800 dark:bg-gray-900">
         <div className="space-y-2 text-center">
-          <h1 className="text-2xl font-bold text-red-600 dark:text-red-400">
-            Settings Error
-          </h1>
+          <h1 className="text-2xl font-bold text-red-600 dark:text-red-400">Settings Error</h1>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             An error occurred while loading your settings
           </p>
@@ -38,9 +36,7 @@ export default function SettingsError({
             <strong>Error:</strong> {error.message || 'Unknown error'}
           </p>
           {error.digest && (
-            <p className="text-xs text-gray-500 dark:text-gray-500">
-              Error ID: {error.digest}
-            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-500">Error ID: {error.digest}</p>
           )}
         </div>
 
