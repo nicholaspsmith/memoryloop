@@ -72,7 +72,7 @@
 - [x] T016 [US3] Create deploy user with sudo access and SSH key authentication
 - [x] T017 [US3] Configure SSH hardening (disable password auth, fail2ban)
 - [x] T018 [US3] Create directory structure on VPS (/opt/memoryloop, /opt/memoryloop/data, etc.)
-- [ ] T019 [P] [US3] Create VPS setup script in scripts/setup-vps.sh (automate server configuration)
+- [x] T019 [P] [US3] Create VPS setup script in scripts/setup-vps.sh (automate server configuration)
 
 **Checkpoint**: VPS accessible, Docker ready, secure SSH configured
 
