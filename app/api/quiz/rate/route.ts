@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
       difficulty: flashcard.fsrsState.difficulty,
       elapsed_days: flashcard.fsrsState.elapsed_days,
       scheduled_days: flashcard.fsrsState.scheduled_days,
+      learning_steps: flashcard.fsrsState.learning_steps,
       reps: flashcard.fsrsState.reps,
       lapses: flashcard.fsrsState.lapses,
       last_review: flashcard.fsrsState.last_review
