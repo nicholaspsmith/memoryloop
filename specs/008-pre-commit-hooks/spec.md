@@ -95,7 +95,7 @@ As a developer, when tests fail before PR creation, I want to receive suggestion
 ### Edge Cases
 
 - What happens when a developer needs to commit work-in-progress code that doesn't pass all checks? A `--no-verify` bypass is available but logged
-- What happens when tests are flaky (intermittent failures)? The system should identify and flag flaky tests separately
+- What happens when tests are flaky (intermittent failures)? Failed tests are retried once; if retry passes, push proceeds with a warning about potential flakiness
 - What happens when the hook itself has errors? Clear error messages should indicate hook problems vs code problems
 - What happens on a fresh clone before hooks are set up? The setup script should be part of the install process
 
@@ -106,17 +106,20 @@ As a developer, when tests fail before PR creation, I want to receive suggestion
 - **FR-001**: System MUST run type checking on staged files before allowing commits
 - **FR-002**: System MUST run linting on staged files before allowing commits
 - **FR-003**: System MUST verify code formatting on staged files before allowing commits
-- **FR-004**: System MUST run all test suites (unit, integration, e2e) before allowing pushes
+- **FR-004**: System MUST run unit and integration test suites before allowing pushes (e2e tests run in CI only)
+- **FR-004a**: System MUST retry failed tests once before blocking push (to handle transient failures)
 - **FR-005**: System MUST display clear, actionable error messages when validation fails
 - **FR-006**: System MUST provide a bypass mechanism for exceptional cases (with explicit flag)
-- **FR-007**: System MUST provide a test audit tool to identify tests without meaningful assertions
+- **FR-007**: System MUST run test audit as part of pre-push hook (before test execution) to identify tests without meaningful assertions
+- **FR-007a**: System MUST block push when newly added tests lack meaningful assertions
+- **FR-007b**: System MUST warn (but allow push) when existing tests lack meaningful assertions
 - **FR-008**: System MUST provide suggestions for fixing implementation code when tests fail
 - **FR-009**: System MUST automatically configure hooks when dependencies are installed
 - **FR-010**: System MUST support running checks on only changed files for performance
 - **FR-011**: System MUST exit with appropriate status codes (0 for success, non-zero for failure)
 - **FR-012**: System MUST group related errors by root cause when possible
 - **FR-013**: System MUST validate commit message subject line is 72 characters or fewer
-- **FR-014**: System MUST validate commit message uses imperative mood
+- **FR-014**: System MUST validate commit message uses imperative mood (via pattern matching for common non-imperative prefixes like "Added", "Fixed", "Updated")
 - **FR-015**: System MUST warn when commit message suggests multiple responsibilities
 - **FR-016**: System MUST validate commit body format matches project standards
 - **FR-017**: System MUST reference project rules file when showing commit message errors
@@ -137,13 +140,23 @@ As a developer, when tests fail before PR creation, I want to receive suggestion
 - **SC-001**: Zero commits with type errors, lint errors, or formatting issues reach the repository
 - **SC-002**: Zero pushes with failing tests reach the remote repository (without explicit bypass)
 - **SC-003**: Pre-commit hooks complete validation in under 30 seconds for typical changes
-- **SC-004**: Pre-push hooks complete all tests in under 5 minutes
+- **SC-004**: Pre-push hooks complete unit and integration tests in under 5 minutes
 - **SC-005**: 100% of test files are analyzed by the test audit tool
 - **SC-006**: Developers receive fix suggestions for 80% of common failure patterns
 - **SC-007**: Hook setup requires zero manual configuration after initial project setup
 - **SC-008**: Build failures in CI pipeline reduce by 75% due to early local validation
 - **SC-009**: 100% of commits follow project commit message standards (subject length, format, body)
 - **SC-010**: Commit message validation completes in under 1 second
+
+## Clarifications
+
+### Session 2025-12-21
+
+- Q: When should the test audit run? → A: As part of pre-push hook (before tests run)
+- Q: Should test audit findings block push or warn? → A: Block on new tests only, warn on existing
+- Q: How should the system handle flaky tests? → A: Retry once before failing
+- Q: Should e2e tests run in pre-push hook? → A: No, e2e runs in CI only (unit + integration locally)
+- Q: How should imperative mood be validated? → A: Simple pattern match (detect common non-imperative prefixes like "Added", "Fixed")
 
 ## Assumptions
 
