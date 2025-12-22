@@ -41,5 +41,5 @@
 ## Notes
 
 - Specification is ready for `/speckit.plan`
-- Future enhancement tracked in bd task memoryloop-6to: "Add flashcard grouping by conversation/topic with filtering options"
+- Future enhancement deferred: "Add flashcard grouping by conversation/topic with filtering options"
 - Vector database preference noted in assumptions to enable future semantic capabilities
