@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import QuizCard from './QuizCard'
 import QuizProgress from './QuizProgress'
 
-const MAX_RETRIES = 3
+const MAX_RETRIES = 2 // Reduced from 3 to minimize delay before showing error (max 3s vs 7s)
 const INITIAL_RETRY_DELAY = 1000 // 1 second
 
 /**
@@ -64,6 +64,7 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
   const [failedRating, setFailedRating] = useState<FailedRating | null>(null)
   const [mode, setMode] = useState<'due' | 'all'>('due')
   const [totalCards, setTotalCards] = useState(0)
+  const [pendingRatings, setPendingRatings] = useState(0)
 
   // Fetch due flashcards on mount if not provided
   useEffect(() => {
@@ -71,6 +72,21 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
       fetchFlashcards('due')
     }
   }, [])
+
+  // Warn user if they try to leave with pending ratings
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (pendingRatings > 0) {
+        e.preventDefault()
+        // Modern browsers ignore custom messages, but we need to set returnValue
+        e.returnValue = ''
+        return ''
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [pendingRatings])
 
   const fetchFlashcards = async (fetchMode: 'due' | 'all' = 'due') => {
     try {
@@ -117,8 +133,15 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
       setIsCompleted(true)
     }
 
+    // Track pending rating
+    setPendingRatings((prev) => prev + 1)
+
     // Send rating to server in background
-    await sendRating(flashcardId, flashcardQuestion, rating)
+    try {
+      await sendRating(flashcardId, flashcardQuestion, rating)
+    } finally {
+      setPendingRatings((prev) => prev - 1)
+    }
   }
 
   const sendRating = async (
@@ -371,6 +394,28 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
             You&apos;ve reviewed all {flashcards.length} flashcard
             {flashcards.length !== 1 ? 's' : ''}. Great work!
           </p>
+          {/* Show pending ratings indicator */}
+          {pendingRatings > 0 && (
+            <p className="text-sm text-amber-600 dark:text-amber-400 mb-4 flex items-center justify-center gap-2">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="none"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+              Saving {pendingRatings} rating{pendingRatings !== 1 ? 's' : ''}...
+            </p>
+          )}
           <div className="flex gap-3 justify-center">
             <button
               onClick={handleRestart}
