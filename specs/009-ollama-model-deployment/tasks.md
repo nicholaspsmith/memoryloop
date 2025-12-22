@@ -45,7 +45,7 @@
 - [x] T002 [US1] Add nomic-embed-text model pull with 5-minute timeout to scripts/deploy.sh
 - [x] T003 [US1] Add llama3.2 model pull with 5-minute timeout to scripts/deploy.sh
 - [x] T004 [US1] Ensure model pull failures log warnings but don't block deployment in scripts/deploy.sh
-- [ ] T005 [US1] Test deploy script locally: verify model pull executes and is idempotent
+- [x] T005 [US1] Test deploy script locally: verify model pull executes and is idempotent
 
 **Checkpoint**: Deployment script now pulls Ollama models automatically. US1 complete - production error fixed.
 
@@ -63,18 +63,18 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T006 [P] [US2] Write unit test: health check returns model list when Ollama healthy in tests/unit/api/health/route.test.ts
-- [ ] T007 [P] [US2] Write unit test: health check returns unhealthy when models missing in tests/unit/api/health/route.test.ts
-- [ ] T008 [P] [US2] Write unit test: health check returns Claude status based on ANTHROPIC_API_KEY in tests/unit/api/health/route.test.ts
-- [ ] T009 [US2] Run tests - verify all FAIL before implementation
+- [x] T006 [P] [US2] Write unit test: health check returns model list when Ollama healthy in tests/unit/api/health/route.test.ts
+- [x] T007 [P] [US2] Write unit test: health check returns unhealthy when models missing in tests/unit/api/health/route.test.ts
+- [x] T008 [P] [US2] Write unit test: health check returns Claude status based on ANTHROPIC_API_KEY in tests/unit/api/health/route.test.ts
+- [x] T009 [US2] Run tests - verify all FAIL before implementation
 
 ### Implementation for User Story 2
 
-- [ ] T010 [US2] Enhance Ollama check to fetch /api/tags and extract model names in app/api/health/route.ts
-- [ ] T011 [US2] Add required models validation (nomic-embed-text, llama3.2) in app/api/health/route.ts
-- [ ] T012 [US2] Add Claude API key presence check in app/api/health/route.ts
-- [ ] T013 [US2] Update response format to include models array and claude status in app/api/health/route.ts
-- [ ] T014 [US2] Run tests - verify all PASS after implementation
+- [x] T010 [US2] Enhance Ollama check to fetch /api/tags and extract model names in app/api/health/route.ts
+- [x] T011 [US2] Add required models validation (nomic-embed-text, llama3.2) in app/api/health/route.ts
+- [x] T012 [US2] Add Claude API key presence check in app/api/health/route.ts
+- [x] T013 [US2] Update response format to include models array and claude status in app/api/health/route.ts
+- [x] T014 [US2] Run tests - verify all PASS after implementation
 
 **Checkpoint**: Health endpoint now reports model availability and Claude status. US2 complete.
 

@@ -6,9 +6,19 @@ import { getDb } from '@/lib/db/pg-client'
  *
  * Returns the health status of the application and its dependencies.
  * Used by Docker healthcheck and monitoring systems.
+ *
+ * Checks:
+ * - PostgreSQL database connectivity
+ * - Ollama service availability and required models
+ * - Claude API key presence
+ * - Required environment variables
  */
+
+// Required Ollama models for full application functionality
+const REQUIRED_OLLAMA_MODELS = ['nomic-embed-text', 'llama3.2']
+
 export async function GET() {
-  const checks: Record<string, { status: string; message?: string }> = {}
+  const checks: Record<string, { status: string; message?: string; models?: string[] }> = {}
 
   // Check PostgreSQL database
   try {
@@ -22,7 +32,7 @@ export async function GET() {
     }
   }
 
-  // Check Ollama availability
+  // Check Ollama availability and required models
   try {
     const ollamaUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434'
     const response = await fetch(`${ollamaUrl}/api/tags`, {
@@ -30,7 +40,26 @@ export async function GET() {
     })
 
     if (response.ok) {
-      checks.ollama = { status: 'healthy' }
+      const data = await response.json()
+      const models: string[] = data.models?.map((m: { name: string }) => m.name) || []
+
+      // Check if required models are available
+      const missingModels = REQUIRED_OLLAMA_MODELS.filter(
+        (required) => !models.some((name) => name.startsWith(required))
+      )
+
+      if (missingModels.length > 0) {
+        checks.ollama = {
+          status: 'unhealthy',
+          message: `Missing models: ${missingModels.join(', ')}`,
+          models,
+        }
+      } else {
+        checks.ollama = {
+          status: 'healthy',
+          models,
+        }
+      }
     } else {
       checks.ollama = {
         status: 'unhealthy',
@@ -41,6 +70,17 @@ export async function GET() {
     checks.ollama = {
       status: 'degraded',
       message: 'Ollama unavailable - Claude API fallback active',
+    }
+  }
+
+  // Check Claude API key presence (FR-007)
+  const claudeApiKey = process.env.ANTHROPIC_API_KEY
+  if (claudeApiKey) {
+    checks.claude = { status: 'healthy' }
+  } else {
+    checks.claude = {
+      status: 'degraded',
+      message: 'ANTHROPIC_API_KEY not configured - Claude features unavailable',
     }
   }
 
