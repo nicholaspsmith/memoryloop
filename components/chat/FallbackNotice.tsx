@@ -38,26 +38,16 @@ export default function FallbackNotice() {
             Using Ollama (Free Local AI)
           </h3>
           <p className="text-sm text-blue-800 dark:text-blue-200 mb-2">
-            You're currently using Ollama, a free local AI model. For faster responses and improved
-            quality, consider adding your Claude API key.
+            You&apos;re currently using Ollama, a free local AI model. For faster responses and
+            improved quality, consider adding your Claude API key.
           </p>
           <Link
             href="/settings"
             className="inline-flex items-center text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline"
           >
             Add Claude API Key
-            <svg
-              className="w-4 h-4 ml-1"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
+            <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </Link>
         </div>

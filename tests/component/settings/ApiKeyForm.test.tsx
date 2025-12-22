@@ -76,7 +76,10 @@ describe('ApiKeyForm Component', () => {
 
       const input = screen.getByLabelText(/API Key/i)
       // Use a long key that doesn't start with sk-ant- to trigger the prefix error
-      await user.type(input, 'invalid-key-that-is-long-enough-to-pass-length-check-xxxxxxxxxxxxxxxxxxxx')
+      await user.type(
+        input,
+        'invalid-key-that-is-long-enough-to-pass-length-check-xxxxxxxxxxxxxxxxxxxx'
+      )
       await user.tab() // Trigger blur event
 
       expect(await screen.findByText(/must start with "sk-ant-"/i)).toBeInTheDocument()
@@ -129,7 +132,9 @@ describe('ApiKeyForm Component', () => {
 
     it('should show loading state while saving', async () => {
       const user = userEvent.setup()
-      const mockOnSave = vi.fn(() => new Promise(resolve => setTimeout(resolve, 100)))
+      const mockOnSave = vi.fn(
+        (_apiKey: string): Promise<void> => new Promise((resolve) => setTimeout(resolve, 100))
+      )
       render(<ApiKeyForm onSave={mockOnSave} />)
 
       const input = screen.getByLabelText(/API Key/i)

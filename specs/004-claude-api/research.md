@@ -139,7 +139,7 @@ export async function saveUserApiKey(userId: string, apiKey: string): Promise<vo
     .update(users)
     .set({
       encryptedApiKey: encrypted,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     })
     .where(eq(users.id, userId))
 }
@@ -365,9 +365,15 @@ Current codebase uses this pattern:
 await streamChatCompletion({
   messages: toClaudeMessages(conversationMessages),
   systemPrompt: TUTOR_SYSTEM_PROMPT,
-  onChunk: (text) => { /* ... */ },
-  onComplete: (text) => { /* ... */ },
-  onError: (error) => { /* ... */ }
+  onChunk: (text) => {
+    /* ... */
+  },
+  onComplete: (text) => {
+    /* ... */
+  },
+  onError: (error) => {
+    /* ... */
+  },
 })
 ```
 
@@ -380,10 +386,16 @@ const userApiKey = await getUserApiKey(userId) // from db operations
 const provider = await streamChatCompletion({
   messages: toClaudeMessages(conversationMessages),
   systemPrompt: TUTOR_SYSTEM_PROMPT,
-  onChunk: (text) => { /* ... */ },
-  onComplete: (text) => { /* ... */ },
-  onError: (error) => { /* ... */ },
-  userApiKey: userApiKey || undefined // Use Claude API if key exists
+  onChunk: (text) => {
+    /* ... */
+  },
+  onComplete: (text) => {
+    /* ... */
+  },
+  onError: (error) => {
+    /* ... */
+  },
+  userApiKey: userApiKey || undefined, // Use Claude API if key exists
 })
 
 // Store provider info with message
@@ -415,8 +427,8 @@ export async function getChatCompletion(params: {
 
       // Extract text content from response
       const textContent = response.content
-        .filter(block => block.type === 'text')
-        .map(block => block.text)
+        .filter((block) => block.type === 'text')
+        .map((block) => block.text)
         .join('')
 
       return { content: textContent, provider: 'claude' }
@@ -439,6 +451,7 @@ export async function getChatCompletion(params: {
 ### Decision
 
 Implement two-tier validation:
+
 1. **Format validation**: Client-side and server-side check for `sk-ant-api03-` prefix (Claude API key format)
 2. **Live validation**: Server-side test using minimal token count request to Messages API
 
@@ -485,10 +498,7 @@ import { z } from 'zod'
 export const ClaudeApiKeySchema = z
   .string()
   .min(40)
-  .regex(
-    /^sk-ant-api\d{2}-/,
-    'API key must start with sk-ant-api03- (Claude API key format)'
-  )
+  .regex(/^sk-ant-api\d{2}-/, 'API key must start with sk-ant-api03- (Claude API key format)')
 
 export function isValidClaudeKeyFormat(key: string): boolean {
   try {
@@ -509,7 +519,7 @@ export function maskApiKey(key: string): string {
   }
 
   const prefix = key.slice(0, 14) // "sk-ant-api03-"
-  const suffix = key.slice(-6)     // Last 6 characters
+  const suffix = key.slice(-6) // Last 6 characters
   return `${prefix}...${suffix}`
 }
 ```
@@ -537,7 +547,7 @@ export async function validateClaudeApiKey(apiKey: string): Promise<ValidationRe
     return {
       valid: false,
       error: 'Invalid API key format. Keys should start with sk-ant-api03-',
-      errorCode: 'INVALID_FORMAT'
+      errorCode: 'INVALID_FORMAT',
     }
   }
 
@@ -546,7 +556,7 @@ export async function validateClaudeApiKey(apiKey: string): Promise<ValidationRe
     const client = new Anthropic({
       apiKey: apiKey,
       maxRetries: 0, // Don't retry validation requests
-      timeout: 5000,  // 5 second timeout for validation
+      timeout: 5000, // 5 second timeout for validation
     })
 
     // Minimal test request (1 token output)
@@ -562,31 +572,31 @@ export async function validateClaudeApiKey(apiKey: string): Promise<ValidationRe
       return {
         valid: false,
         error: 'Authentication failed. Please check your API key.',
-        errorCode: 'AUTH_FAILED'
+        errorCode: 'AUTH_FAILED',
       }
     } else if (error instanceof Anthropic.RateLimitError) {
       return {
         valid: false,
         error: 'Rate limit exceeded. Please try again later.',
-        errorCode: 'RATE_LIMIT'
+        errorCode: 'RATE_LIMIT',
       }
     } else if (error instanceof Anthropic.PermissionDeniedError) {
       return {
         valid: false,
         error: 'Permission denied. Your API key may not have access to Claude Sonnet.',
-        errorCode: 'AUTH_FAILED'
+        errorCode: 'AUTH_FAILED',
       }
     } else if (error instanceof Anthropic.APIConnectionError) {
       return {
         valid: false,
         error: 'Network error. Please check your connection.',
-        errorCode: 'NETWORK_ERROR'
+        errorCode: 'NETWORK_ERROR',
       }
     } else {
       return {
         valid: false,
         error: 'Validation failed. Please try again.',
-        errorCode: 'UNKNOWN'
+        errorCode: 'UNKNOWN',
       }
     }
   }
@@ -604,7 +614,7 @@ import { z } from 'zod'
 import { validateClaudeApiKey } from '@/lib/claude/validation'
 
 const ValidateRequestSchema = z.object({
-  apiKey: z.string().min(1)
+  apiKey: z.string().min(1),
 })
 
 export async function POST(request: NextRequest) {
@@ -612,10 +622,7 @@ export async function POST(request: NextRequest) {
     // Check authentication
     const session = await auth()
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     // Parse request
@@ -628,22 +635,22 @@ export async function POST(request: NextRequest) {
     if (result.valid) {
       return NextResponse.json({
         valid: true,
-        message: 'API key is valid and ready to use'
+        message: 'API key is valid and ready to use',
       })
     } else {
-      return NextResponse.json({
-        valid: false,
-        error: result.error,
-        errorCode: result.errorCode
-      }, { status: 400 })
+      return NextResponse.json(
+        {
+          valid: false,
+          error: result.error,
+          errorCode: result.errorCode,
+        },
+        { status: 400 }
+      )
     }
   } catch (error) {
     console.error('[APIKeyValidate] Error:', error)
 
-    return NextResponse.json(
-      { error: 'Validation failed' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Validation failed' }, { status: 500 })
   }
 }
 ```
@@ -665,7 +672,7 @@ async function handleValidate() {
   const response = await fetch('/api/settings/api-key/validate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ apiKey: inputValue })
+    body: JSON.stringify({ apiKey: inputValue }),
   })
 
   const data = await response.json()
@@ -728,8 +735,12 @@ Extend messages table in `lib/db/drizzle-schema.ts`:
 ```typescript
 export const messages = pgTable('messages', {
   id: uuid('id').primaryKey().defaultRandom(),
-  conversationId: uuid('conversation_id').notNull().references(() => conversations.id, { onDelete: 'cascade' }),
-  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  conversationId: uuid('conversation_id')
+    .notNull()
+    .references(() => conversations.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
   role: varchar('role', { length: 20 }).notNull(), // 'user' | 'assistant'
   content: text('content').notNull(),
   embedding: vector('embedding', { dimensions: 768 }),
@@ -787,7 +798,7 @@ export async function createMessage(data: {
     content: data.content,
     provider: data.provider || null, // NULL for user messages
     hasFlashcards: false,
-    createdAt: new Date()
+    createdAt: new Date(),
   }
 
   await db.insert(messages).values(message)
@@ -805,7 +816,9 @@ In chat route handler (where messages are created):
 const provider = await streamChatCompletion({
   messages: conversationMessages,
   systemPrompt: TUTOR_SYSTEM_PROMPT,
-  onChunk: (text) => { /* append to response */ },
+  onChunk: (text) => {
+    /* append to response */
+  },
   onComplete: async (fullText) => {
     // Save assistant message with provider metadata
     await createMessage({
@@ -813,11 +826,13 @@ const provider = await streamChatCompletion({
       userId,
       role: 'assistant',
       content: fullText,
-      provider: provider // 'claude' or 'ollama'
+      provider: provider, // 'claude' or 'ollama'
     })
   },
-  onError: (error) => { /* handle error */ },
-  userApiKey: await getUserApiKey(userId)
+  onError: (error) => {
+    /* handle error */
+  },
+  userApiKey: await getUserApiKey(userId),
 })
 ```
 
@@ -932,10 +947,7 @@ export async function GET() {
   try {
     const session = await auth()
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const apiKey = await getUserApiKey(session.user.id)
@@ -943,20 +955,17 @@ export async function GET() {
     if (!apiKey) {
       return NextResponse.json({
         hasApiKey: false,
-        maskedKey: null
+        maskedKey: null,
       })
     }
 
     return NextResponse.json({
       hasApiKey: true,
-      maskedKey: maskApiKey(apiKey) // Never return plaintext key
+      maskedKey: maskApiKey(apiKey), // Never return plaintext key
     })
   } catch (error) {
     console.error('[APIKey] GET error:', error)
-    return NextResponse.json(
-      { error: 'Failed to retrieve API key' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to retrieve API key' }, { status: 500 })
   }
 }
 
@@ -966,17 +975,14 @@ export async function GET() {
 
 const SaveApiKeySchema = z.object({
   apiKey: z.string().min(40),
-  skipValidation: z.boolean().optional().default(false)
+  skipValidation: z.boolean().optional().default(false),
 })
 
 export async function POST(request: NextRequest) {
   try {
     const session = await auth()
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -986,10 +992,13 @@ export async function POST(request: NextRequest) {
     if (!skipValidation) {
       const validation = await validateClaudeApiKey(apiKey)
       if (!validation.valid) {
-        return NextResponse.json({
-          error: validation.error || 'Invalid API key',
-          errorCode: validation.errorCode
-        }, { status: 400 })
+        return NextResponse.json(
+          {
+            error: validation.error || 'Invalid API key',
+            errorCode: validation.errorCode,
+          },
+          { status: 400 }
+        )
       }
     }
 
@@ -999,22 +1008,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'API key saved successfully',
-      maskedKey: maskApiKey(apiKey)
+      maskedKey: maskApiKey(apiKey),
     })
   } catch (error) {
     console.error('[APIKey] POST error:', error)
 
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid request', details: error.errors },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid request', details: error.errors }, { status: 400 })
     }
 
-    return NextResponse.json(
-      { error: 'Failed to save API key' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to save API key' }, { status: 500 })
   }
 }
 
@@ -1026,24 +1029,18 @@ export async function DELETE() {
   try {
     const session = await auth()
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     await deleteUserApiKey(session.user.id)
 
     return NextResponse.json({
       success: true,
-      message: 'API key removed successfully'
+      message: 'API key removed successfully',
     })
   } catch (error) {
     console.error('[APIKey] DELETE error:', error)
-    return NextResponse.json(
-      { error: 'Failed to remove API key' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to remove API key' }, { status: 500 })
   }
 }
 ```
@@ -1274,6 +1271,7 @@ export function ApiKeyForm() {
 #### Security Implications
 
 **API Routes (chosen approach)**:
+
 - ✓ Explicit authentication checks with `auth()` at each endpoint
 - ✓ No exposure of API keys in client bundle
 - ✓ Server-side encryption/decryption only
@@ -1281,6 +1279,7 @@ export function ApiKeyForm() {
 - ✓ CORS protection via Next.js default headers
 
 **Server Actions (not chosen)**:
+
 - Risk: Actions embedded in Server Components can leak sensitive data if not careful
 - Risk: Requires 'use server' directives, harder to audit security boundaries
 - Benefit: Progressive enhancement (forms work without JS)

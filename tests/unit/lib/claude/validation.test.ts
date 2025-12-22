@@ -40,12 +40,7 @@ describe('Claude API Key Validation', () => {
     })
 
     it('should reject keys with wrong prefix', async () => {
-      const invalidPrefixes = [
-        'sk-openai-abc123',
-        'api-key-123',
-        'claude-key-123',
-        'sk-123',
-      ]
+      const invalidPrefixes = ['sk-openai-abc123', 'api-key-123', 'claude-key-123', 'sk-123']
 
       for (const key of invalidPrefixes) {
         const result = await validateClaudeApiKey(key)
@@ -88,7 +83,8 @@ describe('Claude API Key Validation', () => {
 
   describe('API authentication validation', () => {
     // Helper to create a valid-format test key
-    const makeTestKey = (suffix: string) => `sk-ant-api03-${'x'.repeat(85)}${suffix.padEnd(10, 'x')}`
+    const makeTestKey = (suffix: string) =>
+      `sk-ant-api03-${'x'.repeat(85)}${suffix.padEnd(10, 'x')}`
 
     it('should detect invalid API keys via 401 response', async () => {
       global.fetch = vi.fn().mockResolvedValue({
@@ -211,7 +207,8 @@ describe('Claude API Key Validation', () => {
   })
 
   describe('Security and edge cases', () => {
-    const makeTestKey = (suffix: string) => `sk-ant-api03-${'x'.repeat(85)}${suffix.padEnd(10, 'x')}`
+    const makeTestKey = (suffix: string) =>
+      `sk-ant-api03-${'x'.repeat(85)}${suffix.padEnd(10, 'x')}`
 
     it('should trim whitespace from API keys', async () => {
       global.fetch = vi.fn().mockResolvedValue({
@@ -221,7 +218,7 @@ describe('Claude API Key Validation', () => {
       })
 
       const keyWithSpaces = '  ' + makeTestKey('trimtest') + '  '
-      const result = await validateClaudeApiKey(keyWithSpaces)
+      await validateClaudeApiKey(keyWithSpaces)
 
       // Should handle trimming and validate
       expect(global.fetch).toHaveBeenCalled()
@@ -289,7 +286,8 @@ describe('Claude API Key Validation', () => {
   })
 
   describe('API call details', () => {
-    const makeTestKey = (suffix: string) => `sk-ant-api03-${'x'.repeat(85)}${suffix.padEnd(10, 'x')}`
+    const makeTestKey = (suffix: string) =>
+      `sk-ant-api03-${'x'.repeat(85)}${suffix.padEnd(10, 'x')}`
 
     it('should make a minimal test request to Anthropic API', async () => {
       global.fetch = vi.fn().mockResolvedValue({

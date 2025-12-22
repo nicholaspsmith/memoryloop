@@ -12,11 +12,12 @@ config({ path: resolve(process.cwd(), '.env.local') })
 
 import { getDb } from '@/lib/db/pg-client'
 import { messages } from '@/lib/db/drizzle-schema'
-import { eq, like } from 'drizzle-orm'
-import { getFlashcardsByUserId, deleteFlashcard, getFlashcardById } from '@/lib/db/operations/flashcards'
+import { like } from 'drizzle-orm'
+import { getFlashcardsByUserId, deleteFlashcard } from '@/lib/db/operations/flashcards'
 
-const TARGET_MESSAGE_CONTENT = "What would be involved in building scalable backends for LanceDB Cloud that offer a serverless experience for billion-scale datasets?"
-const LANCEDB_MESSAGE_ID = "507c964b-4afc-4e95-a73b-e7d8f0636670"
+const TARGET_MESSAGE_CONTENT =
+  'What would be involved in building scalable backends for LanceDB Cloud that offer a serverless experience for billion-scale datasets?'
+const LANCEDB_MESSAGE_ID = '507c964b-4afc-4e95-a73b-e7d8f0636670'
 
 async function main() {
   try {
@@ -50,9 +51,7 @@ async function main() {
     const messagesToKeep = [targetMessage.id, LANCEDB_MESSAGE_ID]
 
     // Filter flashcards that are NOT from either message
-    const flashcardsToDelete = allFlashcards.filter(
-      fc => !messagesToKeep.includes(fc.messageId)
-    )
+    const flashcardsToDelete = allFlashcards.filter((fc) => !messagesToKeep.includes(fc.messageId))
 
     console.log(`\nFlashcards to delete: ${flashcardsToDelete.length}`)
     console.log(`Flashcards to keep: ${allFlashcards.length - flashcardsToDelete.length}`)
@@ -66,7 +65,9 @@ async function main() {
     console.log('\n--- Flashcards to be deleted ---')
     for (const fc of flashcardsToDelete) {
       console.log(`\nID: ${fc.id}`)
-      console.log(`Question: ${fc.question.substring(0, 80)}${fc.question.length > 80 ? '...' : ''}`)
+      console.log(
+        `Question: ${fc.question.substring(0, 80)}${fc.question.length > 80 ? '...' : ''}`
+      )
       console.log(`Message ID: ${fc.messageId}`)
     }
 
@@ -95,7 +96,6 @@ async function main() {
 
     console.log(`\n✅ Deleted ${deletedCount} flashcards`)
     console.log(`Remaining flashcards: ${allFlashcards.length - deletedCount}`)
-
   } catch (error) {
     console.error('Error:', error)
     process.exit(1)

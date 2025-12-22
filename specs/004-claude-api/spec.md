@@ -6,7 +6,7 @@
 **Input**: User description: "Implement Claude API integration. Use Ollama as a fallback only. Claude API key will be entered by user through user interface. It will be stored securely. Each user can only hit the Claude API if they entered their API key through the user interface."
 **Related Issue**: https://github.com/nicholaspsmith/memoryloop/issues/153
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Enter and Save API Key (Priority: P1)
 
@@ -98,7 +98,7 @@ A user wants to update their existing API key (e.g., after rotating keys for sec
 - What happens when a user has multiple browser tabs open and updates their API key in one tab?
 - How does the system handle very long API keys or special characters in the key?
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -118,7 +118,7 @@ A user wants to update their existing API key (e.g., after rotating keys for sec
 - **FR-014**: System MUST track which AI provider (Claude API or Ollama) was used for each conversation and flashcard generation
 - **FR-015**: System MUST re-validate user API keys when they return authentication errors from Claude API
 
-### Key Entities *(include if feature involves data)*
+### Key Entities _(include if feature involves data)_
 
 - **User API Key**: Encrypted string associated with a user account, represents their personal Claude API credentials
   - Belongs to exactly one User
@@ -135,7 +135,7 @@ A user wants to update their existing API key (e.g., after rotating keys for sec
   - Provides audit trail for user API usage
   - Note: This is not a separate entity/table, but metadata on existing entities
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
@@ -175,7 +175,7 @@ A user wants to update their existing API key (e.g., after rotating keys for sec
 - Usage quotas or rate limiting per user
 - Historical API usage analytics or reporting
 
-## Clarifications *(from /speckit.clarify - 2025-12-17)*
+## Clarifications _(from /speckit.clarify - 2025-12-17)_
 
 The following decisions were made to resolve ambiguities in the specification:
 

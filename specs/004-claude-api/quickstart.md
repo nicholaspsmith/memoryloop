@@ -13,12 +13,14 @@ This guide walks through implementing the Claude API integration feature, follow
 ### Environment Setup
 
 1. **PostgreSQL with pgcrypto extension**:
+
    ```bash
    # Verify pgcrypto is available (should already be on Supabase)
    psql $DATABASE_URL -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
    ```
 
 2. **Environment variables** (add to `.env.local`):
+
    ```bash
    # API key encryption (generate secure random string)
    API_KEY_ENCRYPTION_SECRET="<generate-32-byte-base64-string>"
@@ -30,6 +32,7 @@ This guide walks through implementing the Claude API integration feature, follow
    ```
 
 3. **Generate encryption secret**:
+
    ```bash
    # Use OpenSSL to generate secure random string
    openssl rand -base64 32
@@ -53,6 +56,7 @@ npm run db:migrate
 ```
 
 Verify migration:
+
 ```bash
 psql $DATABASE_URL -c "\d api_keys"
 psql $DATABASE_URL -c "\d messages"
@@ -89,10 +93,12 @@ Follow this order to implement user stories with tests first:
    - Display component: `/components/settings/ApiKeyDisplay.tsx`
 
 4. **Verify**: Run tests
+
    ```bash
    npm run test -- tests/contract/settings
    npm run test -- tests/component/settings
    ```
+
    Expected: All tests PASS
 
 5. **E2E test**:
@@ -128,10 +134,12 @@ Follow this order to implement user stories with tests first:
    - Update Message component to show provider
 
 4. **Verify**: Run tests
+
    ```bash
    npm run test -- tests/integration/claude
    npm run test -- tests/component/settings/ProviderBadge
    ```
+
    Expected: All tests PASS
 
 5. **E2E test**: End-to-end chat flow with user API key
@@ -250,6 +258,7 @@ npm run test -- --watch
 ### Issue: pgcrypto extension not found
 
 **Solution**:
+
 ```bash
 psql $DATABASE_URL -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
 ```
@@ -261,6 +270,7 @@ On Supabase, this should already be available. Verify in Supabase dashboard unde
 **Error**: "API_KEY_ENCRYPTION_SECRET environment variable not set"
 
 **Solution**:
+
 ```bash
 # Add to .env.local
 echo "API_KEY_ENCRYPTION_SECRET=$(openssl rand -base64 32)" >> .env.local
@@ -272,6 +282,7 @@ npm run dev
 ### Issue: Anthropic API key validation fails during development
 
 **Solution**: Use mock validation in development mode or use a valid test API key:
+
 ```typescript
 // In development, skip real validation
 if (process.env.NODE_ENV === 'development' && !process.env.ANTHROPIC_TEST_KEY) {
@@ -282,6 +293,7 @@ if (process.env.NODE_ENV === 'development' && !process.env.ANTHROPIC_TEST_KEY) {
 ### Issue: Tests fail due to missing environment variables
 
 **Solution**: Create `.env.test` with test-specific variables:
+
 ```bash
 DATABASE_URL="postgresql://test:test@localhost:5432/memoryloop_test"
 API_KEY_ENCRYPTION_SECRET="test-encryption-key-32-bytes-long"

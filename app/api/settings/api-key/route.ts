@@ -19,15 +19,12 @@ const SaveApiKeySchema = z.object({
  *
  * Returns user's API key status (without decrypting the key)
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const session = await auth()
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
     const apiKeyRecord = await getUserApiKeyRecord(session.user.id)
@@ -52,10 +49,7 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error fetching API key:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch API key' },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: 'Failed to fetch API key' }, { status: 500 })
   }
 }
 
@@ -69,10 +63,7 @@ export async function POST(request: NextRequest) {
     const session = await auth()
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
@@ -82,7 +73,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: validation.error.errors[0]?.message || 'Invalid request',
+          error: validation.error.issues[0]?.message || 'Invalid request',
         },
         { status: 400 }
       )
@@ -117,10 +108,7 @@ export async function POST(request: NextRequest) {
     )
   } catch (error) {
     console.error('Error saving API key:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to save API key' },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: 'Failed to save API key' }, { status: 500 })
   }
 }
 
@@ -129,24 +117,18 @@ export async function POST(request: NextRequest) {
  *
  * Delete user's Claude API key
  */
-export async function DELETE(request: NextRequest) {
+export async function DELETE(_request: NextRequest) {
   try {
     const session = await auth()
 
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
     const deleted = await deleteUserApiKey(session.user.id)
 
     if (!deleted) {
-      return NextResponse.json(
-        { success: false, error: 'API key not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ success: false, error: 'API key not found' }, { status: 404 })
     }
 
     return NextResponse.json({
@@ -157,9 +139,6 @@ export async function DELETE(request: NextRequest) {
     })
   } catch (error) {
     console.error('Error deleting API key:', error)
-    return NextResponse.json(
-      { success: false, error: 'Failed to delete API key' },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: 'Failed to delete API key' }, { status: 500 })
   }
 }

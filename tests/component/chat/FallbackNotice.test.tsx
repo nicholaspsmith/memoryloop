@@ -67,7 +67,7 @@ describe('FallbackNotice Component', () => {
 
   describe('Accessibility', () => {
     it('should have appropriate role', () => {
-      const { container } = render(<FallbackNotice />)
+      render(<FallbackNotice />)
 
       // Should have status or alert role for screen readers
       const notice = screen.queryByRole('status') || screen.queryByRole('alert')

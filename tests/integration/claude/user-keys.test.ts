@@ -12,9 +12,7 @@ import type { ClaudeMessage } from '@/lib/claude/client'
 
 describe('Claude Client with User API Keys', () => {
   const mockApiKey = 'sk-ant-api03-test-key-long-enough-for-validation-1234567890abcdef'
-  const mockMessages: ClaudeMessage[] = [
-    { role: 'user', content: 'What is machine learning?' },
-  ]
+  const mockMessages: ClaudeMessage[] = [{ role: 'user', content: 'What is machine learning?' }]
   const systemPrompt = 'You are a helpful educational tutor.'
 
   beforeEach(() => {

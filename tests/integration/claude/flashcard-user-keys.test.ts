@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { generateFlashcardsFromContent } from '@/lib/claude/flashcard-generator'
 import type { FlashcardPair } from '@/lib/claude/flashcard-generator'
 
@@ -175,8 +175,7 @@ describe('Flashcard Generation with User API Keys', () => {
       const coveredTopics = topics.filter((topic) =>
         flashcards.some(
           (card: FlashcardPair) =>
-            card.question.toLowerCase().includes(topic) ||
-            card.answer.toLowerCase().includes(topic)
+            card.question.toLowerCase().includes(topic) || card.answer.toLowerCase().includes(topic)
         )
       )
 
@@ -194,7 +193,7 @@ describe('Flashcard Generation with User API Keys', () => {
       })
 
       // Should NOT call Ollama endpoint
-      const ollamaCalls = fetchSpy.mock.calls.filter((call) =>
+      const ollamaCalls = fetchSpy.mock.calls.filter((call: [RequestInfo | URL, RequestInit?]) =>
         call[0]?.toString().includes('localhost:11434')
       )
       expect(ollamaCalls).toHaveLength(0)
@@ -210,7 +209,7 @@ describe('Flashcard Generation with User API Keys', () => {
       })
 
       // Should call Ollama endpoint
-      const ollamaCalls = fetchSpy.mock.calls.filter((call) =>
+      const ollamaCalls = fetchSpy.mock.calls.filter((call: [RequestInfo | URL, RequestInit?]) =>
         call[0]?.toString().includes('localhost:11434')
       )
       expect(ollamaCalls.length).toBeGreaterThan(0)

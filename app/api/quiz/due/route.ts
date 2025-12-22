@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { z } from 'zod'
 import { getFlashcardsByUserId } from '@/lib/db/operations/flashcards'
 
 /**
@@ -17,10 +18,7 @@ export async function GET(request: NextRequest) {
     // Check authentication
     const session = await auth()
     if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized', code: 'UNAUTHORIZED' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized', code: 'UNAUTHORIZED' }, { status: 401 })
     }
 
     const userId = session.user.id
@@ -48,9 +46,7 @@ export async function GET(request: NextRequest) {
         return dueA - dueB
       })
 
-      console.log(
-        `[QuizDue] Found ${flashcards.length} due cards for user ${userId}`
-      )
+      console.log(`[QuizDue] Found ${flashcards.length} due cards for user ${userId}`)
     } else if (mode === 'all') {
       // Practice mode - return all cards sorted by creation date
       flashcards = allFlashcards.sort((a, b) => {
@@ -71,6 +67,19 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error('[QuizDue] Error:', error)
+
+    // Log detailed Zod validation errors for debugging
+    if (error instanceof z.ZodError) {
+      console.error('[QuizDue] Validation errors:', JSON.stringify(error.issues, null, 2))
+      return NextResponse.json(
+        {
+          error: 'Data validation error',
+          code: 'VALIDATION_ERROR',
+          details: error.issues,
+        },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json(
       {

@@ -95,7 +95,10 @@ describe('Flashcard Response Parser', () => {
       const result = parseFlashcardsFromResponse(response, 'Claude')
 
       expect(result).toHaveLength(2)
-      expect(result[0]).toEqual({ question: 'What is RAG?', answer: 'Retrieval-Augmented Generation' })
+      expect(result[0]).toEqual({
+        question: 'What is RAG?',
+        answer: 'Retrieval-Augmented Generation',
+      })
       expect(result[1]).toEqual({ question: 'What is MCP?', answer: 'Model Context Protocol' })
     })
 
@@ -187,7 +190,7 @@ These flashcards cover the key concepts.`
       const response = JSON.stringify([
         {
           question: 'What is "machine learning"?',
-          answer: 'It\'s a subset of AI that enables systems to learn from data',
+          answer: "It's a subset of AI that enables systems to learn from data",
         },
       ])
 
@@ -202,7 +205,8 @@ These flashcards cover the key concepts.`
       const response = JSON.stringify([
         {
           question: 'What is RAG?',
-          answer: 'RAG stands for Retrieval-Augmented Generation.\n\nIt combines:\n1. Information retrieval\n2. Text generation',
+          answer:
+            'RAG stands for Retrieval-Augmented Generation.\n\nIt combines:\n1. Information retrieval\n2. Text generation',
         },
       ])
 
@@ -224,7 +228,10 @@ These flashcards cover the key concepts.`
       const result = parseFlashcardsFromResponse(response, 'Ollama')
 
       expect(result).toHaveLength(2)
-      expect(result[0]).toEqual({ question: 'What is Docker?', answer: 'Platform for containerization' })
+      expect(result[0]).toEqual({
+        question: 'What is Docker?',
+        answer: 'Platform for containerization',
+      })
     })
 
     it('should handle Ollama response with markdown', () => {
@@ -351,9 +358,7 @@ Hope these help!`
 
     it('should handle very long answers', () => {
       const longAnswer = 'A'.repeat(1000)
-      const response = JSON.stringify([
-        { question: 'Long answer test?', answer: longAnswer },
-      ])
+      const response = JSON.stringify([{ question: 'Long answer test?', answer: longAnswer }])
 
       const result = parseFlashcardsFromResponse(response, 'Claude')
 

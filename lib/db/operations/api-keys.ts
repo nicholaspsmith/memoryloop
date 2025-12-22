@@ -107,11 +107,7 @@ export async function getUserApiKey(userId: string): Promise<string | null> {
 export async function getUserApiKeyRecord(userId: string): Promise<ApiKey | null> {
   const db = getDb()
 
-  const [record] = await db
-    .select()
-    .from(apiKeys)
-    .where(eq(apiKeys.userId, userId))
-    .limit(1)
+  const [record] = await db.select().from(apiKeys).where(eq(apiKeys.userId, userId)).limit(1)
 
   return record || null
 }
@@ -126,10 +122,7 @@ export async function deleteUserApiKey(userId: string): Promise<boolean> {
   const db = getDb()
   const startTime = Date.now()
 
-  const result = await db
-    .delete(apiKeys)
-    .where(eq(apiKeys.userId, userId))
-    .returning()
+  const result = await db.delete(apiKeys).where(eq(apiKeys.userId, userId)).returning()
 
   const deleted = result.length > 0
 
@@ -153,10 +146,7 @@ export async function deleteUserApiKey(userId: string): Promise<boolean> {
  * @param userId - User ID
  * @param isValid - Validation status
  */
-export async function updateApiKeyValidation(
-  userId: string,
-  isValid: boolean
-): Promise<void> {
+export async function updateApiKeyValidation(userId: string, isValid: boolean): Promise<void> {
   const db = getDb()
   const startTime = Date.now()
 

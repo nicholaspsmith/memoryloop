@@ -492,8 +492,6 @@ export async function validateOllamaConnection(): Promise<void> {
       throw new Error(`Ollama not accessible at ${OLLAMA_BASE_URL}`)
     }
   } catch (error) {
-    throw new Error(
-      `Ollama is not running. Start it with: brew services start ollama`
-    )
+    throw new Error(`Ollama is not running. Start it with: brew services start ollama`)
   }
 }
