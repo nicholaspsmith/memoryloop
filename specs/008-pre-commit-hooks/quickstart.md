@@ -91,9 +91,6 @@ Check `.claude/rules.md` for format requirements:
 # Run tests locally first
 npm test
 npm run test:integration
-
-# Check test audit
-npm run test:audit
 ```
 
 ## Development
@@ -115,5 +112,20 @@ echo "Add new feature" > /tmp/msg
 ### Adding new validation rules
 
 1. Commit message rules: Edit `scripts/hooks/commit-msg-validator.ts`
-2. Test quality rules: Edit `scripts/hooks/test-audit.ts`
+2. Test quality rules: Edit `eslint.config.mjs` (vitest plugin rules)
 3. Lint rules: Edit `eslint.config.mjs`
+
+## Verification
+
+After installation, verify hooks are working:
+
+```bash
+# 1. Check hooks are configured
+git config core.hooksPath  # Should output: .githooks
+
+# 2. Test commit-msg validation
+echo "Add test" > /tmp/msg && npx tsx scripts/hooks/commit-msg-validator.ts /tmp/msg
+
+# 3. Test with an actual commit
+git add -A && git commit -m "Test commit"  # Should run pre-commit + commit-msg hooks
+```
