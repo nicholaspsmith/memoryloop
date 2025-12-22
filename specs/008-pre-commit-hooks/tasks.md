@@ -103,16 +103,16 @@
 
 ### Implementation for User Story 2
 
-- [ ] T030 [US2] Backup existing .githooks/pre-push content
-- [ ] T031 [US2] Modify .githooks/pre-push to run unit tests (npm test -- --run)
-- [ ] T032 [US2] Add integration test execution (npm run test:integration)
-- [ ] T033 [US2] Implement retry logic: on failure, retry once before blocking (FR-004a)
-- [ ] T034 [US2] Add flaky test warning: if retry passes, warn about potential flakiness
-- [ ] T035 [US2] Preserve existing main branch protection logic
-- [ ] T036 [US2] Test pre-push: verify failing test blocks with clear message
-- [ ] T037 [US2] Test pre-push: verify retry behavior on transient failure
-- [ ] T038 [US2] Test pre-push: verify all passing allows push
-- [ ] T039 [US2] Test bypass: verify --no-verify works for emergencies (FR-006)
+- [x] T030 [US2] Backup existing .githooks/pre-push content
+- [x] T031 [US2] Modify .githooks/pre-push to run unit tests (npm test -- --run)
+- [x] T032 [US2] Add integration test execution (npm run test:integration)
+- [x] T033 [US2] Implement retry logic: on failure, retry once before blocking (FR-004a)
+- [x] T034 [US2] Add flaky test warning: if retry passes, warn about potential flakiness
+- [x] T035 [US2] Preserve existing main branch protection logic
+- [x] T036 [US2] Test pre-push: verify failing test blocks with clear message
+- [x] T037 [US2] Test pre-push: verify retry behavior on transient failure
+- [x] T038 [US2] Test pre-push: verify all passing allows push
+- [x] T039 [US2] Test bypass: verify --no-verify works for emergencies (FR-006)
 
 **Checkpoint**: Pre-push hook runs tests with retry, blocks on persistent failure. US2 complete.
 
