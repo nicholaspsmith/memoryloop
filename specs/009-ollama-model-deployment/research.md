@@ -31,6 +31,10 @@
 - Block deployment: Too risky, could cause extended outages
 - Retry with exponential backoff: Adds complexity, model pull already retries internally
 
+**Note on Retries**: The `ollama pull` command handles retries internally when downloading model layers. No additional retry logic is needed in deploy.sh.
+
+**Note on Timeouts**: A 5-minute (300s) timeout is applied to each model pull to prevent deployment from hanging indefinitely. If timeout is reached, deployment continues with a warning.
+
 ## Decision 3: Health Check Enhancement
 
 **Decision**: Enhance existing `/api/health` endpoint to verify model availability

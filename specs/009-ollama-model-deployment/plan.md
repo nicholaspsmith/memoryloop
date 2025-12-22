@@ -112,10 +112,11 @@ while [ $OLLAMA_ATTEMPTS -lt $OLLAMA_MAX ]; do
     sleep 2
 done
 
-# Pull required models (idempotent - skips if already present)
+# Pull required models with 5-minute timeout (idempotent - skips if already present)
 echo "Ensuring Ollama models are available..."
-docker exec memoryloop-ollama ollama pull nomic-embed-text || echo "Warning: Failed to pull nomic-embed-text"
-docker exec memoryloop-ollama ollama pull llama3.2 || echo "Warning: Failed to pull llama3.2"
+timeout 300 docker exec memoryloop-ollama ollama pull nomic-embed-text || echo "Warning: Failed to pull nomic-embed-text"
+timeout 300 docker exec memoryloop-ollama ollama pull llama3.2 || echo "Warning: Failed to pull llama3.2"
+echo "Ollama models ready."
 ```
 
 ### Health Check Model Verification
@@ -137,6 +138,21 @@ if (missingModels.length > 0) {
     status: 'unhealthy',
     message: `Missing models: ${missingModels.join(', ')}`,
     models,
+  }
+}
+```
+
+### Claude API Key Validation (FR-007)
+
+```typescript
+// Check Claude API key presence (without making billable requests)
+const claudeApiKey = process.env.ANTHROPIC_API_KEY
+if (claudeApiKey) {
+  checks.claude = { status: 'healthy' }
+} else {
+  checks.claude = {
+    status: 'degraded',
+    message: 'ANTHROPIC_API_KEY not configured - Claude features unavailable',
   }
 }
 ```
