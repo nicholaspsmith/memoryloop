@@ -93,7 +93,10 @@ jobs:
           PGPASSWORD=postgres psql -h localhost -U postgres -d memoryloop_test -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
 
       - name: Run database migrations
-        run: npm run db:push
+        run: |
+          npm run db:push
+          # Apply manual migration for FSRS decimal columns
+          PGPASSWORD=postgres psql -h localhost -U postgres -d memoryloop_test -f drizzle/0002_fix_review_logs_types.sql
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/memoryloop_test
 

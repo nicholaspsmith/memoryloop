@@ -42,13 +42,20 @@ interface QuizInterfaceProps {
   initialFlashcards?: Flashcard[]
 }
 
+interface FailedRating {
+  flashcardId: string
+  flashcardQuestion: string
+  rating: number
+  retrying: boolean
+}
+
 export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceProps) {
   const [flashcards, setFlashcards] = useState<Flashcard[]>(initialFlashcards)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isLoading, setIsLoading] = useState(!initialFlashcards.length)
   const [error, setError] = useState<string | null>(null)
   const [isCompleted, setIsCompleted] = useState(false)
-  const [syncError, setSyncError] = useState<string | null>(null)
+  const [failedRating, setFailedRating] = useState<FailedRating | null>(null)
   const [mode, setMode] = useState<'due' | 'all'>('due')
   const [totalCards, setTotalCards] = useState(0)
 
@@ -92,9 +99,11 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
   }
 
   const handleRate = async (flashcardId: string, rating: number) => {
-    // Optimistic update: move to next card immediately for instant feedback
-    setSyncError(null)
+    // Get the flashcard question before moving to next card
+    const ratedFlashcard = flashcards.find((f) => f.id === flashcardId)
+    const flashcardQuestion = ratedFlashcard?.question || 'Unknown flashcard'
 
+    // Optimistic update: move to next card immediately for instant feedback
     if (currentIndex < flashcards.length - 1) {
       setCurrentIndex(currentIndex + 1)
     } else {
@@ -102,7 +111,11 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
       setIsCompleted(true)
     }
 
-    // Send rating to server in background (fire-and-forget with error handling)
+    // Send rating to server in background
+    await sendRating(flashcardId, flashcardQuestion, rating)
+  }
+
+  const sendRating = async (flashcardId: string, flashcardQuestion: string, rating: number) => {
     try {
       const response = await fetch('/api/quiz/rate', {
         method: 'POST',
@@ -113,16 +126,46 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
       if (!response.ok) {
         const data = await response.json().catch(() => ({}))
         console.error('[Quiz] Rating failed:', data.error || response.statusText)
-        // Show non-blocking error toast
-        setSyncError('Failed to save rating. Your progress may not be saved.')
-        setTimeout(() => setSyncError(null), 4000)
+        // Show error with retry option
+        setFailedRating({ flashcardId, flashcardQuestion, rating, retrying: false })
       }
     } catch (err) {
       console.error('[Quiz] Rating error:', err)
-      // Show non-blocking error toast
-      setSyncError('Failed to save rating. Your progress may not be saved.')
-      setTimeout(() => setSyncError(null), 4000)
+      // Show error with retry option
+      setFailedRating({ flashcardId, flashcardQuestion, rating, retrying: false })
     }
+  }
+
+  const handleRetryRating = async () => {
+    if (!failedRating) return
+
+    setFailedRating({ ...failedRating, retrying: true })
+
+    try {
+      const response = await fetch('/api/quiz/rate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          flashcardId: failedRating.flashcardId,
+          rating: failedRating.rating,
+        }),
+      })
+
+      if (response.ok) {
+        // Success - clear the error
+        setFailedRating(null)
+      } else {
+        // Still failing
+        setFailedRating({ ...failedRating, retrying: false })
+      }
+    } catch {
+      // Still failing
+      setFailedRating({ ...failedRating, retrying: false })
+    }
+  }
+
+  const handleCancelRetry = () => {
+    setFailedRating(null)
   }
 
   const handleRestart = () => {
@@ -341,18 +384,80 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
         <QuizCard flashcard={currentFlashcard} onRate={handleRate} onDelete={handleDelete} />
       </div>
 
-      {/* Sync error toast (non-blocking) */}
-      {syncError && (
-        <div className="fixed bottom-4 right-4 bg-yellow-100 dark:bg-yellow-900 border border-yellow-400 dark:border-yellow-600 text-yellow-800 dark:text-yellow-200 px-4 py-3 rounded-lg shadow-lg max-w-sm animate-fade-in">
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fillRule="evenodd"
-                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <p className="text-sm">{syncError}</p>
+      {/* Failed rating error modal */}
+      {failedRating && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-red-600 dark:text-red-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Failed to Save Rating
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Your rating for this flashcard could not be saved:
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 mb-4">
+              <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
+                &ldquo;{failedRating.flashcardQuestion}&rdquo;
+              </p>
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={handleCancelRetry}
+                disabled={failedRating.retrying}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRetryRating}
+                disabled={failedRating.retrying}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 disabled:opacity-50 flex items-center gap-2"
+              >
+                {failedRating.retrying ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        fill="none"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    Retrying...
+                  </>
+                ) : (
+                  'Retry'
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
