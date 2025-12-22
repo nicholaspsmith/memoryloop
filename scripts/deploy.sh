@@ -66,6 +66,26 @@ done
 echo "Ensuring pgcrypto extension is installed..."
 docker exec memoryloop-postgres psql -U memoryloop -d memoryloop -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;" 2>/dev/null || true
 
+# Wait for Ollama to be ready
+echo "Waiting for Ollama to be ready..."
+OLLAMA_ATTEMPTS=0
+OLLAMA_MAX=30
+while [ $OLLAMA_ATTEMPTS -lt $OLLAMA_MAX ]; do
+    OLLAMA_ATTEMPTS=$((OLLAMA_ATTEMPTS + 1))
+    if docker exec memoryloop-ollama ollama list > /dev/null 2>&1; then
+        echo "Ollama is ready."
+        break
+    fi
+    echo "Waiting for Ollama... (${OLLAMA_ATTEMPTS}/${OLLAMA_MAX})"
+    sleep 2
+done
+
+# Pull required models with 5-minute timeout (idempotent - skips if already present)
+echo "Ensuring Ollama models are available..."
+timeout 300 docker exec memoryloop-ollama ollama pull nomic-embed-text || echo "Warning: Failed to pull nomic-embed-text"
+timeout 300 docker exec memoryloop-ollama ollama pull llama3.2 || echo "Warning: Failed to pull llama3.2"
+echo "Ollama models ready."
+
 # Wait for app health check
 echo "Waiting for health check..."
 MAX_ATTEMPTS=30

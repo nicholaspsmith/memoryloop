@@ -41,10 +41,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T001 [US1] Add Ollama container health check wait loop to scripts/deploy.sh after PostgreSQL check (line 63)
-- [ ] T002 [US1] Add nomic-embed-text model pull with 5-minute timeout to scripts/deploy.sh
-- [ ] T003 [US1] Add llama3.2 model pull with 5-minute timeout to scripts/deploy.sh
-- [ ] T004 [US1] Ensure model pull failures log warnings but don't block deployment in scripts/deploy.sh
+- [x] T001 [US1] Add Ollama container health check wait loop to scripts/deploy.sh after PostgreSQL check (line 63)
+- [x] T002 [US1] Add nomic-embed-text model pull with 5-minute timeout to scripts/deploy.sh
+- [x] T003 [US1] Add llama3.2 model pull with 5-minute timeout to scripts/deploy.sh
+- [x] T004 [US1] Ensure model pull failures log warnings but don't block deployment in scripts/deploy.sh
 - [ ] T005 [US1] Test deploy script locally: verify model pull executes and is idempotent
 
 **Checkpoint**: Deployment script now pulls Ollama models automatically. US1 complete - production error fixed.
