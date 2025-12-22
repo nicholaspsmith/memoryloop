@@ -54,6 +54,40 @@ interface FailedRating {
   retryCount: number
 }
 
+interface LastRating {
+  flashcardId: string
+  flashcardIndex: number
+  rating: number
+  timestamp: number
+}
+
+const UNDO_TIMEOUT_MS = 5000 // 5 seconds to undo
+const FAILED_RATINGS_STORAGE_KEY = 'memoryloop_failed_ratings'
+
+// Helper functions for localStorage persistence
+function loadFailedRatings(): FailedRating[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const stored = localStorage.getItem(FAILED_RATINGS_STORAGE_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+function saveFailedRatings(ratings: FailedRating[]) {
+  if (typeof window === 'undefined') return
+  try {
+    if (ratings.length === 0) {
+      localStorage.removeItem(FAILED_RATINGS_STORAGE_KEY)
+    } else {
+      localStorage.setItem(FAILED_RATINGS_STORAGE_KEY, JSON.stringify(ratings))
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceProps) {
   const router = useRouter()
   const [flashcards, setFlashcards] = useState<Flashcard[]>(initialFlashcards)
@@ -65,11 +99,24 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
   const [mode, setMode] = useState<'due' | 'all'>('due')
   const [totalCards, setTotalCards] = useState(0)
   const [pendingRatings, setPendingRatings] = useState(0)
+  const [lastRating, setLastRating] = useState<LastRating | null>(null)
+  const [undoTimeoutId, setUndoTimeoutId] = useState<NodeJS.Timeout | null>(null)
+  const [storedFailedRatings, setStoredFailedRatings] = useState<FailedRating[]>([])
 
   // Fetch due flashcards on mount if not provided
   useEffect(() => {
     if (initialFlashcards.length === 0) {
       fetchFlashcards('due')
+    }
+  }, [])
+
+  // Load stored failed ratings on mount and attempt to retry them
+  useEffect(() => {
+    const stored = loadFailedRatings()
+    if (stored.length > 0) {
+      setStoredFailedRatings(stored)
+      // Auto-retry stored ratings
+      retryStoredRatings(stored)
     }
   }, [])
 
@@ -87,6 +134,15 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [pendingRatings])
+
+  // Clear undo timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (undoTimeoutId) {
+        clearTimeout(undoTimeoutId)
+      }
+    }
+  }, [undoTimeoutId])
 
   const fetchFlashcards = async (fetchMode: 'due' | 'all' = 'due') => {
     try {
@@ -124,6 +180,26 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
     // Get the flashcard question before moving to next card
     const ratedFlashcard = flashcards.find((f) => f.id === flashcardId)
     const flashcardQuestion = ratedFlashcard?.question || 'Unknown flashcard'
+    const ratedIndex = currentIndex
+
+    // Clear any existing undo timeout
+    if (undoTimeoutId) {
+      clearTimeout(undoTimeoutId)
+    }
+
+    // Track last rating for undo functionality
+    setLastRating({
+      flashcardId,
+      flashcardIndex: ratedIndex,
+      rating,
+      timestamp: Date.now(),
+    })
+
+    // Set timeout to clear undo option
+    const timeoutId = setTimeout(() => {
+      setLastRating(null)
+    }, UNDO_TIMEOUT_MS)
+    setUndoTimeoutId(timeoutId)
 
     // Optimistic update: move to next card immediately for instant feedback
     if (currentIndex < flashcards.length - 1) {
@@ -178,10 +254,23 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
         return sendRating(flashcardId, flashcardQuestion, rating, retryCount + 1)
       }
 
-      // Client errors (4xx except 401) or max retries exceeded - show error
+      // Client errors (4xx except 401) or max retries exceeded - show error and persist
       const data = await response.json().catch(() => ({}))
       console.error('[Quiz] Rating failed:', data.error || response.statusText)
-      setFailedRating({ flashcardId, flashcardQuestion, rating, retrying: false, retryCount: 0 })
+      const failedRatingData = {
+        flashcardId,
+        flashcardQuestion,
+        rating,
+        retrying: false,
+        retryCount: 0,
+      }
+      setFailedRating(failedRatingData)
+      // Persist to localStorage for later retry
+      const existing = loadFailedRatings()
+      if (!existing.find((r) => r.flashcardId === flashcardId)) {
+        saveFailedRatings([...existing, failedRatingData])
+        setStoredFailedRatings([...existing, failedRatingData])
+      }
       return false
     } catch (err) {
       // Network errors - auto-retry with backoff
@@ -195,7 +284,20 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
       }
 
       console.error('[Quiz] Rating error after retries:', err)
-      setFailedRating({ flashcardId, flashcardQuestion, rating, retrying: false, retryCount: 0 })
+      const failedRatingData = {
+        flashcardId,
+        flashcardQuestion,
+        rating,
+        retrying: false,
+        retryCount: 0,
+      }
+      setFailedRating(failedRatingData)
+      // Persist to localStorage for later retry
+      const existing = loadFailedRatings()
+      if (!existing.find((r) => r.flashcardId === flashcardId)) {
+        saveFailedRatings([...existing, failedRatingData])
+        setStoredFailedRatings([...existing, failedRatingData])
+      }
       return false
     }
   }
@@ -213,6 +315,8 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
     )
 
     if (success) {
+      // Clear from localStorage
+      clearStoredFailedRating(failedRating.flashcardId)
       setFailedRating(null)
     }
     // If failed, sendRating will update failedRating state with new error
@@ -220,7 +324,50 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
 
   const handleDismissError = () => {
     // Dismiss without retrying - rating is lost but server state unchanged
+    if (failedRating) {
+      clearStoredFailedRating(failedRating.flashcardId)
+    }
     setFailedRating(null)
+  }
+
+  const handleUndo = () => {
+    if (!lastRating) return
+
+    // Clear the undo timeout
+    if (undoTimeoutId) {
+      clearTimeout(undoTimeoutId)
+      setUndoTimeoutId(null)
+    }
+
+    // Go back to the rated card
+    setCurrentIndex(lastRating.flashcardIndex)
+    setIsCompleted(false)
+
+    // Clear the last rating (no more undo after going back)
+    setLastRating(null)
+  }
+
+  // Retry all stored failed ratings (called on mount)
+  const retryStoredRatings = async (ratings: FailedRating[]) => {
+    const stillFailed: FailedRating[] = []
+
+    for (const rating of ratings) {
+      const success = await sendRating(rating.flashcardId, rating.flashcardQuestion, rating.rating)
+      if (!success) {
+        stillFailed.push(rating)
+      }
+    }
+
+    // Update state and localStorage with any that still failed
+    setStoredFailedRatings(stillFailed)
+    saveFailedRatings(stillFailed)
+  }
+
+  // Clear a stored failed rating (after successful retry or dismiss)
+  const clearStoredFailedRating = (flashcardId: string) => {
+    const updated = storedFailedRatings.filter((r) => r.flashcardId !== flashcardId)
+    setStoredFailedRatings(updated)
+    saveFailedRatings(updated)
   }
 
   const handleRestart = () => {
@@ -460,6 +607,34 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
       <div className="mb-8">
         <QuizCard flashcard={currentFlashcard} onRate={handleRate} onDelete={handleDelete} />
       </div>
+
+      {/* Undo snackbar - shows briefly after rating */}
+      {lastRating && !failedRating && (
+        <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:max-w-sm z-50 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-gray-800 dark:bg-gray-700 rounded-lg shadow-lg p-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-white">
+                Rated card as{' '}
+                <span className="font-medium">
+                  {lastRating.rating === 1
+                    ? 'Again'
+                    : lastRating.rating === 2
+                      ? 'Hard'
+                      : lastRating.rating === 3
+                        ? 'Good'
+                        : 'Easy'}
+                </span>
+              </p>
+              <button
+                onClick={handleUndo}
+                className="px-3 py-1 bg-white/20 hover:bg-white/30 text-white text-sm font-medium rounded transition-colors duration-200"
+              >
+                Undo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Failed rating snackbar - non-blocking bottom notification */}
       {failedRating && (
