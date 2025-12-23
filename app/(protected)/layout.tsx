@@ -2,6 +2,7 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import LogoutButton from '@/components/auth/LogoutButton'
 import Navigation from '@/components/nav/Navigation'
+import { PageTransition } from '@/components/ui/PageTransition'
 
 /**
  * Protected Layout
@@ -47,7 +48,9 @@ export default async function ProtectedLayout({ children }: { children: React.Re
       </header>
 
       {/* Main content */}
-      <main className="mx-auto max-w-7xl">{children}</main>
+      <main className="mx-auto max-w-7xl">
+        <PageTransition>{children}</PageTransition>
+      </main>
     </div>
   )
 }
