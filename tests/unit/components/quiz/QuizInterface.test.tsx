@@ -335,55 +335,69 @@ describe('QuizInterface - Navigation Arrows', () => {
     })
   })
 
-  describe('Progress Update with Navigation', () => {
-    it('should update progress indicator when navigating', async () => {
-      const user = userEvent.setup()
+  describe('Progress Update with Card Rating', () => {
+    it('should show 0% progress initially with no cards rated', async () => {
       render(<QuizInterface initialFlashcards={mockFlashcards} />)
 
       await waitFor(() => {
-        expect(screen.getByText(/1 \/ 3|1 of 3/i)).toBeInTheDocument()
+        const questions = screen.getAllByText('First card question')
+        expect(questions.length).toBeGreaterThanOrEqual(1)
       })
 
-      const rightArrow = screen.getByLabelText(/next card|navigate right/i)
-      await user.click(rightArrow)
-
-      // Progress should update to 2/3
-      expect(screen.getByText(/2 \/ 3|2 of 3/i)).toBeInTheDocument()
+      // Progress should show 0 of 3 (0%)
+      expect(screen.getByText(/0 \/ 3|0 of 3/i)).toBeInTheDocument()
+      expect(screen.getByText(/0%/i)).toBeInTheDocument()
     })
 
-    it('should show correct progress after wrapping forward', async () => {
+    it('should update progress when cards are rated', async () => {
       const user = userEvent.setup()
       render(<QuizInterface initialFlashcards={mockFlashcards} />)
 
       await waitFor(() => {
-        expect(screen.getByText(/1 \/ 3|1 of 3/i)).toBeInTheDocument()
+        const questions = screen.getAllByText('First card question')
+        expect(questions.length).toBeGreaterThanOrEqual(1)
       })
 
-      const rightArrow = screen.getByLabelText(/next card|navigate right/i)
+      // Initial progress: 0/3
+      expect(screen.getByText(/0 \/ 3|0 of 3/i)).toBeInTheDocument()
 
-      // Navigate to last card
-      await user.click(rightArrow)
-      await user.click(rightArrow)
-      expect(screen.getByText(/3 \/ 3|3 of 3/i)).toBeInTheDocument()
+      // Reveal answer and rate the first card
+      const revealButton = screen.getByRole('button', { name: /show answer|reveal/i })
+      await user.click(revealButton)
 
-      // Wrap to first
-      await user.click(rightArrow)
-      expect(screen.getByText(/1 \/ 3|1 of 3/i)).toBeInTheDocument()
+      const easyButton = screen.getByRole('button', { name: /(?<!Very )Easy/i })
+      await user.click(easyButton)
+
+      // Progress should update to 1/3 (33%)
+      await waitFor(() => {
+        expect(screen.getByText(/1 \/ 3|1 of 3/i)).toBeInTheDocument()
+        expect(screen.getByText(/33%/i)).toBeInTheDocument()
+      })
     })
 
-    it('should show correct progress after wrapping backward', async () => {
+    it('should show 100% progress when all cards are rated', async () => {
       const user = userEvent.setup()
       render(<QuizInterface initialFlashcards={mockFlashcards} />)
 
       await waitFor(() => {
-        expect(screen.getByText(/1 \/ 3|1 of 3/i)).toBeInTheDocument()
+        const questions = screen.getAllByText('First card question')
+        expect(questions.length).toBeGreaterThanOrEqual(1)
       })
 
-      const leftArrow = screen.getByLabelText(/previous card|navigate left/i)
+      // Rate all 3 cards
+      for (let i = 0; i < 3; i++) {
+        const revealButton = screen.getByRole('button', { name: /show answer|reveal/i })
+        await user.click(revealButton)
 
-      // Wrap to last card
-      await user.click(leftArrow)
-      expect(screen.getByText(/3 \/ 3|3 of 3/i)).toBeInTheDocument()
+        const easyButton = screen.getByRole('button', { name: /(?<!Very )Easy/i })
+        await user.click(easyButton)
+      }
+
+      // Should show completion screen
+      await waitFor(() => {
+        expect(screen.getByText(/quiz complete|practice session complete/i)).toBeInTheDocument()
+        expect(screen.getByText(/reviewed all 3 flashcard/i)).toBeInTheDocument()
+      })
     })
   })
 

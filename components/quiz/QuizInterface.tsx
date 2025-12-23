@@ -91,7 +91,8 @@ function saveFailedRatings(ratings: FailedRating[]) {
 
 export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceProps) {
   const router = useRouter()
-  const [flashcards, setFlashcards] = useState<Flashcard[]>(initialFlashcards)
+  const [allFlashcards, setAllFlashcards] = useState<Flashcard[]>(initialFlashcards)
+  const [ratedCardIds, setRatedCardIds] = useState<Set<string>>(new Set())
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isLoading, setIsLoading] = useState(!initialFlashcards.length)
   const [error, setError] = useState<string | null>(null)
@@ -103,6 +104,13 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
   const [lastRating, setLastRating] = useState<LastRating | null>(null)
   const [undoTimeoutId, setUndoTimeoutId] = useState<NodeJS.Timeout | null>(null)
   const [storedFailedRatings, setStoredFailedRatings] = useState<FailedRating[]>([])
+
+  // Compute unrated flashcards (cards that haven't been rated yet)
+  const flashcards = allFlashcards.filter((card) => !ratedCardIds.has(card.id))
+
+  // Total cards for progress calculation (all cards that were originally loaded)
+  const totalOriginalCards = allFlashcards.length
+  const completedCards = ratedCardIds.size
 
   // Fetch due flashcards on mount if not provided
   useEffect(() => {
@@ -160,7 +168,9 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
       const data = await response.json()
 
       if (data.success && data.flashcards) {
-        setFlashcards(data.flashcards)
+        setAllFlashcards(data.flashcards)
+        setRatedCardIds(new Set()) // Reset rated cards when fetching new deck
+        setCurrentIndex(0) // Reset to first card
         setTotalCards(data.totalCards || 0)
 
         if (data.flashcards.length === 0) {
@@ -178,10 +188,9 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
   }
 
   const handleRate = async (flashcardId: string, rating: number) => {
-    // Get the flashcard question before moving to next card
+    // Get the flashcard question before marking as rated
     const ratedFlashcard = flashcards.find((f) => f.id === flashcardId)
     const flashcardQuestion = ratedFlashcard?.question || 'Unknown flashcard'
-    const ratedIndex = currentIndex
 
     // Clear any existing undo timeout
     if (undoTimeoutId) {
@@ -191,7 +200,7 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
     // Track last rating for undo functionality
     setLastRating({
       flashcardId,
-      flashcardIndex: ratedIndex,
+      flashcardIndex: currentIndex,
       rating,
       timestamp: Date.now(),
     })
@@ -202,13 +211,21 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
     }, UNDO_TIMEOUT_MS)
     setUndoTimeoutId(timeoutId)
 
-    // Optimistic update: move to next card immediately for instant feedback
-    if (currentIndex < flashcards.length - 1) {
-      setCurrentIndex(currentIndex + 1)
-    } else {
-      // Completed all cards
+    // Mark card as rated (this removes it from the visible deck)
+    setRatedCardIds((prev) => new Set(prev).add(flashcardId))
+
+    // After rating, the deck shrinks. Adjust current index:
+    // - If we're not at the last card, stay at same index (next unrated card will appear)
+    // - If we're at the last unrated card, check if quiz is complete
+    const remainingCards = flashcards.length - 1 // -1 because we just rated one
+    if (remainingCards === 0) {
+      // All cards rated - quiz complete
       setIsCompleted(true)
+    } else if (currentIndex >= remainingCards) {
+      // We were at the last card, go back one position
+      setCurrentIndex(remainingCards - 1)
     }
+    // Otherwise, currentIndex stays the same and the next card appears at that position
 
     // Track pending rating
     setPendingRatings((prev) => prev + 1)
@@ -340,8 +357,16 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
       setUndoTimeoutId(null)
     }
 
-    // Go back to the rated card
-    setCurrentIndex(lastRating.flashcardIndex)
+    // Un-rate the card (add it back to the deck)
+    setRatedCardIds((prev) => {
+      const newSet = new Set(prev)
+      newSet.delete(lastRating.flashcardId)
+      return newSet
+    })
+
+    // The card will reappear in the deck. Find its new position
+    // For now, go back to index 0 to ensure we see the un-rated card
+    setCurrentIndex(0)
     setIsCompleted(false)
 
     // Clear the last rating (no more undo after going back)
@@ -374,12 +399,14 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
   const handleRestart = () => {
     setCurrentIndex(0)
     setIsCompleted(false)
+    setRatedCardIds(new Set()) // Reset rated cards
     fetchFlashcards(mode)
   }
 
   const handlePracticeAll = () => {
     setCurrentIndex(0)
     setIsCompleted(false)
+    setRatedCardIds(new Set()) // Reset rated cards
     fetchFlashcards('all')
   }
 
@@ -408,19 +435,29 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
       const data = await response.json()
 
       if (data.success) {
-        // Remove flashcard from state
-        const updatedFlashcards = flashcards.filter((f) => f.id !== flashcardId)
-        setFlashcards(updatedFlashcards)
+        // Remove flashcard from allFlashcards
+        const updatedAllFlashcards = allFlashcards.filter((f) => f.id !== flashcardId)
+        setAllFlashcards(updatedAllFlashcards)
+
+        // Also remove from rated cards if it was rated
+        setRatedCardIds((prev) => {
+          const newSet = new Set(prev)
+          newSet.delete(flashcardId)
+          return newSet
+        })
+
+        // Check remaining unrated cards
+        const remainingUnrated = updatedAllFlashcards.filter((f) => !ratedCardIds.has(f.id))
 
         // Update current index if needed
-        if (updatedFlashcards.length === 0) {
-          // No more flashcards
+        if (remainingUnrated.length === 0) {
+          // No more unrated flashcards
           setIsCompleted(true)
-        } else if (currentIndex >= updatedFlashcards.length) {
-          // Current index is out of bounds, go to last card
-          setCurrentIndex(updatedFlashcards.length - 1)
+        } else if (currentIndex >= remainingUnrated.length) {
+          // Current index is out of bounds, go to last unrated card
+          setCurrentIndex(remainingUnrated.length - 1)
         }
-        // If currentIndex < updatedFlashcards.length, it will automatically show the next card
+        // If currentIndex < remainingUnrated.length, it will automatically show the next card
       } else {
         throw new Error(data.error || 'Failed to delete flashcard')
       }
@@ -542,8 +579,8 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
             {mode === 'due' ? 'Quiz Complete!' : 'Practice Session Complete!'}
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            You&apos;ve reviewed all {flashcards.length} flashcard
-            {flashcards.length !== 1 ? 's' : ''}. Great work!
+            You&apos;ve reviewed all {completedCards} flashcard
+            {completedCards !== 1 ? 's' : ''}. Great work!
           </p>
           {/* Show pending ratings indicator */}
           {pendingRatings > 0 && (
@@ -604,7 +641,7 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
 
       {/* Progress indicator */}
       <div className="mb-8">
-        <QuizProgress current={currentIndex + 1} total={flashcards.length} showPercentage />
+        <QuizProgress current={completedCards} total={totalOriginalCards} showPercentage />
       </div>
 
       {/* Current flashcard with navigation arrows */}
