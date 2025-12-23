@@ -43,6 +43,9 @@ Follow the project principles defined in `.specify/memory/constitution.md`:
 
 ## Active Technologies
 
+- TypeScript 5.7 (strict mode) + Next.js 16.0.10 App Router, React 19.2.3, Tailwind CSS 4.0.0, canvas-confetti (for celebration animation) (010-ui-polish)
+- N/A (presentation layer only, no data persistence) (010-ui-polish)
+
 - TypeScript 5.x with React 18 (Next.js 16) + React, Tailwind CSS (003-flashcard-rating-labels)
 - N/A (UI-only change, no data model changes) (003-flashcard-rating-labels)
 
