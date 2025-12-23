@@ -383,6 +383,16 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
     fetchFlashcards('all')
   }
 
+  const handleNavigateNext = () => {
+    if (flashcards.length === 0) return
+    setCurrentIndex((prev) => (prev + 1) % flashcards.length)
+  }
+
+  const handleNavigatePrevious = () => {
+    if (flashcards.length === 0) return
+    setCurrentIndex((prev) => (prev - 1 + flashcards.length) % flashcards.length)
+  }
+
   const handleDelete = async (flashcardId: string) => {
     try {
       setError(null)
@@ -597,9 +607,54 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
         <QuizProgress current={currentIndex + 1} total={flashcards.length} showPercentage />
       </div>
 
-      {/* Current flashcard */}
-      <div className="mb-8">
-        <QuizCard flashcard={currentFlashcard} onRate={handleRate} onDelete={handleDelete} />
+      {/* Current flashcard with navigation arrows */}
+      <div className="mb-8 relative">
+        {/* Navigation arrows */}
+        <div className="flex items-center justify-center gap-4">
+          {/* Left arrow */}
+          <button
+            onClick={handleNavigatePrevious}
+            aria-label="Navigate to previous card"
+            className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
+
+          {/* Flashcard */}
+          <div className="flex-1 max-w-3xl">
+            <QuizCard flashcard={currentFlashcard} onRate={handleRate} onDelete={handleDelete} />
+          </div>
+
+          {/* Right arrow */}
+          <button
+            onClick={handleNavigateNext}
+            aria-label="Navigate to next card"
+            className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Undo snackbar - shows briefly after rating */}
