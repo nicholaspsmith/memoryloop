@@ -33,20 +33,26 @@ export default function MessageList({
 
   // Show loading spinner while fetching initial messages
   if (messages.length === 0 && isLoading) {
-    return <LoadingSpinner />
+    return (
+      <div className="flex-1 overflow-y-auto px-4 py-6">
+        <LoadingSpinner />
+      </div>
+    )
   }
 
   // Show empty state if no messages
   if (messages.length === 0 && !isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center px-4">
-        <div className="max-w-md">
-          <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-2">
-            Start a conversation
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400">
-            Ask me anything! I&apos;m here to help you learn and understand new concepts.
-          </p>
+      <div className="flex-1 overflow-y-auto px-4 py-6">
+        <div className="flex flex-col items-center justify-center min-h-full text-center">
+          <div className="max-w-md">
+            <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-2">
+              Start a conversation
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400">
+              Ask me anything! I&apos;m here to help you learn and understand new concepts.
+            </p>
+          </div>
         </div>
       </div>
     )

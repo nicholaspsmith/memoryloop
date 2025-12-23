@@ -12,9 +12,11 @@
 
 export function LoadingSpinner() {
   return (
-    <div className="flex items-center justify-center p-8" role="status">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600 dark:border-gray-600 dark:border-t-blue-400" />
-      <span className="sr-only">Loading...</span>
+    <div className="flex items-center justify-center min-h-[400px]">
+      <div className="text-center" role="status">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+      </div>
     </div>
   )
 }

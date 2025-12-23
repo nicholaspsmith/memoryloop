@@ -15,10 +15,10 @@ describe('LoadingSpinner', () => {
     expect(loadingText).toBeInTheDocument()
   })
 
-  it('applies sr-only class to loading text for screen readers', () => {
+  it('displays visible loading text', () => {
     render(<LoadingSpinner />)
     const loadingText = screen.getByText(/loading/i)
-    expect(loadingText).toHaveClass('sr-only')
+    expect(loadingText).toBeVisible()
   })
 
   it('renders spinner element with animate-spin class', () => {
