@@ -132,7 +132,9 @@ export default function ApiKeyForm({ onSave, onDelete, existingKeyPreview }: Api
       {existingKeyPreview && (
         <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
           <p className="text-sm text-gray-600 dark:text-gray-400">Current API Key:</p>
-          <p className="font-mono text-sm mt-1">{existingKeyPreview}</p>
+          <p className="font-mono text-sm text-gray-900 dark:text-gray-100 mt-1">
+            {existingKeyPreview}
+          </p>
         </div>
       )}
 
