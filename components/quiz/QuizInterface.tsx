@@ -104,6 +104,7 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
   const [lastRating, setLastRating] = useState<LastRating | null>(null)
   const [undoTimeoutId, setUndoTimeoutId] = useState<NodeJS.Timeout | null>(null)
   const [storedFailedRatings, setStoredFailedRatings] = useState<FailedRating[]>([])
+  const [navigationDirection, setNavigationDirection] = useState<'left' | 'right' | null>(null)
 
   // Compute unrated flashcards (cards that haven't been rated yet)
   const flashcards = allFlashcards.filter((card) => !ratedCardIds.has(card.id))
@@ -412,12 +413,18 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
 
   const handleNavigateNext = () => {
     if (flashcards.length === 0) return
+    setNavigationDirection('right')
     setCurrentIndex((prev) => (prev + 1) % flashcards.length)
+    // Clear animation after it completes
+    setTimeout(() => setNavigationDirection(null), 300)
   }
 
   const handleNavigatePrevious = () => {
     if (flashcards.length === 0) return
+    setNavigationDirection('left')
     setCurrentIndex((prev) => (prev - 1 + flashcards.length) % flashcards.length)
+    // Clear animation after it completes
+    setTimeout(() => setNavigationDirection(null), 300)
   }
 
   const handleDelete = async (flashcardId: string) => {
@@ -670,9 +677,20 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
             </svg>
           </button>
 
-          {/* Flashcard - fixed width container */}
-          <div className="w-full max-w-3xl">
-            <QuizCard flashcard={currentFlashcard} onRate={handleRate} onDelete={handleDelete} />
+          {/* Flashcard - fixed width container with animation */}
+          <div className="flex-shrink-0 flex-grow-0 w-full max-w-3xl overflow-hidden">
+            <div
+              key={currentFlashcard.id}
+              className={
+                navigationDirection === 'left'
+                  ? 'animate-slide-in-left'
+                  : navigationDirection === 'right'
+                    ? 'animate-slide-in-right'
+                    : ''
+              }
+            >
+              <QuizCard flashcard={currentFlashcard} onRate={handleRate} onDelete={handleDelete} />
+            </div>
           </div>
 
           {/* Right arrow */}
