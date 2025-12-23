@@ -1,14 +1,21 @@
 import { connect, Connection } from '@lancedb/lancedb'
 import path from 'path'
+import { withTimeout, TimeoutError } from './utils/timeout'
 
 let dbConnection: Connection | null = null
 let connectionPromise: Promise<Connection> | null = null
 let schemaInitialized = false
 
+// Schema initialization timeout: 30 seconds
+const SCHEMA_INIT_TIMEOUT_MS = 30000
+
 /**
  * Get LanceDB connection singleton
  * Creates a new connection if one doesn't exist, otherwise returns cached connection
  * Automatically initializes schema on first connection
+ *
+ * Uses dynamic import to delegate schema initialization to lib/db/schema.ts,
+ * avoiding code duplication while breaking circular dependency.
  */
 export async function getDbConnection(): Promise<Connection> {
   if (dbConnection) {
@@ -21,82 +28,57 @@ export async function getDbConnection(): Promise<Connection> {
   }
 
   // Create new connection promise to prevent race conditions
-  connectionPromise = (async () => {
-    const dbPath = process.env.LANCEDB_PATH || path.join(process.cwd(), 'data', 'lancedb')
+  connectionPromise = withTimeout(
+    (async () => {
+      const dbPath = process.env.LANCEDB_PATH || path.join(process.cwd(), 'data', 'lancedb')
 
-    dbConnection = await connect(dbPath)
+      dbConnection = await connect(dbPath)
 
-    console.log(`✅ LanceDB connected at: ${dbPath}`)
+      console.log(`[LanceDB] Connected at: ${dbPath}`)
 
-    // Auto-initialize schema on first connection if tables don't exist
-    // This ensures production deployments work without manual initialization
-    //
-    // NOTE: This duplicates logic from lib/db/schema.ts to avoid circular dependency:
-    // - schema.ts imports getDbConnection() from this file
-    // - We cannot import initializeSchema() from schema.ts here without creating a cycle
-    // - Alternative solutions (dependency injection, separate module) add unnecessary complexity
-    if (!schemaInitialized) {
-      try {
-        const existingTables = await dbConnection.tableNames()
-
-        // Create messages table if it doesn't exist
-        if (!existingTables.includes('messages')) {
-          await dbConnection.createTable(
-            'messages',
-            [
-              {
-                id: '00000000-0000-0000-0000-000000000000',
-                userId: '00000000-0000-0000-0000-000000000000',
-                embedding: new Array(768).fill(0), // nomic-embed-text: 768 dimensions
-              },
-            ],
-            { mode: 'create' }
-          )
-        }
-
-        // Create flashcards table if it doesn't exist
-        if (!existingTables.includes('flashcards')) {
-          await dbConnection.createTable(
-            'flashcards',
-            [
-              {
-                id: '00000000-0000-0000-0000-000000000000',
-                userId: '00000000-0000-0000-0000-000000000000',
-                embedding: new Array(768).fill(0), // nomic-embed-text: 768 dimensions
-              },
-            ],
-            { mode: 'create' }
-          )
-        }
-
-        // Cleanup init rows from newly created tables only
-        // More efficient than deleting from all tables - only clean up what we just created
-        const tablesCreated = (await dbConnection.tableNames()).filter(
-          (t) => !existingTables.includes(t)
-        )
-
-        for (const tableName of tablesCreated) {
-          const table = await dbConnection.openTable(tableName)
-          await table.delete("id = '00000000-0000-0000-0000-000000000000'")
-        }
-
+      // Auto-initialize schema on first connection using dynamic import
+      // Dynamic import breaks the circular dependency:
+      // - Pass db connection to schema.ts to avoid it calling getDbConnection()
+      // - We dynamically import initializeSchema() from schema.ts at runtime
+      if (!schemaInitialized) {
+        const { initializeSchema } = await import('./schema')
+        await initializeSchema(dbConnection)
         schemaInitialized = true
-      } catch (error) {
-        // Structured error logging for production debugging
-        const errorContext = {
+      }
+
+      return dbConnection
+    })(),
+    SCHEMA_INIT_TIMEOUT_MS,
+    'schema_initialization'
+  ).catch((error) => {
+    // Reset connection state on timeout or error to allow retry
+    connectionPromise = null
+    dbConnection = null
+    schemaInitialized = false
+
+    // Log error with structured format
+    if (TimeoutError.isTimeoutError(error)) {
+      console.error(
+        JSON.stringify({
+          event: 'schema_init_timeout',
+          timeout: SCHEMA_INIT_TIMEOUT_MS,
+          error: error.message,
+          timestamp: new Date().toISOString(),
+        })
+      )
+    } else {
+      console.error(
+        JSON.stringify({
           event: 'schema_init_failed',
-          dbPath,
           error: error instanceof Error ? error.message : String(error),
           timestamp: new Date().toISOString(),
-        }
-        console.error('❌ Failed to auto-initialize LanceDB schema:', JSON.stringify(errorContext))
-        // Don't throw - allow app to continue even if schema init fails
-        // Operations will fail gracefully with error logging
-      }
+        })
+      )
     }
 
-    return dbConnection
-  })()
+    // Fail fast - propagate error instead of swallowing it
+    throw error
+  })
 
   return connectionPromise
 }
@@ -108,15 +90,27 @@ export async function closeDbConnection(): Promise<void> {
   if (dbConnection) {
     // LanceDB doesn't have explicit close, just set to null
     dbConnection = null
-    console.log('✅ LanceDB connection closed')
+    console.log('[LanceDB] Connection closed')
   }
 }
 
 /**
  * Reset database connection (for test isolation)
  * Forces a new connection on next getDbConnection call
+ *
+ * Waits for any in-progress connection to complete before resetting
+ * to prevent race conditions during concurrent operations.
  */
-export function resetDbConnection(): void {
+export async function resetDbConnection(): Promise<void> {
+  // Wait for any in-progress connection to complete
+  if (connectionPromise) {
+    try {
+      await connectionPromise
+    } catch {
+      // Ignore errors from the connection we're about to reset
+    }
+  }
+
   dbConnection = null
   connectionPromise = null
   schemaInitialized = false

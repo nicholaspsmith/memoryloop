@@ -1,4 +1,4 @@
-import { getDbConnection } from './client'
+import { type Connection } from '@lancedb/lancedb'
 
 // Prevent concurrent initialization
 let initializationPromise: Promise<void> | null = null
@@ -14,14 +14,16 @@ let initializationPromise: Promise<void> | null = null
  * the minimum needed for vector search operations.
  *
  * Thread-safe: prevents concurrent initialization attempts
+ *
+ * @param db - Optional database connection. If not provided, will get connection.
  */
-export async function initializeSchema() {
+export async function initializeSchema(db?: Connection) {
   // If already initializing, wait for that to complete
   if (initializationPromise) {
     return initializationPromise
   }
 
-  initializationPromise = performInitialization()
+  initializationPromise = performInitialization(db)
 
   try {
     await initializationPromise
@@ -30,57 +32,108 @@ export async function initializeSchema() {
   }
 }
 
-async function performInitialization() {
-  const db = await getDbConnection()
+async function performInitialization(db?: Connection) {
+  // If no connection provided, get one (for backwards compatibility)
+  if (!db) {
+    const { getDbConnection } = await import('./client')
+    db = await getDbConnection()
+  }
   const existingTables = await db.tableNames()
+  const createdTables: string[] = []
 
-  console.log('🔨 Creating LanceDB schema...')
+  try {
+    console.log('[LanceDB] Creating schema...')
 
-  // 1. Messages table - minimal schema for vector search
-  if (!existingTables.includes('messages')) {
-    await db.createTable(
-      'messages',
-      [
-        {
-          id: '00000000-0000-0000-0000-000000000000',
-          userId: '00000000-0000-0000-0000-000000000000',
-          embedding: new Array(768).fill(0), // nomic-embed-text produces 768 dimensions
-        },
-      ],
-      { mode: 'create' }
-    )
-    console.log('✅ Created messages table (minimal: id, userId, embedding)')
-  }
-
-  // 2. Flashcards table - minimal schema for vector search
-  if (!existingTables.includes('flashcards')) {
-    await db.createTable(
-      'flashcards',
-      [
-        {
-          id: '00000000-0000-0000-0000-000000000000',
-          userId: '00000000-0000-0000-0000-000000000000',
-          embedding: new Array(768).fill(0), // nomic-embed-text produces 768 dimensions
-        },
-      ],
-      { mode: 'create' }
-    )
-    console.log('✅ Created flashcards table (minimal: id, userId, embedding)')
-  }
-
-  // Cleanup init rows from newly created tables
-  const tablesCreated = (await db.tableNames()).filter((t) => !existingTables.includes(t))
-
-  if (tablesCreated.length > 0) {
-    console.log('🧹 Cleaning up init rows...')
-
-    for (const tableName of tablesCreated) {
-      const table = await db.openTable(tableName)
-      await table.delete("id = '00000000-0000-0000-0000-000000000000'")
+    // 1. Messages table - minimal schema for vector search
+    if (!existingTables.includes('messages')) {
+      await db.createTable(
+        'messages',
+        [
+          {
+            id: '00000000-0000-0000-0000-000000000000',
+            userId: '00000000-0000-0000-0000-000000000000',
+            embedding: new Array(768).fill(0), // nomic-embed-text produces 768 dimensions
+          },
+        ],
+        { mode: 'create' }
+      )
+      createdTables.push('messages')
+      console.log('[LanceDB] Created messages table (minimal: id, userId, embedding)')
     }
-  }
 
-  console.log('✅ LanceDB schema initialized successfully')
+    // 2. Flashcards table - minimal schema for vector search
+    if (!existingTables.includes('flashcards')) {
+      await db.createTable(
+        'flashcards',
+        [
+          {
+            id: '00000000-0000-0000-0000-000000000000',
+            userId: '00000000-0000-0000-0000-000000000000',
+            embedding: new Array(768).fill(0), // nomic-embed-text produces 768 dimensions
+          },
+        ],
+        { mode: 'create' }
+      )
+      createdTables.push('flashcards')
+      console.log('[LanceDB] Created flashcards table (minimal: id, userId, embedding)')
+    }
+
+    // Cleanup init rows from newly created tables
+    if (createdTables.length > 0) {
+      console.log('[LanceDB] Cleaning up init rows...')
+
+      for (const tableName of createdTables) {
+        const table = await db.openTable(tableName)
+        await table.delete("id = '00000000-0000-0000-0000-000000000000'")
+      }
+    }
+
+    console.log('[LanceDB] Schema initialized successfully')
+  } catch (error) {
+    // ATOMIC ROLLBACK: Delete all tables created during this session
+    if (createdTables.length > 0) {
+      console.error(
+        JSON.stringify({
+          event: 'schema_rollback_started',
+          tablesCount: createdTables.length,
+          tables: createdTables,
+          timestamp: new Date().toISOString(),
+        })
+      )
+
+      for (const tableName of createdTables) {
+        try {
+          await db.dropTable(tableName)
+          console.log(`[LanceDB] Dropped table ${tableName} during rollback`)
+        } catch (dropError) {
+          // Best-effort cleanup - log but don't fail the rollback
+          console.error(
+            JSON.stringify({
+              event: 'schema_rollback_table_drop_failed',
+              tableName,
+              error: dropError instanceof Error ? dropError.message : String(dropError),
+              timestamp: new Date().toISOString(),
+            })
+          )
+        }
+      }
+
+      console.error(
+        JSON.stringify({
+          event: 'schema_rollback_completed',
+          tablesCount: createdTables.length,
+          timestamp: new Date().toISOString(),
+        })
+      )
+    }
+
+    // Re-throw with context
+    const errorMessage =
+      `Schema initialization failed after creating ${createdTables.length} table(s). ` +
+      `Rollback completed. Original error: ${error instanceof Error ? error.message : String(error)}`
+
+    throw new Error(errorMessage)
+  }
 }
 
 /**
@@ -88,6 +141,7 @@ async function performInitialization() {
  */
 export async function isSchemaInitialized(): Promise<boolean> {
   try {
+    const { getDbConnection } = await import('./client')
     const db = await getDbConnection()
     const tableNames = await db.tableNames()
     // Only messages and flashcards tables in LanceDB
