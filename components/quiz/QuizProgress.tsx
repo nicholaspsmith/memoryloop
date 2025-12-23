@@ -28,11 +28,11 @@ export default function QuizProgress({
   const progressValue = total > 0 ? (current / total) * 100 : 0
 
   return (
-    <div className="w-full max-w-2xl">
+    <div className="w-full">
       {/* Progress Text */}
       <div className="flex items-center justify-between mb-2">
         <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Card {current} of {total}
+          Completed {current} of {total} Cards
         </p>
         {showPercentage && (
           <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{percentage}%</p>
@@ -45,7 +45,7 @@ export default function QuizProgress({
         aria-valuenow={current}
         aria-valuemin={0}
         aria-valuemax={total}
-        aria-label={`Quiz progress: ${current} of ${total} cards${showPercentage ? `, ${percentage}%` : ''}`}
+        aria-label={`Quiz progress: Completed ${current} of ${total} cards${showPercentage ? `, ${percentage}%` : ''}`}
         className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"
         data-testid="progress-bar"
       >

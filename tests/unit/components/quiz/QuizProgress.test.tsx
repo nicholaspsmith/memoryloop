@@ -20,10 +20,10 @@ describe('QuizProgress', () => {
       expect(screen.getByText(/1.*of.*10/i)).toBeInTheDocument()
     })
 
-    it('should display "Card 5 of 20" format', () => {
+    it('should display "Completed 5 of 20 Cards" format', () => {
       render(<QuizProgress current={5} total={20} />)
 
-      expect(screen.getByText(/card.*5.*of.*20/i)).toBeInTheDocument()
+      expect(screen.getByText(/completed.*5.*of.*20.*cards/i)).toBeInTheDocument()
     })
 
     it('should handle single card deck', () => {

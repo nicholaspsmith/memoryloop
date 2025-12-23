@@ -1,29 +1,22 @@
 /**
  * Loading Spinner Component
  *
- * Reusable loading spinner for inline loading states.
- * Can be used in buttons, forms, and other components.
+ * Displays a loading spinner with accessibility support for page loading states.
+ * Used in Suspense boundaries across chat, quiz, and settings pages.
+ *
+ * Accessibility:
+ * - role="status" for screen readers
+ * - sr-only text provides context
+ * - Respects prefers-reduced-motion (via Tailwind)
  */
 
-interface LoadingSpinnerProps {
-  size?: 'sm' | 'md' | 'lg'
-  className?: string
-}
-
-export default function LoadingSpinner({ size = 'md', className = '' }: LoadingSpinnerProps) {
-  const sizeClasses = {
-    sm: 'h-4 w-4',
-    md: 'h-8 w-8',
-    lg: 'h-12 w-12',
-  }
-
+export function LoadingSpinner() {
   return (
-    <div
-      className={`inline-block animate-spin rounded-full border-2 border-solid border-current border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite] ${sizeClasses[size]} ${className}`}
-      role="status"
-      aria-label="Loading"
-    >
-      <span className="sr-only">Loading...</span>
+    <div className="flex items-center justify-center h-[calc(100vh-8rem)]">
+      <div className="text-center" role="status">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4"></div>
+        <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+      </div>
     </div>
   )
 }

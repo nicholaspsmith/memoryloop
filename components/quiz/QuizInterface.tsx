@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import QuizCard from './QuizCard'
 import QuizProgress from './QuizProgress'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { triggerConfetti, clearConfetti } from '@/lib/animations/confetti'
 
 const MAX_RETRIES = 2 // Reduced from 3 to minimize delay before showing error (max 3s vs 7s)
 const INITIAL_RETRY_DELAY = 1000 // 1 second
@@ -90,7 +92,8 @@ function saveFailedRatings(ratings: FailedRating[]) {
 
 export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceProps) {
   const router = useRouter()
-  const [flashcards, setFlashcards] = useState<Flashcard[]>(initialFlashcards)
+  const [allFlashcards, setAllFlashcards] = useState<Flashcard[]>(initialFlashcards)
+  const [ratedCardIds, setRatedCardIds] = useState<Set<string>>(new Set())
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isLoading, setIsLoading] = useState(!initialFlashcards.length)
   const [error, setError] = useState<string | null>(null)
@@ -102,6 +105,14 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
   const [lastRating, setLastRating] = useState<LastRating | null>(null)
   const [undoTimeoutId, setUndoTimeoutId] = useState<NodeJS.Timeout | null>(null)
   const [storedFailedRatings, setStoredFailedRatings] = useState<FailedRating[]>([])
+  const [navigationDirection, setNavigationDirection] = useState<'left' | 'right' | null>(null)
+
+  // Compute unrated flashcards (cards that haven't been rated yet)
+  const flashcards = allFlashcards.filter((card) => !ratedCardIds.has(card.id))
+
+  // Total cards for progress calculation (all cards that were originally loaded)
+  const totalOriginalCards = allFlashcards.length
+  const completedCards = ratedCardIds.size
 
   // Fetch due flashcards on mount if not provided
   useEffect(() => {
@@ -144,6 +155,24 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
     }
   }, [undoTimeoutId])
 
+  // Trigger confetti when quiz completes
+  useEffect(() => {
+    if (isCompleted) {
+      // Trigger confetti animation
+      triggerConfetti()
+
+      // Auto-cleanup after 3 seconds
+      const cleanupTimeout = setTimeout(() => {
+        clearConfetti()
+      }, 3000)
+
+      return () => {
+        clearTimeout(cleanupTimeout)
+        clearConfetti()
+      }
+    }
+  }, [isCompleted])
+
   const fetchFlashcards = async (fetchMode: 'due' | 'all' = 'due') => {
     try {
       setIsLoading(true)
@@ -159,7 +188,9 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
       const data = await response.json()
 
       if (data.success && data.flashcards) {
-        setFlashcards(data.flashcards)
+        setAllFlashcards(data.flashcards)
+        setRatedCardIds(new Set()) // Reset rated cards when fetching new deck
+        setCurrentIndex(0) // Reset to first card
         setTotalCards(data.totalCards || 0)
 
         if (data.flashcards.length === 0) {
@@ -177,10 +208,9 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
   }
 
   const handleRate = async (flashcardId: string, rating: number) => {
-    // Get the flashcard question before moving to next card
+    // Get the flashcard question before marking as rated
     const ratedFlashcard = flashcards.find((f) => f.id === flashcardId)
     const flashcardQuestion = ratedFlashcard?.question || 'Unknown flashcard'
-    const ratedIndex = currentIndex
 
     // Clear any existing undo timeout
     if (undoTimeoutId) {
@@ -190,7 +220,7 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
     // Track last rating for undo functionality
     setLastRating({
       flashcardId,
-      flashcardIndex: ratedIndex,
+      flashcardIndex: currentIndex,
       rating,
       timestamp: Date.now(),
     })
@@ -201,13 +231,21 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
     }, UNDO_TIMEOUT_MS)
     setUndoTimeoutId(timeoutId)
 
-    // Optimistic update: move to next card immediately for instant feedback
-    if (currentIndex < flashcards.length - 1) {
-      setCurrentIndex(currentIndex + 1)
-    } else {
-      // Completed all cards
+    // Mark card as rated (this removes it from the visible deck)
+    setRatedCardIds((prev) => new Set(prev).add(flashcardId))
+
+    // After rating, the deck shrinks. Adjust current index:
+    // - If we're not at the last card, stay at same index (next unrated card will appear)
+    // - If we're at the last unrated card, check if quiz is complete
+    const remainingCards = flashcards.length - 1 // -1 because we just rated one
+    if (remainingCards === 0) {
+      // All cards rated - quiz complete
       setIsCompleted(true)
+    } else if (currentIndex >= remainingCards) {
+      // We were at the last card, go back one position
+      setCurrentIndex(remainingCards - 1)
     }
+    // Otherwise, currentIndex stays the same and the next card appears at that position
 
     // Track pending rating
     setPendingRatings((prev) => prev + 1)
@@ -339,8 +377,16 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
       setUndoTimeoutId(null)
     }
 
-    // Go back to the rated card
-    setCurrentIndex(lastRating.flashcardIndex)
+    // Un-rate the card (add it back to the deck)
+    setRatedCardIds((prev) => {
+      const newSet = new Set(prev)
+      newSet.delete(lastRating.flashcardId)
+      return newSet
+    })
+
+    // The card will reappear in the deck. Find its new position
+    // For now, go back to index 0 to ensure we see the un-rated card
+    setCurrentIndex(0)
     setIsCompleted(false)
 
     // Clear the last rating (no more undo after going back)
@@ -373,13 +419,33 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
   const handleRestart = () => {
     setCurrentIndex(0)
     setIsCompleted(false)
+    setRatedCardIds(new Set()) // Reset rated cards
     fetchFlashcards(mode)
   }
 
   const handlePracticeAll = () => {
     setCurrentIndex(0)
     setIsCompleted(false)
+    setRatedCardIds(new Set()) // Reset rated cards
     fetchFlashcards('all')
+  }
+
+  const handleNavigateNext = () => {
+    if (flashcards.length === 0) return
+    // Next: card slides out to the right
+    setNavigationDirection('right')
+    setCurrentIndex((prev) => (prev + 1) % flashcards.length)
+    // Clear animation after it completes
+    setTimeout(() => setNavigationDirection(null), 300)
+  }
+
+  const handleNavigatePrevious = () => {
+    if (flashcards.length === 0) return
+    // Previous: card slides out to the left
+    setNavigationDirection('left')
+    setCurrentIndex((prev) => (prev - 1 + flashcards.length) % flashcards.length)
+    // Clear animation after it completes
+    setTimeout(() => setNavigationDirection(null), 300)
   }
 
   const handleDelete = async (flashcardId: string) => {
@@ -397,19 +463,29 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
       const data = await response.json()
 
       if (data.success) {
-        // Remove flashcard from state
-        const updatedFlashcards = flashcards.filter((f) => f.id !== flashcardId)
-        setFlashcards(updatedFlashcards)
+        // Remove flashcard from allFlashcards
+        const updatedAllFlashcards = allFlashcards.filter((f) => f.id !== flashcardId)
+        setAllFlashcards(updatedAllFlashcards)
+
+        // Also remove from rated cards if it was rated
+        setRatedCardIds((prev) => {
+          const newSet = new Set(prev)
+          newSet.delete(flashcardId)
+          return newSet
+        })
+
+        // Check remaining unrated cards
+        const remainingUnrated = updatedAllFlashcards.filter((f) => !ratedCardIds.has(f.id))
 
         // Update current index if needed
-        if (updatedFlashcards.length === 0) {
-          // No more flashcards
+        if (remainingUnrated.length === 0) {
+          // No more unrated flashcards
           setIsCompleted(true)
-        } else if (currentIndex >= updatedFlashcards.length) {
-          // Current index is out of bounds, go to last card
-          setCurrentIndex(updatedFlashcards.length - 1)
+        } else if (currentIndex >= remainingUnrated.length) {
+          // Current index is out of bounds, go to last unrated card
+          setCurrentIndex(remainingUnrated.length - 1)
         }
-        // If currentIndex < updatedFlashcards.length, it will automatically show the next card
+        // If currentIndex < remainingUnrated.length, it will automatically show the next card
       } else {
         throw new Error(data.error || 'Failed to delete flashcard')
       }
@@ -420,14 +496,7 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
 
   // Loading state
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading flashcards...</p>
-        </div>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   // Error state
@@ -538,8 +607,8 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
             {mode === 'due' ? 'Quiz Complete!' : 'Practice Session Complete!'}
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-4">
-            You&apos;ve reviewed all {flashcards.length} flashcard
-            {flashcards.length !== 1 ? 's' : ''}. Great work!
+            You&apos;ve reviewed all {completedCards} flashcard
+            {completedCards !== 1 ? 's' : ''}. Great work!
           </p>
           {/* Show pending ratings indicator */}
           {pendingRatings > 0 && (
@@ -600,12 +669,68 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
 
       {/* Progress indicator */}
       <div className="mb-8">
-        <QuizProgress current={currentIndex + 1} total={flashcards.length} showPercentage />
+        <QuizProgress current={completedCards} total={totalOriginalCards} showPercentage />
       </div>
 
-      {/* Current flashcard */}
-      <div className="mb-8">
-        <QuizCard flashcard={currentFlashcard} onRate={handleRate} onDelete={handleDelete} />
+      {/* Current flashcard with navigation arrows */}
+      <div className="mb-8 relative overflow-visible">
+        {/* Navigation arrows */}
+        <div className="flex items-center justify-center gap-4 overflow-visible">
+          {/* Left arrow */}
+          <button
+            onClick={handleNavigatePrevious}
+            aria-label="Navigate to previous card"
+            className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
+            </svg>
+          </button>
+
+          {/* Flashcard - fixed width container with animation */}
+          <div className="flex-shrink-0 flex-grow-0 w-full sm:w-[640px] md:w-[768px] lg:w-[896px]">
+            <div
+              key={currentFlashcard.id}
+              className={
+                navigationDirection === 'left'
+                  ? 'animate-slide-out-left'
+                  : navigationDirection === 'right'
+                    ? 'animate-slide-out-right'
+                    : ''
+              }
+            >
+              <QuizCard flashcard={currentFlashcard} onRate={handleRate} onDelete={handleDelete} />
+            </div>
+          </div>
+
+          {/* Right arrow */}
+          <button
+            onClick={handleNavigateNext}
+            aria-label="Navigate to next card"
+            className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Undo snackbar - shows briefly after rating */}

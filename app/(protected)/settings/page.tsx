@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import ApiKeyForm from '@/components/settings/ApiKeyForm'
 import ApiKeyDisplay from '@/components/settings/ApiKeyDisplay'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import type { GetApiKeyResponse } from '@/lib/types/api-key'
 
 /**
@@ -87,11 +88,13 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Settings</h1>
+    <div className="mx-auto px-4 py-8 max-w-4xl">
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-8">Settings</h1>
 
       <section className="mb-12">
-        <h2 className="text-xl font-semibold mb-2">Claude API Key</h2>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+          Claude API Key
+        </h2>
         <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">
           Provide your own Claude API key to use Claude for chat and flashcard generation. Your key
           is encrypted and stored securely.
@@ -107,7 +110,7 @@ export default function SettingsPage() {
         )}
 
         {isLoading ? (
-          <div className="text-gray-600 dark:text-gray-400">Loading...</div>
+          <LoadingSpinner />
         ) : error ? (
           <div className="text-red-600">{error}</div>
         ) : apiKeyData?.exists ? (
@@ -131,7 +134,7 @@ export default function SettingsPage() {
       </section>
 
       <section className="border-t border-gray-200 dark:border-gray-700 pt-8">
-        <h2 className="text-xl font-semibold mb-2">AI Provider</h2>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">AI Provider</h2>
         {apiKeyData?.exists ? (
           <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
             <div className="flex items-center gap-2 mb-2">
