@@ -27,9 +27,10 @@ beforeAll(async () => {
   resetDbConnection()
 
   // Initialize schema for this worker's database
-  const { initializeSchema } = await import('@/lib/db/schema')
-  await initializeSchema()
-})
+  // getDbConnection() will auto-initialize schema on first connection
+  const { getDbConnection } = await import('@/lib/db/client')
+  await getDbConnection()
+}, 30000)
 
 afterAll(async () => {
   // Clean up test database after all tests in this worker complete
