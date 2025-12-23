@@ -2,6 +2,17 @@
 
 This project uses speckit for feature specification and task tracking.
 
+## Feature-Specific Context
+
+When working on a feature branch (e.g., `003-flashcard-rating-labels`), check for a matching
+specs directory at `specs/[branch-name]/`. If it exists, read these files for feature context:
+
+- `specs/[branch-name]/spec.md` - Feature specification and requirements
+- `specs/[branch-name]/plan.md` - Implementation plan and technical decisions
+- `specs/[branch-name]/tasks.md` - Task breakdown and progress tracking
+
+This feature-specific context supplements the project-wide information below.
+
 ## Task Tracking
 
 Tasks are tracked in markdown files at `specs/[feature-name]/tasks.md` using simple checkboxes:
@@ -41,36 +52,56 @@ Follow the project principles defined in `.specify/memory/constitution.md`:
 - Observability & Debugging
 - Atomic Commits & Version Control Discipline. Adhere to .claude/rules.md
 
-## Active Technologies
+## Technology Stack
 
-- TypeScript 5.7 (strict mode) + @lancedb/lancedb 0.22, Node.js 20+, Vitest (testing framework) (001-lancedb-schema-fixes)
-- LanceDB (file-based vector database for embeddings only) (001-lancedb-schema-fixes)
+### Core
 
-- TypeScript 5.7 (strict mode) + Next.js 16.0.10 App Router, React 19.2.3, Tailwind CSS 4.0.0, canvas-confetti (for celebration animation) (010-ui-polish)
-- N/A (presentation layer only, no data persistence) (010-ui-polish)
+- TypeScript 5.7
+- Node.js 20+
+- Next.js 16.0
+- React 19.2
 
-- TypeScript 5.x with React 18 (Next.js 16) + React, Tailwind CSS (003-flashcard-rating-labels)
-- N/A (UI-only change, no data model changes) (003-flashcard-rating-labels)
+### Styling
 
-- TypeScript 5.7, Node.js 20+, Bash (for hook scripts) + Husky (hook management), lint-staged (staged file operations), commitlint (commit message validation) (008-pre-commit-hooks)
-- N/A (hooks are stateless) (008-pre-commit-hooks)
+- Tailwind CSS 4.0
 
-- TypeScript 5.x, Node.js 20.x (Next.js 15) + Next.js 15, Docker, Docker Compose, Nginx, Certbot, GitHub Actions (002-ci-cd-deployment)
-- LanceDB (file-based vector database), Backblaze B2 (backups) (002-ci-cd-deployment)
-- TypeScript 5.7 / Node.js (Next.js 16.0.10) + Next.js 16, @anthropic-ai/sdk 0.71, @lancedb/lancedb 0.22, Ollama (nomic-embed-text) (005-rag-integration)
-- PostgreSQL (drizzle-orm, metadata), LanceDB (vectors/embeddings) (005-rag-integration)
-- TypeScript 5.7 (strict mode), Next.js 16.0.10 App Router (004-claude-api)
-- PostgreSQL on Supabase with pgvector (0.2.1) for vector embeddings (768 dimensions) (004-claude-api)
+### Database
 
-## Recent Changes
+- PostgreSQL (via postgres 3.4, drizzle-orm 0.45)
+- LanceDB 0.22 (vector database)
+- pgvector 0.2 (vector embeddings)
 
-- 002-ci-cd-deployment: Added TypeScript 5.x, Node.js 20.x (Next.js 15) + Next.js 15, Docker, Docker Compose, Nginx, Certbot, GitHub Actions
-- 004-claude-api: Added TypeScript 5.7 (strict mode), Next.js 16.0.10 App Router
-- 001-lancedb-schema-fixes: Fixed LanceDB schema initialization reliability, eliminated code duplication, added atomic rollback
+### AI/ML
+
+- Anthropic Claude SDK 0.71
+- Ollama (nomic-embed-text for local embeddings)
+- ts-fsrs 5.2 (spaced repetition)
+
+### Authentication
+
+- NextAuth 5.0.0
+
+### Testing
+
+- Vitest 4.0
+- Playwright 1.57
+- Testing Library (React, Jest-DOM)
+
+### Development Tools
+
+- ESLint 9.0
+- Prettier 3.7
+- lint-staged 16.2
+
+### Deployment
+
+- Docker, Docker Compose
+- Nginx, Certbot
+- GitHub Actions
 
 ## Feature Implementation Notes (T065)
 
-### 001-lancedb-schema-fixes: LanceDB Schema Initialization Fixes
+###001-lancedb-schema-fixes: LanceDB Schema Initialization Fixes
 
 **Status**: ✅ Complete (All phases 1-8, User Stories 1-4)
 
