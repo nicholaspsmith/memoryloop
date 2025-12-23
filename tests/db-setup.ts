@@ -24,7 +24,7 @@ beforeAll(async () => {
 
   // Reset connection to use new path
   const { resetDbConnection } = await import('@/lib/db/client')
-  resetDbConnection()
+  await resetDbConnection()
 
   // Initialize schema for this worker's database
   // getDbConnection() will auto-initialize schema on first connection

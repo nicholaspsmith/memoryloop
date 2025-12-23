@@ -13,7 +13,7 @@ import { getDbConnection, resetDbConnection, closeDbConnection } from '@/lib/db/
 describe('LanceDB Auto-Initialization', () => {
   beforeEach(async () => {
     // Reset connection state before each test
-    resetDbConnection()
+    await resetDbConnection()
   })
 
   afterEach(async () => {
@@ -69,7 +69,7 @@ describe('LanceDB Auto-Initialization', () => {
       await getDbConnection()
 
       // Reset connection
-      resetDbConnection()
+      await resetDbConnection()
 
       // This would normally re-initialize if tables were missing
       // In tests, tables persist, so we're just verifying the reset works
@@ -256,7 +256,7 @@ describe('LanceDB Auto-Initialization', () => {
       await getDbConnection()
 
       // Reset and reconnect - tables already exist, so no creation happens
-      resetDbConnection()
+      await resetDbConnection()
       const db = await getDbConnection()
 
       // Verify connection works
@@ -293,7 +293,7 @@ describe('LanceDB Auto-Initialization', () => {
       // and that schema initialization is fully delegated to schema.ts
 
       // Reset to force re-initialization
-      resetDbConnection()
+      await resetDbConnection()
 
       // Get connection - this should trigger dynamic import of schema.ts
       const db = await getDbConnection()
@@ -309,6 +309,52 @@ describe('LanceDB Auto-Initialization', () => {
       // Verify only the expected tables exist (2 tables from schema.ts)
       const lanceDbTables = tableNames.filter((t) => ['messages', 'flashcards'].includes(t))
       expect(lanceDbTables).toHaveLength(2)
+    })
+  })
+
+  describe('Safe Connection Reset (US4)', () => {
+    it('should handle concurrent resetDbConnection calls safely', async () => {
+      // This test verifies that multiple reset calls don't cause race conditions
+
+      // First establish a connection
+      await getDbConnection()
+
+      // Call reset multiple times concurrently
+      await Promise.all([resetDbConnection(), resetDbConnection(), resetDbConnection()])
+
+      // Should be able to get a new connection after reset
+      const db = await getDbConnection()
+      expect(db).toBeDefined()
+
+      // Verify tables exist (proves re-initialization worked)
+      const tableNames = await db.tableNames()
+      expect(tableNames).toContain('messages')
+      expect(tableNames).toContain('flashcards')
+    })
+
+    it('should wait for connection in progress before resetting', async () => {
+      // This test verifies that reset waits for any in-progress connection
+
+      // Reset first to ensure clean state
+      await resetDbConnection()
+
+      // Start connection (but don't await it yet)
+      const connectionPromise = getDbConnection()
+
+      // Immediately call reset while connection is in progress
+      const resetPromise = resetDbConnection()
+
+      // Both should complete without errors
+      await Promise.all([connectionPromise, resetPromise])
+
+      // Should be able to get a new connection after reset
+      const db = await getDbConnection()
+      expect(db).toBeDefined()
+
+      // Verify tables exist
+      const tableNames = await db.tableNames()
+      expect(tableNames).toContain('messages')
+      expect(tableNames).toContain('flashcards')
     })
   })
 })

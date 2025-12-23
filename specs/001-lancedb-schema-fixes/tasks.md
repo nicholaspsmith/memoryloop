@@ -138,14 +138,14 @@
 
 ### Tests for User Story 4
 
-- [ ] T027 [P] [US4] Write test for concurrent resetDbConnection calls in tests/unit/lib/db/client-auto-init.test.ts
-- [ ] T028 [P] [US4] Write test for reset during connection in progress in tests/unit/lib/db/client-auto-init.test.ts
+- [x] T027 [P] [US4] Write test for concurrent resetDbConnection calls in tests/unit/lib/db/client-auto-init.test.ts
+- [x] T028 [P] [US4] Write test for reset during connection in progress in tests/unit/lib/db/client-auto-init.test.ts
 
 ### Implementation for User Story 4
 
-- [ ] T029 [US4] Change resetDbConnection signature to async in lib/db/client.ts
-- [ ] T030 [US4] Add await for connectionPromise before resetting in lib/db/client.ts
-- [ ] T031 [US4] Update all callers of resetDbConnection to await it in tests/unit/lib/db/client-auto-init.test.ts
+- [x] T029 [US4] Change resetDbConnection signature to async in lib/db/client.ts
+- [x] T030 [US4] Add await for connectionPromise before resetting in lib/db/client.ts
+- [x] T031 [US4] Update all callers of resetDbConnection to await it in tests/unit/lib/db/client-auto-init.test.ts
 
 **Checkpoint**: User Story 4 complete - safe reset implemented
 

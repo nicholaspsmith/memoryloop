@@ -97,8 +97,20 @@ export async function closeDbConnection(): Promise<void> {
 /**
  * Reset database connection (for test isolation)
  * Forces a new connection on next getDbConnection call
+ *
+ * Waits for any in-progress connection to complete before resetting
+ * to prevent race conditions during concurrent operations.
  */
-export function resetDbConnection(): void {
+export async function resetDbConnection(): Promise<void> {
+  // Wait for any in-progress connection to complete
+  if (connectionPromise) {
+    try {
+      await connectionPromise
+    } catch {
+      // Ignore errors from the connection we're about to reset
+    }
+  }
+
   dbConnection = null
   connectionPromise = null
   schemaInitialized = false
