@@ -413,8 +413,8 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
 
   const handleNavigateNext = () => {
     if (flashcards.length === 0) return
-    // Next: card slides towards right (enters from left)
-    setNavigationDirection('left')
+    // Next: card slides out to the right
+    setNavigationDirection('right')
     setCurrentIndex((prev) => (prev + 1) % flashcards.length)
     // Clear animation after it completes
     setTimeout(() => setNavigationDirection(null), 300)
@@ -422,8 +422,8 @@ export default function QuizInterface({ initialFlashcards = [] }: QuizInterfaceP
 
   const handleNavigatePrevious = () => {
     if (flashcards.length === 0) return
-    // Previous: card slides from right to left (enters from right)
-    setNavigationDirection('right')
+    // Previous: card slides out to the left
+    setNavigationDirection('left')
     setCurrentIndex((prev) => (prev - 1 + flashcards.length) % flashcards.length)
     // Clear animation after it completes
     setTimeout(() => setNavigationDirection(null), 300)
