@@ -3,8 +3,7 @@
 # Test script for update-agent-context.sh version extraction logic
 # Tests various edge cases and version formats
 
-# Temporarily disable set -e to debug CI issue
-# set -euo pipefail
+# Note: set -e disabled for GitHub Actions compatibility (workflow uses bash -e)
 set -uo pipefail
 
 SCRIPT_DIR="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -65,24 +64,17 @@ echo "=== Running update-agent-context.sh Tests ==="
 echo ""
 
 # Source the script functions
-echo "DEBUG: About to source script functions"
 source_script_functions
-echo "DEBUG: Script functions sourced successfully"
-echo "DEBUG: PACKAGE_JSON=$PACKAGE_JSON"
-echo "DEBUG: MOCK_DIR=$MOCK_DIR"
 
 # Test 1: Valid package.json extraction
 echo "Test 1: Valid package.json extraction"
-version=$(get_version "typescript") || { echo "DEBUG: get_version failed with exit code $?"; exit 1; }
-echo "DEBUG: Version extracted: '$version'"
-run_test "Extract TypeScript version" "5.7.0" "$version" || { echo "DEBUG: run_test failed"; exit 1; }
-echo "DEBUG: Test 1 completed, TESTS_FAILED=$TESTS_FAILED"
+version=$(get_version "typescript")
+run_test "Extract TypeScript version" "5.7.0" "$version"
 
 # Test 2: npm prefix stripping (^)
 echo "Test 2: npm prefix stripping (^)"
 version=$(get_version "next")
 run_test "Strip caret prefix" "16.0.10" "$version"
-echo "DEBUG: Test 2 completed, TESTS_FAILED=$TESTS_FAILED"
 
 # Test 3: npm prefix stripping (~)
 echo "Test 3: npm prefix stripping (~)"

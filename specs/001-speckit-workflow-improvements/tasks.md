@@ -126,7 +126,7 @@ User Stories 1-3 cover:
 - [ ] T033 [P] [US7] Add test case: Parenthetical version update (postgres, drizzle-orm) in `tests/bash/test-version-extraction.sh`
 - [ ] T034 [P] [US7] Add test case: Special characters in display name in `tests/bash/test-version-extraction.sh`
 - [x] T035 [US7] Make test script executable and add shebang to `tests/bash/test-version-extraction.sh`
-- [ ] T036 [US7] Run complete test suite and verify all 10 test cases pass
+- [x] T036 [US7] Run complete test suite and verify all 10 test cases pass
 - [x] T037 [US7] Add test execution to GitHub Actions workflow (if .github/workflows/ exists)
 
 **Checkpoint**: At this point, comprehensive tests should exist and pass for all version extraction logic

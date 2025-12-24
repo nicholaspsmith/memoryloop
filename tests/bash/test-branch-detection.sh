@@ -3,8 +3,7 @@
 # Test script for get-current-branch.sh
 # Tests various edge cases and branch detection scenarios
 
-# Temporarily disable set -e to work with GitHub Actions bash -e shell
-# set -euo pipefail
+# Note: set -e disabled for GitHub Actions compatibility (workflow uses bash -e)
 set -uo pipefail
 
 SCRIPT_DIR="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
