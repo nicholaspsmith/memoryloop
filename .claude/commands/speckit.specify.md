@@ -56,8 +56,7 @@ Given that feature description, do this:
 
    d. Run the script `.specify/scripts/bash/create-new-feature.sh --json "$ARGUMENTS"` with the calculated number and short-name:
    - Pass `--number N+1` and `--short-name "your-short-name"` along with the feature description
-   - Bash example: `.specify/scripts/bash/create-new-feature.sh --json "$ARGUMENTS" --json --number 5 --short-name "user-auth" "Add user authentication"`
-   - PowerShell example: `.specify/scripts/bash/create-new-feature.sh --json "$ARGUMENTS" -Json -Number 5 -ShortName "user-auth" "Add user authentication"`
+   - Example: `.specify/scripts/bash/create-new-feature.sh --json "$ARGUMENTS" --json --number 5 --short-name "user-auth" "Add user authentication"`
 
    **IMPORTANT**:
    - Check all three sources (remote branches, local branches, specs directories) to find the highest number
@@ -189,6 +188,26 @@ Given that feature description, do this:
    d. **Update Checklist**: After each validation iteration, update the checklist file with current pass/fail status
 
 7. Report completion with branch name, spec file path, checklist results, and readiness for the next phase (`/speckit.clarify` or `/speckit.plan`).
+
+8. **Next Steps**:
+
+   After completion, use AskUserQuestion to ask what to do next:
+
+   **Question**: "Specification complete! What would you like to do next?"
+
+   **Options**:
+   - **Create Implementation Plan** (`/3.plan`): Generate detailed technical implementation plan
+   - **Clarify Requirements** (`/2.1.clarify`): Resolve any specification ambiguities first
+   - **Review Specification**: I'll review the spec file myself before continuing
+   - **Exit**: I'm done for now
+
+   - If user selects "Create Implementation Plan", execute `/3.plan`
+   - If user selects "Clarify Requirements", execute `/2.1.clarify`
+   - Otherwise, acknowledge and wait for user's next action
+
+9. **Branch Footer**:
+
+   After all other output is complete, run `.specify/scripts/bash/get-current-branch.sh --format footer` and display the result as the final line of your response.
 
 **NOTE:** The script creates and checks out the new branch and initializes the spec file before writing.
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-# Update agent context files with information from plan.md
+# Update Claude Code context file with information from plan.md
 #
-# This script maintains AI agent context files by parsing feature specifications 
-# and updating agent-specific configuration files with project information.
+# This script maintains the CLAUDE.md context file by parsing feature specifications
+# and updating it with project information.
 #
 # MAIN FUNCTIONS:
 # 1. Environment Validation
@@ -17,10 +17,9 @@
 #    - Handles missing or incomplete specification data gracefully
 #
 # 3. Agent File Management
-#    - Creates new agent context files from templates when needed
-#    - Updates existing agent files with new project information
+#    - Creates new CLAUDE.md from template when needed
+#    - Updates existing CLAUDE.md with new project information
 #    - Preserves manual additions and custom configurations
-#    - Supports multiple AI agent formats and directory structures
 #
 # 4. Content Generation
 #    - Generates language-specific build/test commands
@@ -28,15 +27,7 @@
 #    - Updates technology stacks and recent changes sections
 #    - Maintains consistent formatting and timestamps
 #
-# 5. Multi-Agent Support
-#    - Handles agent-specific file paths and naming conventions
-#    - Supports: Claude, Gemini, Copilot, Cursor, Qwen, opencode, Codex, Windsurf, Kilo Code, Auggie CLI, Roo Code, CodeBuddy CLI, Qoder CLI, Amp, SHAI, or Amazon Q Developer CLI
-#    - Can update single agents or all existing agent files
-#    - Creates default Claude file if no agent files exist
-#
-# Usage: ./update-agent-context.sh [agent_type]
-# Agent types: claude|gemini|copilot|cursor-agent|qwen|opencode|codex|windsurf|kilocode|auggie|shai|q|bob|qoder
-# Leave empty to update all existing agent files
+# Usage: ./update-agent-context.sh
 
 set -e
 
@@ -56,25 +47,9 @@ source "$SCRIPT_DIR/common.sh"
 eval $(get_feature_paths)
 
 NEW_PLAN="$IMPL_PLAN"  # Alias for compatibility with existing code
-AGENT_TYPE="${1:-}"
 
-# Agent-specific file paths  
+# Claude Code context file path
 CLAUDE_FILE="$REPO_ROOT/CLAUDE.md"
-GEMINI_FILE="$REPO_ROOT/GEMINI.md"
-COPILOT_FILE="$REPO_ROOT/.github/agents/copilot-instructions.md"
-CURSOR_FILE="$REPO_ROOT/.cursor/rules/specify-rules.mdc"
-QWEN_FILE="$REPO_ROOT/QWEN.md"
-AGENTS_FILE="$REPO_ROOT/AGENTS.md"
-WINDSURF_FILE="$REPO_ROOT/.windsurf/rules/specify-rules.md"
-KILOCODE_FILE="$REPO_ROOT/.kilocode/rules/specify-rules.md"
-AUGGIE_FILE="$REPO_ROOT/.augment/rules/specify-rules.md"
-ROO_FILE="$REPO_ROOT/.roo/rules/specify-rules.md"
-CODEBUDDY_FILE="$REPO_ROOT/CODEBUDDY.md"
-QODER_FILE="$REPO_ROOT/QODER.md"
-AMP_FILE="$REPO_ROOT/AGENTS.md"
-SHAI_FILE="$REPO_ROOT/SHAI.md"
-Q_FILE="$REPO_ROOT/AGENTS.md"
-BOB_FILE="$REPO_ROOT/AGENTS.md"
 
 # Template file
 TEMPLATE_FILE="$REPO_ROOT/.specify/templates/agent-file-template.md"
@@ -203,6 +178,102 @@ parse_plan_data() {
     if [[ -n "$NEW_PROJECT_TYPE" ]]; then
         log_info "Found project type: $NEW_PROJECT_TYPE"
     fi
+}
+
+# Generate documentation URL for a package
+# Usage: get_package_doc_url "package-name" "version"
+get_package_doc_url() {
+    local package="$1"
+    local version="$2"
+
+    # Special cases for popular packages with dedicated documentation sites
+    case "$package" in
+        "next")
+            echo "https://nextjs.org/docs"
+            ;;
+        "react")
+            echo "https://react.dev"
+            ;;
+        "react-dom")
+            echo "https://react.dev/reference/react-dom"
+            ;;
+        "typescript")
+            echo "https://www.typescriptlang.org/docs"
+            ;;
+        "@anthropic-ai/sdk")
+            echo "https://docs.anthropic.com/en/api/client-sdks"
+            ;;
+        "tailwindcss")
+            echo "https://tailwindcss.com/docs"
+            ;;
+        "@lancedb/lancedb")
+            echo "https://lancedb.github.io/lancedb"
+            ;;
+        "postgres")
+            echo "https://www.npmjs.com/package/postgres/v/$version"
+            ;;
+        "drizzle-orm")
+            echo "https://orm.drizzle.team/docs/overview"
+            ;;
+        "next-auth")
+            echo "https://next-auth.js.org"
+            ;;
+        "vitest")
+            echo "https://vitest.dev"
+            ;;
+        "@playwright/test")
+            echo "https://playwright.dev/docs/intro"
+            ;;
+        "eslint")
+            echo "https://eslint.org/docs/latest"
+            ;;
+        "prettier")
+            echo "https://prettier.io/docs/en"
+            ;;
+        "ts-fsrs")
+            echo "https://www.npmjs.com/package/ts-fsrs/v/$version"
+            ;;
+        *)
+            # Default to npm package page with specific version
+            echo "https://www.npmjs.com/package/$package/v/$version"
+            ;;
+    esac
+}
+
+# Extract version for a package from package.json
+# Usage: get_version "package-name"
+# Returns: Version string with prefixes stripped (e.g., "1.2.3" from "^1.2.3")
+get_version() {
+    local package="$1"
+    local package_json="${PACKAGE_JSON:-$REPO_ROOT/package.json}"
+
+    # Check if package.json exists
+    if [[ ! -f "$package_json" ]]; then
+        echo ""
+        return 1
+    fi
+
+    # Extract version from dependencies or devDependencies using jq
+    # Try both dependencies and devDependencies
+    local version=$(jq -r --arg pkg "$package" '
+        (.dependencies // {})[$pkg] // (.devDependencies // {})[$pkg] // empty
+    ' "$package_json" 2>/dev/null)
+
+    # If version is empty or null, return empty
+    if [[ -z "$version" || "$version" == "null" ]]; then
+        echo ""
+        return 0
+    fi
+
+    # Strip npm version prefixes (^, ~, >=, >, <, <=)
+    version="${version#^}"
+    version="${version#'~'}"
+    version="${version#>=}"
+    version="${version#>}"
+    version="${version#<=}"
+    version="${version#<}"
+
+    echo "$version"
 }
 
 format_technology_stack() {
@@ -373,21 +444,35 @@ update_existing_agent_file() {
         return 1
     }
     
-    # Process the file in one pass
-    local tech_stack=$(format_technology_stack "$NEW_LANG" "$NEW_FRAMEWORK")
+    # Generate Active Technologies from package.json dependencies
     local new_tech_entries=()
     local new_change_entry=""
-    
-    # Prepare new technology entries
-    if [[ -n "$tech_stack" ]] && ! grep -q "$tech_stack" "$target_file"; then
-        new_tech_entries+=("- $tech_stack ($CURRENT_BRANCH)")
+
+    # Read dependencies from package.json
+    local package_json="$REPO_ROOT/package.json"
+    if [[ ! -f "$package_json" ]]; then
+        log_error "package.json not found at $package_json"
+        return 1
     fi
-    
-    if [[ -n "$NEW_DB" ]] && [[ "$NEW_DB" != "N/A" ]] && [[ "$NEW_DB" != "NEEDS CLARIFICATION" ]] && ! grep -q "$NEW_DB" "$target_file"; then
-        new_tech_entries+=("- $NEW_DB ($CURRENT_BRANCH)")
-    fi
-    
-    # Prepare new change entry
+
+    # Parse dependencies and generate entries with documentation links
+    while IFS='|' read -r package_name package_version; do
+        # Skip if empty
+        [[ -z "$package_name" ]] && continue
+
+        # Remove ^ or ~ from version
+        local clean_version="${package_version#^}"
+        clean_version="${clean_version#~}"
+
+        # Generate documentation URL
+        local doc_url=$(get_package_doc_url "$package_name" "$clean_version")
+
+        # Format entry: - package-name version ([docs](url))
+        new_tech_entries+=("- $package_name $clean_version ([docs]($doc_url))")
+    done < <(jq -r '.dependencies // {} | to_entries | sort_by(.key) | .[] | "\(.key)|\(.value)"' "$package_json")
+
+    # Prepare new change entry for Recent Changes
+    local tech_stack=$(format_technology_stack "$NEW_LANG" "$NEW_FRAMEWORK")
     if [[ -n "$tech_stack" ]]; then
         new_change_entry="- $CURRENT_BRANCH: Added $tech_stack"
     elif [[ -n "$NEW_DB" ]] && [[ "$NEW_DB" != "N/A" ]] && [[ "$NEW_DB" != "NEEDS CLARIFICATION" ]]; then
@@ -415,27 +500,24 @@ update_existing_agent_file() {
     local file_ended=false
     
     while IFS= read -r line || [[ -n "$line" ]]; do
-        # Handle Active Technologies section
+        # Handle Active Technologies section - REPLACE all existing entries
         if [[ "$line" == "## Active Technologies" ]]; then
             echo "$line" >> "$temp_file"
             in_tech_section=true
             continue
         elif [[ $in_tech_section == true ]] && [[ "$line" =~ ^##[[:space:]] ]]; then
-            # Add new tech entries before closing the section
+            # Add new tech entries before closing the section (replacing old ones)
             if [[ $tech_entries_added == false ]] && [[ ${#new_tech_entries[@]} -gt 0 ]]; then
                 printf '%s\n' "${new_tech_entries[@]}" >> "$temp_file"
+                echo "" >> "$temp_file"
                 tech_entries_added=true
             fi
             echo "$line" >> "$temp_file"
             in_tech_section=false
             continue
-        elif [[ $in_tech_section == true ]] && [[ -z "$line" ]]; then
-            # Add new tech entries before empty line in tech section
-            if [[ $tech_entries_added == false ]] && [[ ${#new_tech_entries[@]} -gt 0 ]]; then
-                printf '%s\n' "${new_tech_entries[@]}" >> "$temp_file"
-                tech_entries_added=true
-            fi
-            echo "$line" >> "$temp_file"
+        elif [[ $in_tech_section == true ]]; then
+            # Skip all existing lines in Active Technologies section
+            # They will be replaced with new package.json-based entries
             continue
         fi
         
@@ -574,177 +656,23 @@ update_agent_file() {
     return 0
 }
 
-#==============================================================================
-# Agent Selection and Processing
-#==============================================================================
-
-update_specific_agent() {
-    local agent_type="$1"
-    
-    case "$agent_type" in
-        claude)
-            update_agent_file "$CLAUDE_FILE" "Claude Code"
-            ;;
-        gemini)
-            update_agent_file "$GEMINI_FILE" "Gemini CLI"
-            ;;
-        copilot)
-            update_agent_file "$COPILOT_FILE" "GitHub Copilot"
-            ;;
-        cursor-agent)
-            update_agent_file "$CURSOR_FILE" "Cursor IDE"
-            ;;
-        qwen)
-            update_agent_file "$QWEN_FILE" "Qwen Code"
-            ;;
-        opencode)
-            update_agent_file "$AGENTS_FILE" "opencode"
-            ;;
-        codex)
-            update_agent_file "$AGENTS_FILE" "Codex CLI"
-            ;;
-        windsurf)
-            update_agent_file "$WINDSURF_FILE" "Windsurf"
-            ;;
-        kilocode)
-            update_agent_file "$KILOCODE_FILE" "Kilo Code"
-            ;;
-        auggie)
-            update_agent_file "$AUGGIE_FILE" "Auggie CLI"
-            ;;
-        roo)
-            update_agent_file "$ROO_FILE" "Roo Code"
-            ;;
-        codebuddy)
-            update_agent_file "$CODEBUDDY_FILE" "CodeBuddy CLI"
-            ;;
-        qoder)
-            update_agent_file "$QODER_FILE" "Qoder CLI"
-            ;;
-        amp)
-            update_agent_file "$AMP_FILE" "Amp"
-            ;;
-        shai)
-            update_agent_file "$SHAI_FILE" "SHAI"
-            ;;
-        q)
-            update_agent_file "$Q_FILE" "Amazon Q Developer CLI"
-            ;;
-        bob)
-            update_agent_file "$BOB_FILE" "IBM Bob"
-            ;;
-        *)
-            log_error "Unknown agent type '$agent_type'"
-            log_error "Expected: claude|gemini|copilot|cursor-agent|qwen|opencode|codex|windsurf|kilocode|auggie|roo|amp|shai|q|bob|qoder"
-            exit 1
-            ;;
-    esac
-}
-
-update_all_existing_agents() {
-    local found_agent=false
-    
-    # Check each possible agent file and update if it exists
-    if [[ -f "$CLAUDE_FILE" ]]; then
-        update_agent_file "$CLAUDE_FILE" "Claude Code"
-        found_agent=true
-    fi
-    
-    if [[ -f "$GEMINI_FILE" ]]; then
-        update_agent_file "$GEMINI_FILE" "Gemini CLI"
-        found_agent=true
-    fi
-    
-    if [[ -f "$COPILOT_FILE" ]]; then
-        update_agent_file "$COPILOT_FILE" "GitHub Copilot"
-        found_agent=true
-    fi
-    
-    if [[ -f "$CURSOR_FILE" ]]; then
-        update_agent_file "$CURSOR_FILE" "Cursor IDE"
-        found_agent=true
-    fi
-    
-    if [[ -f "$QWEN_FILE" ]]; then
-        update_agent_file "$QWEN_FILE" "Qwen Code"
-        found_agent=true
-    fi
-    
-    if [[ -f "$AGENTS_FILE" ]]; then
-        update_agent_file "$AGENTS_FILE" "Codex/opencode"
-        found_agent=true
-    fi
-    
-    if [[ -f "$WINDSURF_FILE" ]]; then
-        update_agent_file "$WINDSURF_FILE" "Windsurf"
-        found_agent=true
-    fi
-    
-    if [[ -f "$KILOCODE_FILE" ]]; then
-        update_agent_file "$KILOCODE_FILE" "Kilo Code"
-        found_agent=true
-    fi
-
-    if [[ -f "$AUGGIE_FILE" ]]; then
-        update_agent_file "$AUGGIE_FILE" "Auggie CLI"
-        found_agent=true
-    fi
-    
-    if [[ -f "$ROO_FILE" ]]; then
-        update_agent_file "$ROO_FILE" "Roo Code"
-        found_agent=true
-    fi
-
-    if [[ -f "$CODEBUDDY_FILE" ]]; then
-        update_agent_file "$CODEBUDDY_FILE" "CodeBuddy CLI"
-        found_agent=true
-    fi
-
-    if [[ -f "$SHAI_FILE" ]]; then
-        update_agent_file "$SHAI_FILE" "SHAI"
-        found_agent=true
-    fi
-
-    if [[ -f "$QODER_FILE" ]]; then
-        update_agent_file "$QODER_FILE" "Qoder CLI"
-        found_agent=true
-    fi
-
-    if [[ -f "$Q_FILE" ]]; then
-        update_agent_file "$Q_FILE" "Amazon Q Developer CLI"
-        found_agent=true
-    fi
-    
-    if [[ -f "$BOB_FILE" ]]; then
-        update_agent_file "$BOB_FILE" "IBM Bob"
-        found_agent=true
-    fi
-    
-    # If no agent files exist, create a default Claude file
-    if [[ "$found_agent" == false ]]; then
-        log_info "No existing agent files found, creating default Claude file..."
-        update_agent_file "$CLAUDE_FILE" "Claude Code"
-    fi
-}
 print_summary() {
     echo
     log_info "Summary of changes:"
-    
+
     if [[ -n "$NEW_LANG" ]]; then
         echo "  - Added language: $NEW_LANG"
     fi
-    
+
     if [[ -n "$NEW_FRAMEWORK" ]]; then
         echo "  - Added framework: $NEW_FRAMEWORK"
     fi
-    
+
     if [[ -n "$NEW_DB" ]] && [[ "$NEW_DB" != "N/A" ]]; then
         echo "  - Added database: $NEW_DB"
     fi
-    
-    echo
 
-    log_info "Usage: $0 [claude|gemini|copilot|cursor-agent|qwen|opencode|codex|windsurf|kilocode|auggie|codebuddy|shai|q|bob|qoder]"
+    echo
 }
 
 #==============================================================================
@@ -754,36 +682,19 @@ print_summary() {
 main() {
     # Validate environment before proceeding
     validate_environment
-    
-    log_info "=== Updating agent context files for feature $CURRENT_BRANCH ==="
-    
+
+    log_info "=== Updating Claude Code context file for feature $CURRENT_BRANCH ==="
+
     # Parse the plan file to extract project information
     if ! parse_plan_data "$NEW_PLAN"; then
         log_error "Failed to parse plan data"
         exit 1
     fi
-    
-    # Process based on agent type argument
-    local success=true
-    
-    if [[ -z "$AGENT_TYPE" ]]; then
-        # No specific agent provided - update all existing agent files
-        log_info "No agent specified, updating all existing agent files..."
-        if ! update_all_existing_agents; then
-            success=false
-        fi
-    else
-        # Specific agent provided - update only that agent
-        log_info "Updating specific agent: $AGENT_TYPE"
-        if ! update_specific_agent "$AGENT_TYPE"; then
-            success=false
-        fi
-    fi
-    
-    # Print summary
-    print_summary
-    
-    if [[ "$success" == true ]]; then
+
+    # Update CLAUDE.md
+    log_info "Updating Claude Code context file: $CLAUDE_FILE"
+    if update_agent_file "$CLAUDE_FILE" "Claude Code"; then
+        print_summary
         log_success "Agent context update completed successfully"
         exit 0
     else

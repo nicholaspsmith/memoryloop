@@ -37,19 +37,24 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
-            REPO: ${{ github.repository }}
-            PR NUMBER: ${{ github.event.pull_request.number }}
+            Review this PR focusing ONLY on issues and potential problems. Be brief and actionable.
 
-            Please review this pull request and provide feedback on:
-            - Code quality and best practices
-            - Potential bugs or issues
-            - Performance considerations
-            - Security concerns
-            - Test coverage
+            CRITICAL RULES:
+            - Only mention problems, bugs, or security concerns
+            - Do NOT mention what is good or correct
+            - Do NOT provide positive feedback or praise
+            - Keep each point concise (1-2 sentences max)
+            - Only include actionable recommendations
 
-            Use the repository's CLAUDE.md for guidance on style and conventions. Be constructive and helpful in your feedback.
+            Focus areas:
+            - Bugs or logic errors
+            - Security vulnerabilities
+            - Performance issues
+            - Missing error handling
 
             Use `gh pr comment` with your Bash tool to leave your review as a comment on the PR.
+
+            If there are no issues, respond with: "No issues found."
 
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options

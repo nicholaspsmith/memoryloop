@@ -135,3 +135,23 @@ Every task MUST strictly follow this format:
   - Within each story: Tests (if requested) → Models → Services → Endpoints → Integration
   - Each phase should be a complete, independently testable increment
 - **Final Phase**: Polish & Cross-Cutting Concerns
+
+## Next Steps
+
+After generating tasks.md, use AskUserQuestion:
+
+**Question**: "Tasks generated! What would you like to do next?"
+
+**Options**:
+
+- **Start Implementation** (`/5.implement`): Begin working through tasks
+- **Create GitHub Issues** (`/4.2.taskstoissues`): Convert tasks to GitHub issues with checklists
+- **Analyze Consistency** (`/6.analyze`): Check cross-artifact consistency
+- **Review Tasks**: I'll review the task breakdown myself before continuing
+- **Exit**: I'm done for now
+
+- Execute the selected command if applicable
+
+---
+
+After all other output is complete, run `.specify/scripts/bash/get-current-branch.sh --format footer` and display the result as the final line of your response.

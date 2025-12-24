@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Post-merge hook for automatic dependency sync
+# Runs after git pull/merge to keep CLAUDE.md in sync with package.json changes
+#
+# This hook:
+# - Detects if package.json was modified in the merge
+# - Automatically runs update-agent-context.sh to sync dependency versions
+# - Updates CLAUDE.md Active Technologies section with latest package info
+#
+# Note: This hook is non-blocking (won't fail the merge if script fails)
+
+# Check if package.json was modified in the merge
+if git diff-tree -r --name-only --no-commit-id ORIG_HEAD HEAD 2>/dev/null | grep -q "^package.json$"; then
+    echo ""
+    echo "📦 package.json was updated in this merge"
+    echo "🔄 Syncing dependency versions to CLAUDE.md..."
+    echo ""
+
+    # Run update-agent-context.sh from repo root
+    if ./.specify/scripts/bash/update-agent-context.sh; then
+        echo ""
+        echo "✅ CLAUDE.md Active Technologies section updated successfully"
+        echo ""
+        echo "💡 Review changes with: git diff CLAUDE.md"
+        echo "💡 Stage changes if needed: git add CLAUDE.md"
+        echo ""
+    else
+        echo ""
+        echo "⚠️  Warning: Failed to update CLAUDE.md"
+        echo "   You may need to run the script manually:"
+        echo "   ./.specify/scripts/bash/update-agent-context.sh"
+        echo ""
+    fi
+fi

@@ -132,4 +132,106 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Confirm the implementation follows the technical plan
    - Report final status with summary of completed work
 
+10. **Automatic PR Creation Offer**: After all tasks are complete, offer to create a pull request:
+
+a. **Detect completion status**:
+
+- Parse tasks.md to count total tasks vs completed tasks
+- Check if all tasks marked with `- [x]` or `- [X]`
+- If any tasks remain incomplete (`- [ ]`), skip PR creation offer and proceed to Next Steps
+
+b. **Offer PR creation** (only if 100% tasks complete):
+
+- Use AskUserQuestion: "All tasks complete! Would you like to create a pull request now?"
+- Options: "Yes, create PR" / "No, I'll create it manually later"
+- If user selects "No", proceed to Next Steps
+
+c. **Gather PR metadata** (if user accepts):
+
+- Get current branch: `git rev-parse --abbrev-ref HEAD`
+- Validate branch name matches pattern `^[0-9]{3}-[a-z0-9-]+$` (reject if invalid)
+- Parse branch format `NNN-short-name` to extract feature number
+- Get feature directory from check-prerequisites.sh output (FEATURE_DIR)
+- Read spec.md for feature summary/description
+- Find associated GitHub issue number:
+  - Run `gh issue list --search "in:title [NNN]" --state open --json number,title`
+  - Extract issue number from results (should match `[NNN]` format)
+  - If no issue found, warn user but continue (PR will still be created)
+
+d. **Generate PR content**:
+
+- Title format: `[NNN] Feature Short Name` (from branch name)
+- Body format:
+
+  ```markdown
+  ## Summary
+
+  [Brief description from spec.md Overview or Summary section]
+
+  ## Changes
+
+  - Completed [count] tasks from implementation plan
+  - [List key deliverables from completed tasks]
+
+  ## Documentation
+
+  - **Specification**: [`specs/NNN-short-name/spec.md`](./specs/NNN-short-name/spec.md)
+  - **Implementation Plan**: [`specs/NNN-short-name/plan.md`](./specs/NNN-short-name/plan.md)
+  - **Tasks**: [`specs/NNN-short-name/tasks.md`](./specs/NNN-short-name/tasks.md)
+
+  ## Task Completion
+
+  ✅ All X tasks completed
+
+  Closes #[issue-number]
+  ```
+
+e. **Create PR**:
+
+- Create temporary file in /tmp: `PR_BODY_FILE=$(mktemp /tmp/pr-body-XXXXXX.md)`
+- Set restrictive permissions: `chmod 600 "$PR_BODY_FILE"`
+- Set up cleanup trap: `trap 'rm -f "$PR_BODY_FILE"' EXIT INT TERM`
+- Write PR body to temporary file
+- Run: `gh pr create --title "[title]" --body-file "$PR_BODY_FILE" --base main`
+- If successful: Display PR URL and number
+- If failed: Show error and manual fallback instructions
+- Temporary file automatically cleaned up by trap on all exit paths
+
+f. **Error handling (non-blocking)**:
+
+- GitHub remote check: Skip if not a GitHub repo
+- Auth failure: Show manual PR creation instructions
+- API errors: Provide fallback command with pre-filled title/body
+- Manual fallback template:
+  ```bash
+  # Create PR manually:
+  gh pr create --title "[NNN] Feature Name" --body-file "FEATURE_DIR/pr-body.md" --base main
+  ```
+
+g. **Success message**:
+
+- Display PR URL: `Created PR #123: https://github.com/owner/repo/pull/123`
+- Note that merging will automatically close the linked issue
+- Remind about CI checks that need to pass
+
 Note: This command assumes a complete task breakdown exists in tasks.md. If tasks are incomplete or missing, suggest running `/speckit.tasks` first to regenerate the task list.
+
+## Next Steps
+
+After completing all tasks (or after stopping at a checkpoint), use AskUserQuestion:
+
+**Question**: "Implementation tasks complete! What would you like to do next?"
+
+**Options**:
+
+- **Create Pull Request**: I'll help create a PR with the changes
+- **Run Final Tests**: Execute the complete test suite
+- **Review Changes**: I'll review the implementation myself
+- **Continue with Remaining Tasks**: There are more tasks to complete
+- **Exit**: I'm done for now
+
+- Execute the selected action if applicable
+
+---
+
+After all other output is complete, run `.specify/scripts/bash/get-current-branch.sh --format footer` and display the result as the final line of your response.
