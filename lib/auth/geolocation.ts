@@ -52,9 +52,9 @@ export async function getGeolocation(ipAddress: string): Promise<GeolocationData
   }
 
   try {
-    // Call ip-api.com
+    // Call ip-api.com (HTTPS for security)
     const response = await fetch(
-      `http://ip-api.com/json/${ipAddress}?fields=country,regionName,city`,
+      `https://ip-api.com/json/${ipAddress}?fields=country,regionName,city`,
       {
         signal: AbortSignal.timeout(5000), // 5 second timeout
       }

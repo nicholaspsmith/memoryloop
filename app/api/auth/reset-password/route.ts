@@ -14,7 +14,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { hash } from 'bcryptjs'
 import { validateResetToken } from '@/lib/db/operations/password-reset-tokens'
-import { updateUser } from '@/lib/db/operations/users'
 import { logSecurityEvent } from '@/lib/db/operations/security-logs'
 import { getGeolocation } from '@/lib/auth/geolocation'
 import { hashToken } from '@/lib/auth/tokens'
@@ -89,14 +88,53 @@ export async function POST(request: NextRequest) {
 
     // Hash new password
     const passwordHash = await hash(password, 12)
-
-    // Update user password
-    const updatedUser = await updateUser(userId, { passwordHash })
-
-    // Mark token as used
     const tokenHash = hashToken(token)
-    const { markTokenUsed } = await import('@/lib/db/operations/password-reset-tokens')
-    await markTokenUsed(tokenHash)
+
+    // Execute password reset in transaction (atomic: both succeed or both fail)
+    const { getDb } = await import('@/lib/db/pg-client')
+    const db = getDb()
+
+    const updatedUser = await db.transaction(async (tx) => {
+      // 1. Mark token as used FIRST (prevents reuse if password update fails)
+      const { passwordResetTokens } = await import('@/lib/db/drizzle-schema')
+      const { eq } = await import('drizzle-orm')
+      await tx
+        .update(passwordResetTokens)
+        .set({ used: true, usedAt: new Date() })
+        .where(eq(passwordResetTokens.tokenHash, tokenHash))
+
+      // 2. Update user password
+      const { users } = await import('@/lib/db/drizzle-schema')
+      const [user] = await tx
+        .update(users)
+        .set({ passwordHash, updatedAt: new Date() })
+        .where(eq(users.id, userId))
+        .returning()
+
+      if (!user) {
+        throw new Error(`User not found: ${userId}`)
+      }
+
+      // Return user in application format
+      return {
+        id: user.id,
+        email: user.email,
+        passwordHash: user.passwordHash,
+        name: user.name,
+        emailVerified: user.emailVerified ?? false,
+        emailVerifiedAt: user.emailVerifiedAt ? user.emailVerifiedAt.getTime() : null,
+        createdAt: user.createdAt.getTime(),
+        updatedAt: user.updatedAt.getTime(),
+      }
+    })
+
+    // Send password change notification email
+    const { sendPasswordChangedEmail } = await import('@/lib/email/templates')
+    await sendPasswordChangedEmail(updatedUser.email, updatedUser.name || undefined)
+
+    // Note: With JWT-based sessions, existing sessions remain valid until expiry (7 days).
+    // Users should manually log out and log back in with their new password.
+    // For production: Consider implementing session versioning to invalidate all sessions.
 
     // Log successful password reset
     await logSecurityEvent({
