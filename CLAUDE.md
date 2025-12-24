@@ -98,3 +98,76 @@ Follow the project principles defined in `.specify/memory/constitution.md`:
 - Docker, Docker Compose
 - Nginx, Certbot
 - GitHub Actions
+
+### Core
+
+- TypeScript 5.7.0
+- Node.js 20+
+- Next.js 16.0.10
+- React 19.2.3
+
+### Styling
+
+- Tailwind CSS 4.0.0
+
+### Database
+
+- PostgreSQL (via postgres 3.4.7, drizzle-orm 0.45.1)
+- LanceDB 0.22.3 (vector database)
+- pgvector 0.2.1 (vector embeddings)
+
+### AI/ML
+
+- Anthropic Claude SDK 0.71.2
+- Ollama (nomic-embed-text for local embeddings)
+- ts-fsrs 5.2.3 (spaced repetition)
+
+### Authentication
+
+- NextAuth 5.0.0-beta.30
+
+### Testing
+
+- Vitest 4.0.15
+- Playwright 1.57.0
+- Testing Library (React, Jest-DOM)
+
+### Development Tools
+
+- ESLint 9.0.0
+- Prettier 3.7.4
+- lint-staged 16.2.7
+
+### Deployment
+
+- Docker, Docker Compose
+- Nginx, Certbot
+- GitHub Actions
+
+## Active Technologies
+
+- TypeScript 5.7.x with Next.js 15.1.x (App Router with React 19) (001-claude-flashcard)
+- LanceDB (vector database) for user data, conversations, messages, flashcards, and review history with vector embeddings for future semantic search (001-claude-flashcard)
+- TypeScript 5.7 (strict mode) + @lancedb/lancedb 0.22 (001-lancedb-schema-fixes)
+- LanceDB (file-based vector database for embeddings only) (001-lancedb-schema-fixes)
+- Bash 4+ (for scripts), TypeScript/Node.js (for Claude command integration in Phase 3) (001-speckit-workflow-improvements)
+- File-based (CLAUDE.md, package.json, .claude/commands/\*, specs directories) (001-speckit-workflow-improvements)
+- TypeScript 5.x, Node.js 20.x (Next.js 15) + Next.js 15 (002-ci-cd-deployment)
+- LanceDB (file-based vector database), Backblaze B2 (backups) (002-ci-cd-deployment)
+- TypeScript 5.x with React 18 (Next.js 16) + React (003-flashcard-rating-labels)
+- N/A (UI-only change, no data model changes) (003-flashcard-rating-labels)
+- [if applicable, e.g., PostgreSQL, CoreData, files or N/A] (004-claude-api)
+- TypeScript/Node.js (existing project) + N/A (removing a dependency (006-remove-bd)
+- N/A (file system operations only) (006-remove-bd)
+- TypeScript 5.7, Node.js 20+, Bash (for hook scripts) + lint-staged (staged file operations) (008-pre-commit-hooks)
+- N/A (hooks are stateless) (008-pre-commit-hooks)
+- TypeScript 5.7 / Node.js (Next.js 16), Bash + Next.js (009-ollama-model-deployment)
+- PostgreSQL (existing), LanceDB (existing), Ollama models volume (009-ollama-model-deployment)
+- TypeScript 5.7 (strict mode) + Next.js 16.0.10 App Router (010-ui-polish)
+- N/A (presentation layer only, no data persistence) (010-ui-polish)
+
+## Recent Changes
+
+- 010-ui-polish: Added TypeScript 5.7 (strict mode) + Next.js 16.0.10 App Router
+- 009-ollama-model-deployment: Added TypeScript 5.7 / Node.js (Next.js 16), Bash + Next.js
+- 008-pre-commit-hooks: Added TypeScript 5.7, Node.js 20+, Bash (for hook scripts) + lint-staged (staged file operations)

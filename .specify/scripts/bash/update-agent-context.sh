@@ -22,6 +22,14 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 PACKAGE_JSON="$REPO_ROOT/package.json"
 CLAUDE_MD="$REPO_ROOT/CLAUDE.md"
 
+# Source common.sh for additional utilities (optional - provides get_feature_paths if available)
+COMMON_SH="$SCRIPT_DIR/common.sh"
+if [[ -f "$COMMON_SH" ]]; then
+    # Don't source yet - not needed for current functionality
+    # Can be enabled later if we need get_feature_paths()
+    :
+fi
+
 # List of packages tracked for version synchronization
 # NOTE: This is the single source of truth. When adding a new package:
 #   1. Add the npm package name to this array
@@ -128,6 +136,55 @@ get_version() {
 }
 
 #==============================================================================
+# Plan.md Parsing Functions
+#==============================================================================
+
+# Extract field from plan.md Technical Context section
+# Usage: extract_plan_field "Language/Version" "$plan_file"
+extract_plan_field() {
+    local field_pattern="$1"
+    local plan_file="$2"
+
+    grep "^\*\*${field_pattern}\*\*: " "$plan_file" 2>/dev/null | \
+        head -1 | \
+        sed "s|^\*\*${field_pattern}\*\*: ||" | \
+        sed 's/^[ \t]*//;s/[ \t]*$//' | \
+        grep -v "NEEDS CLARIFICATION" | \
+        grep -v "^N/A$" || echo ""
+}
+
+# Parse single plan.md file and return key data
+# Returns: branch|lang|framework|storage as pipe-delimited string
+parse_plan_file() {
+    local plan_file="$1"
+    local branch_name="$(basename "$(dirname "$plan_file")")"
+
+    local lang=$(extract_plan_field "Language/Version" "$plan_file")
+    local framework=$(extract_plan_field "Primary Dependencies" "$plan_file")
+    local storage=$(extract_plan_field "Storage" "$plan_file")
+
+    echo "$branch_name|$lang|$framework|$storage"
+}
+
+# Find all plan.md files and parse them
+# Returns lines of pipe-delimited strings (one per plan.md file)
+collect_all_plan_data() {
+    local specs_dir="$REPO_ROOT/specs"
+
+    if [[ ! -d "$specs_dir" ]]; then
+        log_warning "specs/ directory not found at $specs_dir"
+        return 0
+    fi
+
+    # Find all plan.md files and parse each one
+    while IFS= read -r plan_file; do
+        if [[ -f "$plan_file" && -r "$plan_file" ]]; then
+            parse_plan_file "$plan_file"
+        fi
+    done < <(find "$specs_dir" -name "plan.md" -type f 2>/dev/null | sort)
+}
+
+#==============================================================================
 # Version Update Functions
 #==============================================================================
 
@@ -183,6 +240,221 @@ update_version() {
         log_warning "Could not extract version for $package_name (package not found or invalid semver)"
         return 1
     fi
+}
+
+#==============================================================================
+# Section Update Functions
+#==============================================================================
+
+# Format technology stack entry from plan.md data
+# Usage: format_tech_entry "TypeScript 5.7" "Next.js 16, React 19" "004-claude-api"
+format_tech_entry() {
+    local lang="$1"
+    local framework="$2"
+    local branch="$3"
+
+    local parts=()
+    [[ -n "$lang" ]] && parts+=("$lang")
+    # Only take first framework if multiple (e.g., "Next.js 16, React 19" → "Next.js 16")
+    if [[ -n "$framework" ]]; then
+        # Use awk to extract first comma-separated value and trim whitespace
+        local first_framework=$(echo "$framework" | awk -F',' '{gsub(/^[ \t]+|[ \t]+$/, "", $1); print $1}')
+        parts+=("$first_framework")
+    fi
+
+    if [[ ${#parts[@]} -eq 0 ]]; then
+        echo ""
+    elif [[ ${#parts[@]} -eq 1 ]]; then
+        echo "- ${parts[0]} ($branch)"
+    else
+        echo "- ${parts[0]} + ${parts[1]} ($branch)"
+    fi
+}
+
+# Update Active Technologies section in temp file
+# Adds or updates section after Technology Stack
+update_active_technologies() {
+    local temp_file="$1"
+    shift
+    local plan_data_array=("$@")
+
+    if [[ ${#plan_data_array[@]} -eq 0 ]]; then
+        log_info "No plan data to add to Active Technologies"
+        return 0
+    fi
+
+    # Build list of technology entries
+    local tech_entries=()
+    for data in "${plan_data_array[@]}"; do
+        IFS='|' read -r branch lang framework storage <<< "$data"
+
+        # Add main tech stack entry
+        local entry=$(format_tech_entry "$lang" "$framework" "$branch")
+        [[ -n "$entry" ]] && tech_entries+=("$entry")
+
+        # Add storage if present and not N/A
+        if [[ -n "$storage" && "$storage" != "N/A" ]]; then
+            tech_entries+=("- $storage ($branch)")
+        fi
+    done
+
+    if [[ ${#tech_entries[@]} -eq 0 ]]; then
+        log_info "No technology entries to add"
+        return 0
+    fi
+
+    # Check if section already exists
+    if grep -q "^## Active Technologies" "$temp_file"; then
+        # Section exists - replace content between ## Active Technologies and next ##
+        local output_file=$(mktemp)
+        local in_section=false
+
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            if [[ "$line" == "## Active Technologies" ]]; then
+                echo "$line" >> "$output_file"
+                echo "" >> "$output_file"
+                printf '%s\n' "${tech_entries[@]}" >> "$output_file"
+                in_section=true
+            elif [[ $in_section == true ]] && [[ "$line" =~ ^##[[:space:]] ]]; then
+                # Hit next section, stop skipping
+                echo "" >> "$output_file"
+                echo "$line" >> "$output_file"
+                in_section=false
+            elif [[ $in_section == false ]]; then
+                echo "$line" >> "$output_file"
+            fi
+            # Skip lines inside Active Technologies section (they'll be replaced)
+        done < "$temp_file"
+
+        mv "$output_file" "$temp_file"
+        log_info "Updated Active Technologies section"
+    else
+        # Section doesn't exist - add after Technology Stack
+        local output_file=$(mktemp)
+        local added=false
+
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            echo "$line" >> "$output_file"
+
+            # After Technology Stack section heading, skip until we find blank line or next ##
+            if [[ "$line" == "## Technology Stack" ]] && [[ $added == false ]]; then
+                # Skip content of Technology Stack section
+                while IFS= read -r next_line || [[ -n "$next_line" ]]; do
+                    echo "$next_line" >> "$output_file"
+                    if [[ "$next_line" =~ ^##[[:space:]] ]]; then
+                        # Hit next section - insert before it
+                        echo "" >> "$output_file"
+                        echo "## Active Technologies" >> "$output_file"
+                        echo "" >> "$output_file"
+                        printf '%s\n' "${tech_entries[@]}" >> "$output_file"
+                        added=true
+                        break
+                    fi
+                done < <(tail -n +$(($(grep -n "^## Technology Stack" "$temp_file" | cut -d: -f1) + 1)) "$temp_file")
+
+                if [[ $added == true ]]; then
+                    break
+                fi
+            fi
+        done < "$temp_file"
+
+        # If we didn't add it (no next section after Technology Stack), add at end
+        if [[ $added == false ]]; then
+            echo "" >> "$output_file"
+            echo "## Active Technologies" >> "$output_file"
+            echo "" >> "$output_file"
+            printf '%s\n' "${tech_entries[@]}" >> "$output_file"
+        fi
+
+        mv "$output_file" "$temp_file"
+        log_info "Created Active Technologies section"
+    fi
+
+    return 0
+}
+
+# Update Recent Changes section in temp file
+# Adds or updates section with last 3 features
+update_recent_changes() {
+    local temp_file="$1"
+    shift
+    local plan_data_array=("$@")
+
+    if [[ ${#plan_data_array[@]} -eq 0 ]]; then
+        log_info "No plan data for Recent Changes"
+        return 0
+    fi
+
+    # Get last 3 features (array is already sorted by find ... | sort)
+    # Reverse sort to get most recent first
+    local changes=()
+    local count=0
+    local -a reversed=()
+
+    # Reverse the array
+    for ((i=${#plan_data_array[@]}-1; i>=0; i--)); do
+        reversed+=("${plan_data_array[$i]}")
+    done
+
+    # Take first 3 from reversed array
+    for data in "${reversed[@]}"; do
+        if [[ $count -ge 3 ]]; then break; fi
+
+        IFS='|' read -r branch lang framework storage <<< "$data"
+
+        local change_text="- $branch: Added"
+        if [[ -n "$lang" && -n "$framework" ]]; then
+            local first_framework=$(echo "$framework" | awk -F',' '{gsub(/^[ \t]+|[ \t]+$/, "", $1); print $1}')
+            change_text="$change_text $lang + $first_framework"
+        elif [[ -n "$lang" ]]; then
+            change_text="$change_text $lang"
+        elif [[ -n "$framework" ]]; then
+            local first_framework=$(echo "$framework" | awk -F',' '{gsub(/^[ \t]+|[ \t]+$/, "", $1); print $1}')
+            change_text="$change_text $first_framework"
+        fi
+
+        changes+=("$change_text")
+        ((count++))
+    done
+
+    if [[ ${#changes[@]} -eq 0 ]]; then
+        log_info "No changes to add to Recent Changes"
+        return 0
+    fi
+
+    # Check if section already exists
+    if grep -q "^## Recent Changes" "$temp_file"; then
+        # Section exists - replace content
+        local output_file=$(mktemp)
+        local in_section=false
+
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            if [[ "$line" == "## Recent Changes" ]]; then
+                echo "$line" >> "$output_file"
+                echo "" >> "$output_file"
+                printf '%s\n' "${changes[@]}" >> "$output_file"
+                in_section=true
+            elif [[ $in_section == true ]] && [[ "$line" =~ ^##[[:space:]] ]]; then
+                echo "" >> "$output_file"
+                echo "$line" >> "$output_file"
+                in_section=false
+            elif [[ $in_section == false ]]; then
+                echo "$line" >> "$output_file"
+            fi
+        done < "$temp_file"
+
+        mv "$output_file" "$temp_file"
+        log_info "Updated Recent Changes section"
+    else
+        # Section doesn't exist - add after Active Technologies (or after Technology Stack if no Active Technologies)
+        echo "" >> "$temp_file"
+        echo "## Recent Changes" >> "$temp_file"
+        echo "" >> "$temp_file"
+        printf '%s\n' "${changes[@]}" >> "$temp_file"
+        log_info "Created Recent Changes section"
+    fi
+
+    return 0
 }
 
 update_claude_md() {
@@ -260,6 +532,25 @@ update_claude_md() {
     update_parenthetical_version "$temp_file" "postgres" "$postgres_ver" && ((updates_made++)) || true
     update_parenthetical_version "$temp_file" "drizzle-orm" "$drizzle_ver" && ((updates_made++)) || true
 
+    #==========================================================================
+    # Parse plan.md files and update Active Technologies / Recent Changes
+    #==========================================================================
+
+    log_info "Parsing plan.md files for Active Technologies and Recent Changes"
+
+    local plan_data_array=()
+    while IFS= read -r line; do
+        [[ -n "$line" ]] && plan_data_array+=("$line")
+    done < <(collect_all_plan_data)
+
+    if [[ ${#plan_data_array[@]} -gt 0 ]]; then
+        log_info "Found ${#plan_data_array[@]} plan.md file(s)"
+        update_active_technologies "$temp_file" "${plan_data_array[@]}" || log_warning "Failed to update Active Technologies"
+        update_recent_changes "$temp_file" "${plan_data_array[@]}" || log_warning "Failed to update Recent Changes"
+    else
+        log_info "No plan.md files found, skipping section updates"
+    fi
+
     # Only update if changes were made
     local diff_result diff_exit_code
     # Prevent diff exit codes from triggering set -e (0=same, 1=differ, 2=error)
@@ -319,20 +610,28 @@ show_help() {
     cat <<EOF
 Usage: ./update-agent-context.sh [OPTIONS]
 
-Sync package versions from package.json to CLAUDE.md Technology Stack
+Sync package versions from package.json and update context from plan.md files
+
+Operations:
+  1. Sync package versions from package.json to CLAUDE.md Technology Stack
+  2. Parse all plan.md files and update Active Technologies section
+  3. Update Recent Changes section with last 3 features
 
 Options:
-  --validate    Validate that all packages in package.json are being tracked
+  --validate    Validate package tracking and plan.md parsing
   --help        Display this help message
 
-Tracked Packages:
+Tracked Packages: (16 total)
   TypeScript, Next.js, React, Tailwind CSS, LanceDB, pgvector,
   Anthropic Claude SDK, ts-fsrs, NextAuth, Vitest, Playwright,
   ESLint, Prettier, lint-staged, postgres, drizzle-orm
 
+Plan.md Fields Tracked:
+  Language/Version, Primary Dependencies, Storage
+
 Adding New Packages:
-  Edit this script and add a line to the update_claude_md() function:
-    update_version "\$temp_file" "Display Name" "package-name"
+  1. Add package name to TRACKED_PACKAGES array (line ~30)
+  2. Add update_version() call in update_claude_md() function
 
 For more details, see: specs/001-speckit-workflow-improvements/contracts/
 EOF
@@ -392,10 +691,10 @@ main() {
         local missing_updates=()
         for package in "${TRACKED_PACKAGES[@]}"; do
             # Check if package has update_version() call or special case handling
-            # Special cases: postgres, drizzle-orm (use perl substitution directly)
+            # Special cases: postgres, drizzle-orm (use update_parenthetical_version)
             if [[ "$package" == "postgres" ]] || [[ "$package" == "drizzle-orm" ]]; then
-                # Check for perl substitution pattern (s/postgres or s/drizzle-orm)
-                if ! grep -q "s/${package} " "$0"; then
+                # Check for update_parenthetical_version call
+                if ! grep -q "update_parenthetical_version.*\"${package}\"" "$0"; then
                     missing_updates+=("$package (special case)")
                 fi
             else
@@ -432,8 +731,43 @@ main() {
             exit 1
         else
             log_success "All packages are properly tracked with update logic!"
-            exit 0
         fi
+
+        # Validate plan.md parsing
+        log_info ""
+        log_info "=== Validating plan.md parsing ==="
+
+        if [[ ! -d "$REPO_ROOT/specs" ]]; then
+            log_warning "specs/ directory not found at $REPO_ROOT/specs"
+        else
+            local plan_count=0
+            local plan_file
+
+            while IFS= read -r plan_file; do
+                ((plan_count++))
+            done < <(find "$REPO_ROOT/specs" -name "plan.md" -type f 2>/dev/null)
+
+            log_info "Found $plan_count plan.md file(s)"
+
+            if [[ $plan_count -gt 0 ]]; then
+                # Test parse a sample plan.md
+                local sample_plan=$(find "$REPO_ROOT/specs" -name "plan.md" -type f 2>/dev/null | head -1)
+                if [[ -n "$sample_plan" ]]; then
+                    log_info "Testing parse of $(basename "$(dirname "$sample_plan")")/plan.md"
+                    local parsed=$(parse_plan_file "$sample_plan")
+                    log_info "Result: $parsed"
+
+                    # Verify we got some data
+                    if [[ -z "$parsed" ]] || [[ "$parsed" == "|" ]]; then
+                        log_warning "No data extracted from sample plan.md"
+                    else
+                        log_success "Plan.md parsing validated successfully"
+                    fi
+                fi
+            fi
+        fi
+
+        exit 0
     else
         log_info "=== Syncing package versions to CLAUDE.md ==="
         update_claude_md
