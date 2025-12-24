@@ -3,9 +3,33 @@ import { queueEmail, processQueue, calculateNextRetry } from '@/lib/email/retry-
 
 // Mock database operations
 vi.mock('@/lib/db/operations/email-queue', () => ({
-  insertEmailQueue: vi.fn(),
+  insertEmailQueue: vi.fn((data) =>
+    Promise.resolve({
+      id: 'test-email-id',
+      to: data.to,
+      subject: data.subject,
+      textBody: data.textBody,
+      htmlBody: data.htmlBody || null,
+      status: 'pending' as const,
+      attempts: 0,
+      nextRetryAt: new Date(),
+      error: null,
+      sentAt: null,
+      createdAt: new Date(),
+    })
+  ),
   getPendingEmails: vi.fn(() => Promise.resolve([])),
-  updateEmailStatus: vi.fn(),
+  updateEmailStatus: vi.fn((id, updates) =>
+    Promise.resolve({
+      id,
+      to: 'test@example.com',
+      subject: 'Test',
+      textBody: 'Body',
+      htmlBody: null,
+      ...updates,
+      createdAt: new Date(),
+    })
+  ),
 }))
 
 describe('Queue Email', () => {
