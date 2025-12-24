@@ -11,6 +11,22 @@ handoffs:
     send: true
 ---
 
+## Workflow Mode Selection
+
+**IMPORTANT**: Check if workflow mode has been set for this session.
+
+1. Check for mode preference:
+
+   ```bash
+   cat .specify/tmp/workflow-mode.txt 2>/dev/null || echo "NOT_SET"
+   ```
+
+2. If mode is "NOT_SET", use AskUserQuestion to prompt (see speckit.specify.md for format), then store the selection.
+
+3. Remember the selected mode for use at the end of this command.
+
+---
+
 ## User Input
 
 ```text
@@ -135,3 +151,28 @@ Every task MUST strictly follow this format:
   - Within each story: Tests (if requested) → Models → Services → Endpoints → Integration
   - Each phase should be a complete, independently testable increment
 - **Final Phase**: Polish & Cross-Cutting Concerns
+
+## Workflow Mode Completion
+
+After generating tasks.md:
+
+### Automatic Mode:
+
+- Display completion summary
+- Suggest next step: "Tasks generated successfully! Recommended next step: Run `/5.implement` to start implementation, or `/6.analyze` to check consistency across artifacts first."
+- Do NOT prompt for action
+
+### User-Guided Mode:
+
+- Display completion summary
+- Use AskUserQuestion:
+
+  **Question**: "Tasks generated! What would you like to do next?"
+
+  **Options**:
+  - **Start Implementation** (`/5.implement`): Begin working through tasks
+  - **Analyze Consistency** (`/6.analyze`): Check cross-artifact consistency
+  - **Review Tasks**: I'll review the task breakdown myself before continuing
+  - **Exit**: I'm done for now
+
+- Execute the selected command if applicable

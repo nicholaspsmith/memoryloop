@@ -2,6 +2,22 @@
 description: Execute the implementation plan by processing and executing all tasks defined in tasks.md
 ---
 
+## Workflow Mode Selection
+
+**IMPORTANT**: Check if workflow mode has been set for this session.
+
+1. Check for mode preference:
+
+   ```bash
+   cat .specify/tmp/workflow-mode.txt 2>/dev/null || echo "NOT_SET"
+   ```
+
+2. If mode is "NOT_SET", use AskUserQuestion to prompt (see speckit.specify.md for format), then store the selection.
+
+3. Remember the selected mode for use during task execution and completion.
+
+---
+
 ## User Input
 
 ```text
@@ -133,3 +149,29 @@ You **MUST** consider the user input before proceeding (if not empty).
    - Report final status with summary of completed work
 
 Note: This command assumes a complete task breakdown exists in tasks.md. If tasks are incomplete or missing, suggest running `/speckit.tasks` first to regenerate the task list.
+
+## Workflow Mode Completion
+
+After completing all tasks (or after stopping at a checkpoint):
+
+### Automatic Mode:
+
+- Display completion summary with task statistics
+- Suggest next step: "Implementation complete! Consider creating a pull request or running final tests."
+- Do NOT prompt for action
+
+### User-Guided Mode:
+
+- Display completion summary
+- Use AskUserQuestion:
+
+  **Question**: "Implementation tasks complete! What would you like to do next?"
+
+  **Options**:
+  - **Create Pull Request**: I'll help create a PR with the changes
+  - **Run Final Tests**: Execute the complete test suite
+  - **Review Changes**: I'll review the implementation myself
+  - **Continue with Remaining Tasks**: There are more tasks to complete
+  - **Exit**: I'm done for now
+
+- Execute the selected action if applicable

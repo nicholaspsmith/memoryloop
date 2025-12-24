@@ -166,15 +166,15 @@ User Stories 1-3 cover:
 
 ### Implementation for User Story 9
 
-- [ ] T050 [US9] Add workflow mode detection logic (check terminal interactivity with -t 0) to `.claude/commands/speckit.specify.md` frontmatter
-- [ ] T051 [US9] Create mode prompt using AskUserQuestion with options (A)utomatic and (U)ser-Guided in `.claude/commands/speckit.specify.md`
-- [ ] T052 [US9] Store selected mode in session memory (environment variable SPECKIT_WORKFLOW_MODE)
-- [ ] T053 [US9] Add mode prompt to `.claude/commands/speckit.plan.md` (if not already set in session)
-- [ ] T054 [US9] Add mode prompt to `.claude/commands/speckit.tasks.md` (if not already set in session)
-- [ ] T055 [US9] Add mode prompt to `.claude/commands/speckit.implement.md` (if not already set in session)
-- [ ] T056 [US9] Implement Automatic mode behavior: show completion message with suggested next step
-- [ ] T057 [US9] Implement User-Guided mode behavior: pause after completion with handoff options (A/B/C menu)
-- [ ] T058 [US9] Add non-interactive terminal detection to default to Automatic mode (for CI/batch workflows)
+- [x] T050 [US9] Add workflow mode detection logic (check terminal interactivity with -t 0) to `.claude/commands/speckit.specify.md` frontmatter
+- [x] T051 [US9] Create mode prompt using AskUserQuestion with options (A)utomatic and (U)ser-Guided in `.claude/commands/speckit.specify.md`
+- [x] T052 [US9] Store selected mode in session memory (environment variable SPECKIT_WORKFLOW_MODE)
+- [x] T053 [US9] Add mode prompt to `.claude/commands/speckit.plan.md` (if not already set in session)
+- [x] T054 [US9] Add mode prompt to `.claude/commands/speckit.tasks.md` (if not already set in session)
+- [x] T055 [US9] Add mode prompt to `.claude/commands/speckit.implement.md` (if not already set in session)
+- [x] T056 [US9] Implement Automatic mode behavior: show completion message with suggested next step
+- [x] T057 [US9] Implement User-Guided mode behavior: pause after completion with handoff options (A/B/C menu)
+- [x] T058 [US9] Add non-interactive terminal detection to default to Automatic mode (for CI/batch workflows)
 - [ ] T059 [US9] Test interactive mode selection in terminal environment
 - [ ] T060 [US9] Test non-interactive mode default in piped/CI environment
 
