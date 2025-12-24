@@ -33,6 +33,8 @@ export async function createUser(data: {
     email: user.email,
     passwordHash: user.passwordHash,
     name: user.name,
+    emailVerified: user.emailVerified ?? false,
+    emailVerifiedAt: user.emailVerifiedAt ? user.emailVerifiedAt.getTime() : null,
     createdAt: user.createdAt.getTime(),
     updatedAt: user.updatedAt.getTime(),
   }
@@ -56,6 +58,8 @@ export async function getUserByEmail(email: string): Promise<User | null> {
     email: user.email,
     passwordHash: user.passwordHash,
     name: user.name,
+    emailVerified: user.emailVerified ?? false,
+    emailVerifiedAt: user.emailVerifiedAt ? user.emailVerifiedAt.getTime() : null,
     createdAt: user.createdAt.getTime(),
     updatedAt: user.updatedAt.getTime(),
   }
@@ -78,6 +82,8 @@ export async function getUserById(id: string): Promise<User | null> {
     email: user.email,
     passwordHash: user.passwordHash,
     name: user.name,
+    emailVerified: user.emailVerified ?? false,
+    emailVerifiedAt: user.emailVerifiedAt ? user.emailVerifiedAt.getTime() : null,
     createdAt: user.createdAt.getTime(),
     updatedAt: user.updatedAt.getTime(),
   }
@@ -110,6 +116,8 @@ export async function updateUser(
     email: updatedUser.email,
     passwordHash: updatedUser.passwordHash,
     name: updatedUser.name,
+    emailVerified: updatedUser.emailVerified ?? false,
+    emailVerifiedAt: updatedUser.emailVerifiedAt ? updatedUser.emailVerifiedAt.getTime() : null,
     createdAt: updatedUser.createdAt.getTime(),
     updatedAt: updatedUser.updatedAt.getTime(),
   }
@@ -159,6 +167,8 @@ export async function updateUserEmailVerified(userId: string): Promise<User> {
     email: updatedUser.email,
     passwordHash: updatedUser.passwordHash,
     name: updatedUser.name,
+    emailVerified: updatedUser.emailVerified ?? false,
+    emailVerifiedAt: updatedUser.emailVerifiedAt ? updatedUser.emailVerifiedAt.getTime() : null,
     createdAt: updatedUser.createdAt.getTime(),
     updatedAt: updatedUser.updatedAt.getTime(),
   }

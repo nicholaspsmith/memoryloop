@@ -52,6 +52,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           id: publicUser.id,
           email: publicUser.email,
           name: publicUser.name,
+          emailVerified: user.emailVerified || false,
         }
       },
     }),
@@ -72,19 +73,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.id = user.id
         token.email = user.email
         token.name = user.name
+        token.emailVerified = (user.emailVerified ?? false) as boolean
       }
 
       return token
     },
     async session({ session, token }) {
-      // Add user ID to session from token
-      if (session.user) {
-        session.user.id = token.id as string
-        session.user.email = token.email as string
-        session.user.name = token.name as string | null
+      // Add user fields from token
+      return {
+        ...session,
+        user: {
+          id: token.id as string,
+          email: token.email as string,
+          name: token.name as string | null,
+          emailVerified: (token.emailVerified ?? false) as boolean,
+        },
       }
-
-      return session
     },
   },
 })
