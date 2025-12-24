@@ -112,9 +112,13 @@ get_version() {
         # Strip version prefixes (^, ~, >=, etc.) but preserve full semver (major.minor.patch-prerelease)
         cleaned_version=$(echo "$version" | sed 's/^[\^~>=<]*//')
 
-        # Validate semver format: major.minor[.patch][-prerelease][+build]
-        # Examples: 1.0, 1.0.0, 1.0.0-alpha, 1.0.0-beta.1, 1.0.0+20130313144700
-        if [[ "$cleaned_version" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$ ]]; then
+        # Validate strict semver format: major.minor[.patch][-prerelease][+build]
+        # - major.minor.patch: Required (patch optional for npm compatibility)
+        # - prerelease: Optional, starts with '-', followed by alphanumeric+dots (no leading/trailing dots)
+        # - build: Optional, starts with '+', followed by alphanumeric+dots (no leading/trailing dots)
+        # Examples: 1.0, 1.0.0, 1.0.0-alpha, 1.0.0-beta.1, 1.0.0+20130313144700, 1.0.0-rc.1+build.123
+        # Rejects: 1.2.-beta, 1.2+, 1.2.-, 1.2-., 1.2+.
+        if [[ "$cleaned_version" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?(-[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?(\+[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?$ ]]; then
             echo "$cleaned_version"
         else
             echo "Warning: Invalid semver format for $package: $cleaned_version" >&2
@@ -126,6 +130,31 @@ get_version() {
 #==============================================================================
 # Version Update Functions
 #==============================================================================
+
+# Update parenthetical versions (e.g., "via postgres 3.4, drizzle-orm 0.45")
+# These appear inline rather than as standalone entries
+update_parenthetical_version() {
+    local temp_file="$1"
+    local package_name="$2"
+    local version="$3"
+
+    if [[ -n "$version" ]]; then
+        if grep -q "${package_name} [0-9]" "$temp_file" 2>/dev/null; then
+            # Pattern matches: major.minor[.patch][-prerelease][+build]
+            # Handles both "postgres 3.4," and "postgres 3.4)" formats
+            # Note: $version is validated by semver regex in get_version(), safe from injection
+            perl -i -pe "s/${package_name} [0-9]+\.[0-9]+(\.[0-9]+)?(-[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?(\+[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?/${package_name} ${version}/g" "$temp_file"
+            log_info "Updated ${package_name} to $version"
+            return 0
+        else
+            log_warning "${package_name} not found in CLAUDE.md (parenthetical format)"
+            return 1
+        fi
+    else
+        log_warning "Could not extract version for ${package_name}"
+        return 1
+    fi
+}
 
 update_version() {
     local temp_file="$1"
@@ -139,11 +168,11 @@ update_version() {
         # Check if the display name exists in the file with a version number
         if grep -q "$display_name [0-9]" "$temp_file" 2>/dev/null; then
             # Use perl for more reliable substitution with special characters
-            # Pattern matches: major.minor[.patch][-prerelease]
-            # Note: $version is validated by semver regex (line 94) before use here,
+            # Pattern matches: major.minor[.patch][-prerelease][+build]
+            # Note: $version is validated by semver regex (line 121) before use here,
             # ensuring it contains only: digits, dots, hyphens, alphanumeric, and plus
             # This prevents regex injection as no regex metacharacters are allowed
-            perl -i -pe "s/(\Q$display_name\E) [0-9]+\.[0-9]+(\.[0-9]+)?(-[a-zA-Z0-9.-]+)?/\$1 \Q$version\E/" "$temp_file"
+            perl -i -pe "s/(\Q$display_name\E) [0-9]+\.[0-9]+(\.[0-9]+)?(-[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?(\+[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?/\$1 $version/" "$temp_file"
             log_info "Updated $display_name to $version"
             return 0
         else
@@ -228,42 +257,50 @@ update_claude_md() {
     postgres_ver=$(get_version "postgres")
     drizzle_ver=$(get_version "drizzle-orm")
 
-    if [[ -n "$postgres_ver" ]]; then
-        if grep -q "postgres [0-9]" "$temp_file" 2>/dev/null; then
-            # Pattern matches: major.minor[.patch][-prerelease]
-            # Note: $postgres_ver validated by semver regex, safe from injection
-            perl -i -pe "s/postgres [0-9]+\.[0-9]+(\.[0-9]+)?(-[a-zA-Z0-9.-]+)?/postgres \Q$postgres_ver\E/" "$temp_file"
-            log_info "Updated postgres to $postgres_ver"
-            ((updates_made++)) || true
-        fi
-    fi
-
-    if [[ -n "$drizzle_ver" ]]; then
-        if grep -q "drizzle-orm [0-9]" "$temp_file" 2>/dev/null; then
-            # Pattern matches: major.minor[.patch][-prerelease]
-            # Note: $drizzle_ver validated by semver regex, safe from injection
-            perl -i -pe "s/drizzle-orm [0-9]+\.[0-9]+(\.[0-9]+)?(-[a-zA-Z0-9.-]+)?/drizzle-orm \Q$drizzle_ver\E/" "$temp_file"
-            log_info "Updated drizzle-orm to $drizzle_ver"
-            ((updates_made++)) || true
-        fi
-    fi
+    update_parenthetical_version "$temp_file" "postgres" "$postgres_ver" && ((updates_made++)) || true
+    update_parenthetical_version "$temp_file" "drizzle-orm" "$drizzle_ver" && ((updates_made++)) || true
 
     # Only update if changes were made
     local diff_result diff_exit_code
+    # Prevent diff exit codes from triggering set -e (0=same, 1=differ, 2=error)
+    set +e
     diff_result=$(diff -q "$CLAUDE_MD" "$temp_file" 2>&1)
     diff_exit_code=$?
+    set -e
 
     if [[ $diff_exit_code -eq 0 ]]; then
         # Files are identical - no updates needed
         rm -f "$temp_file"
         log_info "No version updates needed - CLAUDE.md is already current"
     elif [[ $diff_exit_code -eq 1 ]]; then
-        # Files differ - update CLAUDE.md
+        # Files differ - update CLAUDE.md with safety backup
+        local backup_file="${CLAUDE_MD}.backup.$$"
+
+        # Create backup before modifying
+        if ! cp "$CLAUDE_MD" "$backup_file"; then
+            log_error "Failed to create backup of CLAUDE.md"
+            log_error "Temp file preserved at: $temp_file"
+            exit 1
+        fi
+
+        # Disable trap before mv to prevent premature temp file deletion
+        trap - EXIT INT TERM
+
+        # Attempt atomic move
         if mv "$temp_file" "$CLAUDE_MD"; then
+            rm -f "$backup_file"  # Success - remove backup
+            temp_file=""  # Clear variable so trap doesn't try to delete moved file
             log_success "Updated CLAUDE.md with $updates_made package version(s)"
         else
-            log_error "Failed to update CLAUDE.md"
-            rm -f "$temp_file"
+            # Move failed - restore from backup
+            log_error "Failed to update CLAUDE.md - restoring from backup"
+            if mv "$backup_file" "$CLAUDE_MD"; then
+                log_success "CLAUDE.md restored successfully"
+            else
+                log_error "CRITICAL: Failed to restore CLAUDE.md from backup!"
+                log_error "Backup file: $backup_file"
+            fi
+            log_error "Updated content preserved at: $temp_file"
             exit 1
         fi
     else
@@ -351,16 +388,50 @@ main() {
 
         log_info "Tracked: $tracked_count packages"
 
+        # Verify update_version() calls exist for tracked packages
+        local missing_updates=()
+        for package in "${TRACKED_PACKAGES[@]}"; do
+            # Check if package has update_version() call or special case handling
+            # Special cases: postgres, drizzle-orm (use perl substitution directly)
+            if [[ "$package" == "postgres" ]] || [[ "$package" == "drizzle-orm" ]]; then
+                # Check for perl substitution pattern (s/postgres or s/drizzle-orm)
+                if ! grep -q "s/${package} " "$0"; then
+                    missing_updates+=("$package (special case)")
+                fi
+            else
+                # Check for update_version() call with this package name
+                if ! grep -q "update_version.*\"${package}\"" "$0"; then
+                    missing_updates+=("$package")
+                fi
+            fi
+        done
+
+        # Report validation results
+        local has_errors=false
+
         if [[ ${#untracked[@]} -gt 0 ]]; then
+            has_errors=true
             log_warning "Untracked packages found in package.json:"
             printf '  - %s\n' "${untracked[@]}"
             log_info ""
             log_info "To track a package:"
             log_info "  1. Add package name to TRACKED_PACKAGES array (line 29)"
             log_info "  2. Add update_version() call in update_claude_md() function"
+        fi
+
+        if [[ ${#missing_updates[@]} -gt 0 ]]; then
+            has_errors=true
+            log_warning "Tracked packages missing update_version() calls:"
+            printf '  - %s\n' "${missing_updates[@]}"
+            log_info ""
+            log_info "These packages are in TRACKED_PACKAGES but have no corresponding update logic."
+            log_info "Add update_version() call in update_claude_md() function for each."
+        fi
+
+        if [[ "$has_errors" == "true" ]]; then
             exit 1
         else
-            log_success "All packages are being tracked!"
+            log_success "All packages are properly tracked with update logic!"
             exit 0
         fi
     else
