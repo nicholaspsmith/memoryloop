@@ -218,16 +218,16 @@ User Stories 1-3 cover:
 
 ### Implementation for User Story 11
 
-- [ ] T076 [US11] Create get_current_branch() function to detect branch name or detached HEAD state
-- [ ] T077 [US11] Handle normal branch: return branch name (e.g., "005-user-auth")
-- [ ] T078 [US11] Handle detached HEAD: return commit SHA (first 7 chars) with "(detached)" prefix
-- [ ] T079 [US11] Handle no git repository: return "N/A" or omit line entirely
-- [ ] T080 [US11] Implement response footer template: `---\nCurrent branch: {branch}`
+- [x] T076 [US11] Create get_current_branch() function to detect branch name or detached HEAD state
+- [x] T077 [US11] Handle normal branch: return branch name (e.g., "005-user-auth")
+- [x] T078 [US11] Handle detached HEAD: return commit SHA (first 7 chars) with "(detached)" prefix
+- [x] T079 [US11] Handle no git repository: return "N/A" or omit line entirely
+- [x] T080 [US11] Implement response footer template: `---\nCurrent branch: {branch}`
 - [ ] T081 [US11] Add footer to Claude Code response pipeline (if hook available) or template-based footer in command files
-- [ ] T082 [US11] Ensure branch detection completes in < 50ms (performance requirement)
-- [ ] T083 [US11] Test branch visibility on normal branch
-- [ ] T084 [US11] Test branch visibility on detached HEAD state
-- [ ] T085 [US11] Test branch visibility when not in git repository
+- [x] T082 [US11] Ensure branch detection completes in < 50ms (performance requirement)
+- [x] T083 [US11] Test branch visibility on normal branch
+- [x] T084 [US11] Test branch visibility on detached HEAD state
+- [x] T085 [US11] Test branch visibility when not in git repository
 
 **Checkpoint**: At this point, current branch should be visible in all Claude responses
 
