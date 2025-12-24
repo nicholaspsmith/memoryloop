@@ -116,24 +116,40 @@ echo
 
 # Test 5: Detached HEAD state (simulate by checking out a commit)
 echo "Test 5: Detached HEAD state"
-current_branch=$(git rev-parse --abbrev-ref HEAD)
-latest_commit=$(git rev-parse HEAD)
+current_ref=$(git rev-parse --abbrev-ref HEAD)
 
-# Checkout the current commit (creates detached HEAD)
-git checkout --quiet "$latest_commit" 2>/dev/null || true
-
-actual=$("$BRANCH_SCRIPT")
-
-# Return to original branch
-git checkout --quiet "$current_branch" 2>/dev/null || true
-
-if contains "$actual" "(detached)"; then
-    echo -e "${GREEN}✓${NC} Detached HEAD detected: $actual"
-    ((TESTS_PASSED++))
+# Check if we're already in detached HEAD (e.g., in CI)
+if [[ "$current_ref" == "HEAD" ]]; then
+    # Already detached, just test it directly
+    actual=$("$BRANCH_SCRIPT")
+    if contains "$actual" "(detached)"; then
+        echo -e "${GREEN}✓${NC} Detached HEAD detected (already detached): $actual"
+        ((TESTS_PASSED++))
+    else
+        echo -e "${RED}✗${NC} Failed to detect detached HEAD"
+        echo "  Got: $actual"
+        ((TESTS_FAILED++))
+    fi
 else
-    echo -e "${RED}✗${NC} Failed to detect detached HEAD"
-    echo "  Got: $actual"
-    ((TESTS_FAILED++))
+    # On a branch, simulate detached HEAD
+    latest_commit=$(git rev-parse HEAD)
+
+    # Checkout the current commit (creates detached HEAD)
+    git checkout --quiet "$latest_commit" 2>/dev/null || true
+
+    actual=$("$BRANCH_SCRIPT")
+
+    # Return to original branch
+    git checkout --quiet "$current_ref" 2>/dev/null || true
+
+    if contains "$actual" "(detached)"; then
+        echo -e "${GREEN}✓${NC} Detached HEAD detected: $actual"
+        ((TESTS_PASSED++))
+    else
+        echo -e "${RED}✗${NC} Failed to detect detached HEAD"
+        echo "  Got: $actual"
+        ((TESTS_FAILED++))
+    fi
 fi
 echo
 
