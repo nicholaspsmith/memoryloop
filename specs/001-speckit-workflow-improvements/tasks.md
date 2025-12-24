@@ -160,25 +160,25 @@ User Stories 1-3 cover:
 
 ## Phase 7: User Story 9 - Interactive Workflow Mode (Priority: P3)
 
-**Goal**: Add interactive prompt for Automatic vs User-Guided workflow mode
+**Goal**: Add user-guided completion prompts to all spec-kit commands
 
-**Independent Test**: Run a spec-kit command and verify that you're prompted to choose between "Automatic" and "User-Guided" modes before the command executes.
+**Independent Test**: Run a spec-kit command (e.g., `/speckit.specify`) and verify that after completion, you're prompted with "What would you like to do next?" with contextually appropriate options.
 
 ### Implementation for User Story 9
 
-- [x] T050 [US9] Add workflow mode detection logic (check terminal interactivity with -t 0) to `.claude/commands/speckit.specify.md` frontmatter
-- [x] T051 [US9] Create mode prompt using AskUserQuestion with options (A)utomatic and (U)ser-Guided in `.claude/commands/speckit.specify.md`
-- [x] T052 [US9] Store selected mode in session memory (environment variable SPECKIT_WORKFLOW_MODE)
-- [x] T053 [US9] Add mode prompt to `.claude/commands/speckit.plan.md` (if not already set in session)
-- [x] T054 [US9] Add mode prompt to `.claude/commands/speckit.tasks.md` (if not already set in session)
-- [x] T055 [US9] Add mode prompt to `.claude/commands/speckit.implement.md` (if not already set in session)
-- [x] T056 [US9] Implement Automatic mode behavior: show completion message with suggested next step
-- [x] T057 [US9] Implement User-Guided mode behavior: pause after completion with handoff options (A/B/C menu)
-- [x] T058 [US9] Add non-interactive terminal detection to default to Automatic mode (for CI/batch workflows)
-- [ ] T059 [US9] Test interactive mode selection in terminal environment
-- [ ] T060 [US9] Test non-interactive mode default in piped/CI environment
+- [x] T050 [US9] Add user-guided completion prompt to `.claude/commands/speckit.specify.md` using AskUserQuestion
+- [x] T051 [US9] Add user-guided completion prompt to `.claude/commands/speckit.plan.md` using AskUserQuestion
+- [x] T052 [US9] Add user-guided completion prompt to `.claude/commands/speckit.tasks.md` using AskUserQuestion
+- [x] T053 [US9] Add user-guided completion prompt to `.claude/commands/speckit.implement.md` using AskUserQuestion
+- [x] T054 [US9] Ensure consistent "Next Steps" format across all command files with appropriate options
+- [x] T055 [US9] Remove automatic mode and mode selection logic (simplified to user-guided only per user feedback)
+- [x] T056 [US9] Verify prompt options are contextually appropriate for each command
+- [x] T057 [US9] Test user-guided completion prompts trigger correctly at command end
+- [ ] T058 [US9] REMOVED - No automatic mode in simplified implementation
+- [ ] T059 [US9] REMOVED - No mode selection in simplified implementation
+- [ ] T060 [US9] REMOVED - No mode storage in simplified implementation
 
-**Checkpoint**: At this point, workflow mode selection should be functional with both Automatic and User-Guided behaviors
+**Checkpoint**: At this point, all spec-kit commands should prompt users with contextually appropriate "Next Steps" options after completion (user-guided prompts only, no automatic mode)
 
 ---
 
@@ -328,7 +328,7 @@ Track 2 - Visibility (Independent):
 **Phase 3 (Workflow UX)**:
 
 - US8: All symlinks can be created in parallel
-- US9: Mode detection before prompt implementation before behavior logic before testing
+- US9: User-guided prompts added to each command file (can be done in parallel)
 - US10: Metadata extraction before issue generation before retry logic before testing
 - US11: Branch detection before footer implementation before testing
 - US12: Completion detection before PR generation before testing
