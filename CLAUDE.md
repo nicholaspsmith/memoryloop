@@ -101,6 +101,8 @@ Follow the project principles defined in `.specify/memory/constitution.md`:
 
 ## Active Technologies
 
+- File-based (CLAUDE.md, package.json, .claude/commands/\*, specs directories) (001-speckit-workflow-improvements)
+
 - TypeScript 5.7.x with Next.js 15.1.x (App Router with React 19) (001-claude-flashcard)
 - LanceDB (vector database) for user data, conversations, messages, flashcards, and review history with vector embeddings for future semantic search (001-claude-flashcard)
 - Bash 4+ (for scripts), TypeScript/Node.js (for Claude command integration in Phase 3) (001-speckit-workflow-improvements)
