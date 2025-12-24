@@ -38,7 +38,45 @@ log_error() {
     echo "ERROR: $1" >&2
 }
 
-# Extract version from package.json (strips ^ ~ and other prefixes, returns major.minor)
+log_warning() {
+    echo "WARNING: $1" >&2
+}
+
+# Check if a required dependency is installed
+check_dependency() {
+    local cmd="$1"
+    local min_version="$2"
+    local install_cmd="$3"
+
+    # Check if command exists
+    if ! command -v "$cmd" &> /dev/null; then
+        log_error "$cmd is required but not found."
+        log_error "Install with: $install_cmd"
+        exit 1
+    fi
+
+    # Version check (best-effort, warn but don't fail)
+    if [[ -n "$min_version" ]]; then
+        local version=""
+        case "$cmd" in
+            jq)
+                version=$(jq --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+' | head -1)
+                ;;
+            perl)
+                version=$(perl --version 2>/dev/null | grep -oE 'version [0-9]+' | grep -oE '[0-9]+' | head -1)
+                ;;
+        esac
+
+        if [[ -n "$version" ]]; then
+            # Simple version comparison (works for major version numbers)
+            if [[ $(echo "$version" | cut -d. -f1) -lt $(echo "$min_version" | cut -d. -f1) ]]; then
+                log_warning "$cmd version $version detected, recommend $min_version+"
+            fi
+        fi
+    fi
+}
+
+# Extract version from package.json (strips ^ ~ and other prefixes, preserves full semver)
 get_version() {
     local package="$1"
     local version
@@ -47,8 +85,8 @@ get_version() {
     version=$(jq -r ".dependencies[\"$package\"] // .devDependencies[\"$package\"] // empty" "$PACKAGE_JSON" 2>/dev/null)
 
     if [[ -n "$version" ]]; then
-        # Strip version prefixes (^, ~, >=, etc.) and get major.minor
-        echo "$version" | sed 's/^[\^~>=<]*//' | sed 's/\.[0-9]*$//' | sed 's/-.*$//'
+        # Strip version prefixes (^, ~, >=, etc.) but preserve full semver (major.minor.patch-prerelease)
+        echo "$version" | sed 's/^[\^~>=<]*//'
     fi
 }
 
@@ -68,7 +106,8 @@ update_version() {
         # Check if the display name exists in the file with a version number
         if grep -q "$display_name [0-9]" "$temp_file" 2>/dev/null; then
             # Use perl for more reliable substitution with special characters
-            perl -i -pe "s/(\Q$display_name\E) [0-9]+\.[0-9]+(\.[0-9]+)?/\$1 $version/" "$temp_file"
+            # Pattern matches: major.minor[.patch][-prerelease]
+            perl -i -pe "s/(\Q$display_name\E) [0-9]+\.[0-9]+(\.[0-9]+)?(-[a-z0-9.]+)?/\$1 $version/" "$temp_file"
             log_info "Updated $display_name to $version"
             return 0
         fi
@@ -96,8 +135,31 @@ update_claude_md() {
 
     local updates_made=0
 
-    # Update each package version
-    # Format: "Display Name" "package-name-in-package.json"
+    #==========================================================================
+    # Package Version Synchronization List
+    #==========================================================================
+    # This section defines which packages are synchronized from package.json
+    # to CLAUDE.md. Each line follows the format:
+    #
+    #   update_version "$temp_file" "Display Name" "package-name"
+    #
+    # Where:
+    #   - "Display Name" = How the package appears in CLAUDE.md (e.g., "TypeScript")
+    #   - "package-name" = Exact package name from package.json (e.g., "typescript")
+    #
+    # To ADD a new package to sync:
+    #   1. Add a new update_version line below with the correct display name and package name
+    #   2. Ensure the display name exists in CLAUDE.md Technology Stack section
+    #   3. Run the script to sync the version
+    #
+    # To REMOVE a package from sync:
+    #   1. Comment out or delete the update_version line
+    #   2. The package will remain in CLAUDE.md but won't be updated automatically
+    #
+    # Note: Special cases (parenthetical versions like "postgres" and "drizzle-orm")
+    # are handled separately below this section.
+    #==========================================================================
+
     update_version "$temp_file" "TypeScript" "typescript" && ((updates_made++)) || true
     update_version "$temp_file" "Next.js" "next" && ((updates_made++)) || true
     update_version "$temp_file" "React" "react" && ((updates_made++)) || true
@@ -120,7 +182,8 @@ update_claude_md() {
 
     if [[ -n "$postgres_ver" ]]; then
         if grep -q "postgres [0-9]" "$temp_file" 2>/dev/null; then
-            perl -i -pe "s/postgres [0-9]+\.[0-9]+/postgres $postgres_ver/" "$temp_file"
+            # Pattern matches: major.minor[.patch][-prerelease]
+            perl -i -pe "s/postgres [0-9]+\.[0-9]+(\.[0-9]+)?(-[a-z0-9.]+)?/postgres $postgres_ver/" "$temp_file"
             log_info "Updated postgres to $postgres_ver"
             ((updates_made++)) || true
         fi
@@ -128,7 +191,8 @@ update_claude_md() {
 
     if [[ -n "$drizzle_ver" ]]; then
         if grep -q "drizzle-orm [0-9]" "$temp_file" 2>/dev/null; then
-            perl -i -pe "s/drizzle-orm [0-9]+\.[0-9]+/drizzle-orm $drizzle_ver/" "$temp_file"
+            # Pattern matches: major.minor[.patch][-prerelease]
+            perl -i -pe "s/drizzle-orm [0-9]+\.[0-9]+(\.[0-9]+)?(-[a-z0-9.]+)?/drizzle-orm $drizzle_ver/" "$temp_file"
             log_info "Updated drizzle-orm to $drizzle_ver"
             ((updates_made++)) || true
         fi
@@ -145,13 +209,72 @@ update_claude_md() {
 }
 
 #==============================================================================
+# Help and Usage
+#==============================================================================
+
+show_help() {
+    cat <<EOF
+Usage: ./update-agent-context.sh [OPTIONS]
+
+Sync package versions from package.json to CLAUDE.md Technology Stack
+
+Options:
+  --validate    Validate that all packages in package.json are being tracked
+  --help        Display this help message
+
+Tracked Packages:
+  TypeScript, Next.js, React, Tailwind CSS, LanceDB, pgvector,
+  Anthropic Claude SDK, ts-fsrs, NextAuth, Vitest, Playwright,
+  ESLint, Prettier, lint-staged, postgres, drizzle-orm
+
+Adding New Packages:
+  Edit this script and add a line to the update_claude_md() function:
+    update_version "\$temp_file" "Display Name" "package-name"
+
+For more details, see: specs/001-speckit-workflow-improvements/contracts/
+EOF
+}
+
+#==============================================================================
 # Main
 #==============================================================================
 
 main() {
-    log_info "=== Syncing package versions to CLAUDE.md ==="
-    update_claude_md
-    log_success "Package version sync completed"
+    local VALIDATE_MODE=false
+
+    # Parse command-line arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --validate)
+                VALIDATE_MODE=true
+                shift
+                ;;
+            --help)
+                show_help
+                exit 0
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                show_help
+                exit 1
+                ;;
+        esac
+    done
+
+    # Check required dependencies
+    check_dependency "jq" "1.6" "brew install jq (macOS) or apt install jq (Ubuntu)"
+    check_dependency "perl" "5.10" "brew install perl (macOS) or apt install perl (Ubuntu)"
+
+    if [[ "$VALIDATE_MODE" == "true" ]]; then
+        log_info "=== Validating package versions ==="
+        # Validation logic will be added here
+        log_info "Validation mode not yet implemented"
+        exit 0
+    else
+        log_info "=== Syncing package versions to CLAUDE.md ==="
+        update_claude_md
+        log_success "Package version sync completed"
+    fi
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

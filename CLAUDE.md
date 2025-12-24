@@ -56,42 +56,42 @@ Follow the project principles defined in `.specify/memory/constitution.md`:
 
 ### Core
 
-- TypeScript 5.7
+- TypeScript 5.7.0
 - Node.js 20+
-- Next.js 16.0
-- React 19.2
+- Next.js 16.0.10
+- React 19.2.3
 
 ### Styling
 
-- Tailwind CSS 4.0
+- Tailwind CSS 4.0.0
 
 ### Database
 
-- PostgreSQL (via postgres 3.4, drizzle-orm 0.45)
-- LanceDB 0.22 (vector database)
-- pgvector 0.2 (vector embeddings)
+- PostgreSQL (via postgres 3.4.7, drizzle-orm 0.45.1)
+- LanceDB 0.22.3 (vector database)
+- pgvector 0.2.1 (vector embeddings)
 
 ### AI/ML
 
-- Anthropic Claude SDK 0.71
+- Anthropic Claude SDK 0.71.2
 - Ollama (nomic-embed-text for local embeddings)
-- ts-fsrs 5.2 (spaced repetition)
+- ts-fsrs 5.2.3 (spaced repetition)
 
 ### Authentication
 
-- NextAuth 5.0.0
+- NextAuth 5.0.0-beta.30
 
 ### Testing
 
-- Vitest 4.0
-- Playwright 1.57
+- Vitest 4.0.15
+- Playwright 1.57.0
 - Testing Library (React, Jest-DOM)
 
 ### Development Tools
 
-- ESLint 9.0
-- Prettier 3.7
-- lint-staged 16.2
+- ESLint 9.0.0
+- Prettier 3.7.4
+- lint-staged 16.2.7
 
 ### Deployment
 
