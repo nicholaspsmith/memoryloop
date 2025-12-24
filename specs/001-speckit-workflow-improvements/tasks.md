@@ -120,14 +120,14 @@ User Stories 1-3 cover:
 - [x] T027 [P] [US7] Add test case: Full semver preservation (major.minor.patch) in `tests/bash/test-version-extraction.sh`
 - [x] T028 [P] [US7] Add test case: Pre-release tag handling (-beta.2, -alpha.1) in `tests/bash/test-version-extraction.sh`
 - [x] T029 [P] [US7] Add test case: Missing package graceful skip in `tests/bash/test-version-extraction.sh`
-- [ ] T030 [P] [US7] Add test case: Invalid JSON error handling in `tests/bash/test-version-extraction.sh`
+- [x] T030 [P] [US7] Add test case: Invalid JSON error handling in `tests/bash/test-version-extraction.sh`
 - [ ] T031 [P] [US7] Add test case: Missing jq dependency error in `tests/bash/test-version-extraction.sh`
 - [ ] T032 [P] [US7] Add test case: Idempotency (no changes needed) in `tests/bash/test-version-extraction.sh`
 - [ ] T033 [P] [US7] Add test case: Parenthetical version update (postgres, drizzle-orm) in `tests/bash/test-version-extraction.sh`
 - [ ] T034 [P] [US7] Add test case: Special characters in display name in `tests/bash/test-version-extraction.sh`
 - [x] T035 [US7] Make test script executable and add shebang to `tests/bash/test-version-extraction.sh`
 - [ ] T036 [US7] Run complete test suite and verify all 10 test cases pass
-- [ ] T037 [US7] Add test execution to GitHub Actions workflow (if .github/workflows/ exists)
+- [x] T037 [US7] Add test execution to GitHub Actions workflow (if .github/workflows/ exists)
 
 **Checkpoint**: At this point, comprehensive tests should exist and pass for all version extraction logic
 
