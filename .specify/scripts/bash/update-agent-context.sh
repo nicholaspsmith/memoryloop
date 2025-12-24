@@ -240,6 +240,42 @@ get_package_doc_url() {
     esac
 }
 
+# Extract version for a package from package.json
+# Usage: get_version "package-name"
+# Returns: Version string with prefixes stripped (e.g., "1.2.3" from "^1.2.3")
+get_version() {
+    local package="$1"
+    local package_json="${PACKAGE_JSON:-$REPO_ROOT/package.json}"
+
+    # Check if package.json exists
+    if [[ ! -f "$package_json" ]]; then
+        echo ""
+        return 1
+    fi
+
+    # Extract version from dependencies or devDependencies using jq
+    # Try both dependencies and devDependencies
+    local version=$(jq -r --arg pkg "$package" '
+        (.dependencies // {})[$pkg] // (.devDependencies // {})[$pkg] // empty
+    ' "$package_json" 2>/dev/null)
+
+    # If version is empty or null, return empty
+    if [[ -z "$version" || "$version" == "null" ]]; then
+        echo ""
+        return 0
+    fi
+
+    # Strip npm version prefixes (^, ~, >=, >, <, <=)
+    version="${version#^}"
+    version="${version#~}"
+    version="${version#>=}"
+    version="${version#>}"
+    version="${version#<=}"
+    version="${version#<}"
+
+    echo "$version"
+}
+
 format_technology_stack() {
     local lang="$1"
     local framework="$2"
