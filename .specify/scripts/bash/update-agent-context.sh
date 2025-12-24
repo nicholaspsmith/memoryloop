@@ -297,10 +297,16 @@ update_active_technologies() {
         return 0
     fi
 
-    # Build list of technology entries
+    # Build list of technology entries (only for unmerged branches)
     local tech_entries=()
     for data in "${plan_data_array[@]}"; do
         IFS='|' read -r branch lang framework storage <<< "$data"
+
+        # Skip if branch has been merged (no longer exists)
+        if ! git rev-parse --verify "$branch" >/dev/null 2>&1; then
+            log_info "Skipping merged branch: $branch"
+            continue
+        fi
 
         # Add main tech stack entry
         local entry=$(format_tech_entry "$lang" "$framework" "$branch")
@@ -410,11 +416,17 @@ update_recent_changes() {
         reversed+=("${plan_data_array[$i]}")
     done
 
-    # Take first 3 from reversed array
+    # Take first 3 from reversed array (only for unmerged branches)
     for data in "${reversed[@]}"; do
         if [[ $count -ge 3 ]]; then break; fi
 
         IFS='|' read -r branch lang framework storage <<< "$data"
+
+        # Skip if branch has been merged (no longer exists)
+        if ! git rev-parse --verify "$branch" >/dev/null 2>&1; then
+            log_info "Skipping merged branch in Recent Changes: $branch"
+            continue
+        fi
 
         local change_text="- $branch: Added"
         if [[ -n "$lang" && -n "$framework" ]]; then

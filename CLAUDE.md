@@ -103,19 +103,10 @@ Follow the project principles defined in `.specify/memory/constitution.md`:
 
 - TypeScript 5.7.x with Next.js 15.1.x (App Router with React 19) (001-claude-flashcard)
 - LanceDB (vector database) for user data, conversations, messages, flashcards, and review history with vector embeddings for future semantic search (001-claude-flashcard)
-- TypeScript 5.7 (strict mode) + @lancedb/lancedb 0.22 (001-lancedb-schema-fixes)
-- LanceDB (file-based vector database for embeddings only) (001-lancedb-schema-fixes)
 - Bash 4+ (for scripts), TypeScript/Node.js (for Claude command integration in Phase 3) (001-speckit-workflow-improvements)
 - File-based (CLAUDE.md, package.json, .claude/commands/\*, specs directories) (001-speckit-workflow-improvements)
-- TypeScript 5.x, Node.js 20.x (Next.js 15) + Next.js 15 (002-ci-cd-deployment)
-- LanceDB (file-based vector database), Backblaze B2 (backups) (002-ci-cd-deployment)
 - TypeScript 5.x with React 18 (Next.js 16) + React (003-flashcard-rating-labels)
 - N/A (UI-only change, no data model changes) (003-flashcard-rating-labels)
-- [if applicable, e.g., PostgreSQL, CoreData, files or N/A] (004-claude-api)
-- TypeScript/Node.js (existing project) + N/A (removing a dependency (006-remove-bd)
-- N/A (file system operations only) (006-remove-bd)
-- TypeScript 5.7, Node.js 20+, Bash (for hook scripts) + lint-staged (staged file operations) (008-pre-commit-hooks)
-- N/A (hooks are stateless) (008-pre-commit-hooks)
 - TypeScript 5.7 / Node.js (Next.js 16), Bash + Next.js (009-ollama-model-deployment)
 - PostgreSQL (existing), LanceDB (existing), Ollama models volume (009-ollama-model-deployment)
 - TypeScript 5.7 (strict mode) + Next.js 16.0.10 App Router (010-ui-polish)
@@ -125,4 +116,4 @@ Follow the project principles defined in `.specify/memory/constitution.md`:
 
 - 010-ui-polish: Added TypeScript 5.7 (strict mode) + Next.js 16.0.10 App Router
 - 009-ollama-model-deployment: Added TypeScript 5.7 / Node.js (Next.js 16), Bash + Next.js
-- 008-pre-commit-hooks: Added TypeScript 5.7, Node.js 20+, Bash (for hook scripts) + lint-staged (staged file operations)
+- 003-flashcard-rating-labels: Added TypeScript 5.x with React 18 (Next.js 16) + React
