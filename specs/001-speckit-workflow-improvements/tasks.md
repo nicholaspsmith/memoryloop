@@ -241,21 +241,21 @@ User Stories 1-3 cover:
 
 ### Implementation for User Story 12
 
-- [ ] T086 [US12] Detect implementation completion by checking all tasks marked as complete in tasks.md
-- [ ] T087 [US12] Add post-implementation completion hook to `.claude/commands/speckit.implement.md`
-- [ ] T088 [US12] Prompt user: "All tasks complete. Create PR now?" with Yes/No options
-- [ ] T089 [US12] Extract feature number and name from current branch
-- [ ] T090 [US12] Find associated GitHub issue number (created in US10)
-- [ ] T091 [US12] Generate PR title format: `[NNN] Feature Short Name`
-- [ ] T092 [US12] Generate PR body with summary from spec.md and "Closes #<issue-number>" footer
-- [ ] T093 [US12] Add task completion summary to PR body (X of Y tasks completed)
-- [ ] T094 [US12] Add links to spec.md, plan.md, and tasks.md in PR body
-- [ ] T095 [US12] Call gh pr create command with title, body, and base branch (main)
-- [ ] T096 [US12] Display PR URL in success message after creation
-- [ ] T097 [US12] Handle PR creation failure with manual fallback instructions
+- [x] T086 [US12] Detect implementation completion by checking all tasks marked as complete in tasks.md (step 10a)
+- [x] T087 [US12] Add post-implementation completion hook to `.claude/commands/speckit.implement.md` (step 10)
+- [x] T088 [US12] Prompt user: "All tasks complete. Create PR now?" with Yes/No options (step 10b)
+- [x] T089 [US12] Extract feature number and name from current branch (step 10c)
+- [x] T090 [US12] Find associated GitHub issue number using gh issue list (step 10c)
+- [x] T091 [US12] Generate PR title format: `[NNN] Feature Short Name` (step 10d)
+- [x] T092 [US12] Generate PR body with summary from spec.md and "Closes #<issue-number>" footer (step 10d)
+- [x] T093 [US12] Add task completion summary to PR body (X of Y tasks completed) (step 10d)
+- [x] T094 [US12] Add links to spec.md, plan.md, and tasks.md in PR body (step 10d)
+- [x] T095 [US12] Call gh pr create command with title, body, and base branch (main) (step 10e)
+- [x] T096 [US12] Display PR URL in success message after creation (step 10g)
+- [x] T097 [US12] Handle PR creation failure with manual fallback instructions (step 10f)
 - [ ] T098 [US12] Test PR creation with valid GitHub authentication
 - [ ] T099 [US12] Test PR body contains "Closes #<issue-number>" and GitHub auto-links issue
-- [ ] T100 [US12] Verify PR merge closes associated GitHub issue automatically
+- [ ] T100 [US12] Test that PR creation is only offered when all tasks are complete
 
 **Checkpoint**: At this point, PR creation should be automated with proper issue linking
 
