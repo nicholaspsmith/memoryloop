@@ -67,13 +67,42 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     maxAge: 7 * 24 * 60 * 60, // 7 days
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       // Add user ID to token on sign in
       if (user) {
         token.id = user.id
         token.email = user.email
         token.name = user.name
         token.emailVerified = (user.emailVerified ?? false) as boolean
+
+        // Store passwordChangedAt timestamp for session invalidation
+        const { getUserById } = await import('@/lib/db/operations/users')
+        const dbUser = await getUserById(user.id)
+        if (dbUser?.passwordChangedAt) {
+          token.passwordChangedAt = dbUser.passwordChangedAt
+        }
+      }
+
+      // On every request, validate session hasn't been invalidated by password change
+      if (token.id && trigger !== 'signIn' && trigger !== 'signUp') {
+        const { getUserById } = await import('@/lib/db/operations/users')
+        const dbUser = await getUserById(token.id as string)
+
+        // If user doesn't exist, invalidate session
+        if (!dbUser) {
+          return null
+        }
+
+        // If password was changed after this JWT was issued, invalidate session
+        const tokenPasswordChangedAt = token.passwordChangedAt as number | undefined
+        const dbPasswordChangedAt = dbUser.passwordChangedAt
+
+        if (dbPasswordChangedAt && tokenPasswordChangedAt) {
+          if (dbPasswordChangedAt > tokenPasswordChangedAt) {
+            // Password changed after JWT was issued - force re-authentication
+            return null
+          }
+        }
       }
 
       return token

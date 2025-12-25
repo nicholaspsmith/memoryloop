@@ -138,9 +138,11 @@ export async function POST(request: NextRequest) {
 
       // 2. Update user password AFTER token is marked used
       //    If password update fails, transaction rolls back and token remains unused for retry
+      //    Also update passwordChangedAt to invalidate all existing sessions
+      const now = new Date()
       const [user] = await tx
         .update(users)
-        .set({ passwordHash, updatedAt: new Date() })
+        .set({ passwordHash, passwordChangedAt: now, updatedAt: now })
         .where(eq(users.id, userId))
         .returning()
 
@@ -175,9 +177,9 @@ export async function POST(request: NextRequest) {
       emailError = error
     }
 
-    // Note: With JWT-based sessions, existing sessions remain valid until expiry (7 days).
-    // Users should manually log out and log back in with their new password.
-    // For production: Consider implementing session versioning to invalidate all sessions.
+    // Note: passwordChangedAt timestamp invalidates all existing sessions.
+    // Users with active sessions will be forced to re-authenticate on their next request.
+    // Session validation happens in auth.ts JWT callback.
 
     // Log successful password reset (once, with notification status if applicable)
     await logSecurityEvent({

@@ -35,6 +35,7 @@ export async function createUser(data: {
     name: user.name,
     emailVerified: user.emailVerified ?? false,
     emailVerifiedAt: user.emailVerifiedAt ? user.emailVerifiedAt.getTime() : null,
+    passwordChangedAt: user.passwordChangedAt ? user.passwordChangedAt.getTime() : null,
     createdAt: user.createdAt.getTime(),
     updatedAt: user.updatedAt.getTime(),
   }
@@ -60,6 +61,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
     name: user.name,
     emailVerified: user.emailVerified ?? false,
     emailVerifiedAt: user.emailVerifiedAt ? user.emailVerifiedAt.getTime() : null,
+    passwordChangedAt: user.passwordChangedAt ? user.passwordChangedAt.getTime() : null,
     createdAt: user.createdAt.getTime(),
     updatedAt: user.updatedAt.getTime(),
   }
@@ -84,6 +86,7 @@ export async function getUserById(id: string): Promise<User | null> {
     name: user.name,
     emailVerified: user.emailVerified ?? false,
     emailVerifiedAt: user.emailVerifiedAt ? user.emailVerifiedAt.getTime() : null,
+    passwordChangedAt: user.passwordChangedAt ? user.passwordChangedAt.getTime() : null,
     createdAt: user.createdAt.getTime(),
     updatedAt: user.updatedAt.getTime(),
   }
@@ -118,6 +121,9 @@ export async function updateUser(
     name: updatedUser.name,
     emailVerified: updatedUser.emailVerified ?? false,
     emailVerifiedAt: updatedUser.emailVerifiedAt ? updatedUser.emailVerifiedAt.getTime() : null,
+    passwordChangedAt: updatedUser.passwordChangedAt
+      ? updatedUser.passwordChangedAt.getTime()
+      : null,
     createdAt: updatedUser.createdAt.getTime(),
     updatedAt: updatedUser.updatedAt.getTime(),
   }
@@ -169,6 +175,9 @@ export async function updateUserEmailVerified(userId: string): Promise<User> {
     name: updatedUser.name,
     emailVerified: updatedUser.emailVerified ?? false,
     emailVerifiedAt: updatedUser.emailVerifiedAt ? updatedUser.emailVerifiedAt.getTime() : null,
+    passwordChangedAt: updatedUser.passwordChangedAt
+      ? updatedUser.passwordChangedAt.getTime()
+      : null,
     createdAt: updatedUser.createdAt.getTime(),
     updatedAt: updatedUser.updatedAt.getTime(),
   }

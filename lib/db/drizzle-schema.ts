@@ -27,6 +27,7 @@ export const users = pgTable('users', {
   passwordHash: varchar('password_hash', { length: 60 }).notNull(),
   emailVerified: boolean('email_verified').notNull().default(false),
   emailVerifiedAt: timestamp('email_verified_at'),
+  passwordChangedAt: timestamp('password_changed_at'), // For session invalidation on password reset
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
