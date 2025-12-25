@@ -29,12 +29,14 @@ This document outlines the performance validation requirements for the flashcard
 **Requirement**: Deck UI loads 50+ decks in <2s
 
 **Test Steps**:
+
 1. Create a test user with exactly 50 decks
 2. Navigate to `/decks` page
 3. Measure time from page navigation to full render
 4. Repeat test 5 times and calculate average
 
 **Measurement Method**:
+
 ```javascript
 // In browser console or E2E test
 const start = performance.now()
@@ -46,6 +48,7 @@ console.log(`Load time: ${end - start}ms`)
 ```
 
 **Success Criteria**:
+
 - ✅ Average load time < 2000ms
 - ✅ No layout shifts during load
 - ✅ All 50 decks visible
@@ -60,12 +63,14 @@ console.log(`Load time: ${end - start}ms`)
 **Requirement**: AI deck generation completes in <10s for 100+ candidates
 
 **Test Steps**:
+
 1. Ensure user has 100+ flashcards with LanceDB embeddings
 2. Call AI generation endpoint with a topic that matches many cards
 3. Measure total processing time from request to response
 4. Repeat test 5 times with different topics
 
 **API Test**:
+
 ```bash
 # Using curl with timing
 time curl -X POST http://localhost:3000/api/decks-ai \
@@ -75,11 +80,13 @@ time curl -X POST http://localhost:3000/api/decks-ai \
 ```
 
 **Measurement Points**:
+
 - Total request time (end-to-end)
 - Vector search time (from response metadata)
 - LLM filtering time (from response metadata)
 
 **Success Criteria**:
+
 - ✅ Total processing time < 10000ms
 - ✅ Vector search completes in < 5000ms
 - ✅ LLM filtering completes in < 5000ms
@@ -95,12 +102,14 @@ time curl -X POST http://localhost:3000/api/decks-ai \
 **Requirement**: Live deck updates appear in session queue within 5s
 
 **Test Steps**:
+
 1. Start a deck study session in one browser window/tab
 2. In another window, add a new due card to the same deck
 3. Measure time until the new card appears in session queue
 4. Repeat test 5 times
 
 **Test Approach**:
+
 ```javascript
 // Window 1: Start session
 const sessionStart = Date.now()
@@ -108,14 +117,14 @@ const sessionStart = Date.now()
 const response = await fetch('/api/study/deck-session', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ deckId: 'test-deck-id' })
+  body: JSON.stringify({ deckId: 'test-deck-id' }),
 })
 
 // Window 2: Add card to deck (after 5s delay)
 setTimeout(async () => {
   await fetch(`/api/decks/${deckId}/cards`, {
     method: 'POST',
-    body: JSON.stringify({ flashcardIds: ['new-card-id'] })
+    body: JSON.stringify({ flashcardIds: ['new-card-id'] }),
   })
 }, 5000)
 
@@ -124,6 +133,7 @@ setTimeout(async () => {
 ```
 
 **Success Criteria**:
+
 - ✅ Added cards detected within 5000ms
 - ✅ Removed cards handled gracefully
 - ✅ No duplicate cards in queue
@@ -140,6 +150,7 @@ setTimeout(async () => {
 **Test Steps**:
 
 #### Scenario 1: Manual Deck Creation and Study
+
 1. Follow all steps in `quickstart.md` Scenario 1
 2. Verify each API response matches expected schema
 3. Confirm deck appears in user's deck list
@@ -148,6 +159,7 @@ setTimeout(async () => {
 **Status**: ⬜ Not tested
 
 #### Scenario 2: Deck Editing and Management
+
 1. Follow all steps in `quickstart.md` Scenario 2
 2. Verify rename operation updates deck name
 3. Verify add/remove cards operations work
@@ -156,6 +168,7 @@ setTimeout(async () => {
 **Status**: ⬜ Not tested
 
 #### Scenario 3: AI-Powered Deck Generation
+
 1. Follow all steps in `quickstart.md` Scenario 3
 2. Verify AI generation returns suggestions
 3. Confirm deck creation from suggestions
@@ -164,6 +177,7 @@ setTimeout(async () => {
 **Status**: ⬜ Not tested
 
 #### Scenario 4: Deck-Filtered Study with Overrides
+
 1. Follow all steps in `quickstart.md` Scenario 4
 2. Verify deck-specific FSRS settings apply
 3. Confirm only deck cards appear in session
@@ -178,18 +192,21 @@ setTimeout(async () => {
 ### If Tests Fail
 
 **T082 (Deck UI Load > 2s)**:
+
 - Enable React.memo() for DeckCard components
 - Implement virtual scrolling for large deck lists
 - Add database indexes on decks.userId and decks.archived
 - Consider pagination for 50+ decks
 
 **T083 (AI Generation > 10s)**:
+
 - Increase vectorSearchLimit for better LLM candidates
 - Implement caching for frequently requested topics
 - Consider parallel LLM calls for large candidate sets
 - Optimize LanceDB query with proper indexes
 
 **T084 (Live Updates > 5s)**:
+
 - Implement Server-Sent Events (SSE) instead of polling
 - Add WebSocket support for real-time updates
 - Reduce polling interval (currently not implemented)
@@ -204,6 +221,7 @@ For continuous performance monitoring, consider:
 3. **Playwright Performance Tests**: For E2E timing validation
 
 Example Playwright performance test:
+
 ```typescript
 test('deck page loads quickly', async ({ page }) => {
   const startTime = Date.now()
@@ -220,7 +238,7 @@ test('deck page loads quickly', async ({ page }) => {
 
 ## Sign-Off
 
-**Tester**: _____________________
-**Date**: _____________________
+**Tester**: \***\*\*\*\*\***\_\***\*\*\*\*\***
+**Date**: \***\*\*\*\*\***\_\***\*\*\*\*\***
 **All Tests Passed**: ⬜ Yes ⬜ No
-**Notes**: _____________________
+**Notes**: \***\*\*\*\*\***\_\***\*\*\*\*\***

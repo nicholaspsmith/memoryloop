@@ -91,7 +91,7 @@ describe('AI Deck Generation Integration', () => {
       // Mock vector search results
       vi.mocked(searchSimilarFlashcardsWithScores).mockResolvedValue([
         { id: testFlashcardIds[0], similarity: 0.95 },
-        { id: testFlashcardIds[1], similarity: 0.90 },
+        { id: testFlashcardIds[1], similarity: 0.9 },
         { id: testFlashcardIds[2], similarity: 0.85 },
       ])
 
@@ -189,9 +189,9 @@ describe('AI Deck Generation Integration', () => {
       // Mock vector search with 5 candidates
       vi.mocked(searchSimilarFlashcardsWithScores).mockResolvedValue([
         { id: testFlashcardIds[0], similarity: 0.95 },
-        { id: testFlashcardIds[1], similarity: 0.90 },
+        { id: testFlashcardIds[1], similarity: 0.9 },
         { id: testFlashcardIds[2], similarity: 0.85 },
-        { id: testFlashcardIds[3], similarity: 0.80 },
+        { id: testFlashcardIds[3], similarity: 0.8 },
         { id: testFlashcardIds[4], similarity: 0.75 },
       ])
 
@@ -231,7 +231,7 @@ describe('AI Deck Generation Integration', () => {
     it('should filter out low-relevance cards (score < 6)', async () => {
       vi.mocked(searchSimilarFlashcardsWithScores).mockResolvedValue([
         { id: testFlashcardIds[0], similarity: 0.95 },
-        { id: testFlashcardIds[1], similarity: 0.90 },
+        { id: testFlashcardIds[1], similarity: 0.9 },
         { id: testFlashcardIds[2], similarity: 0.85 },
       ])
 
@@ -292,7 +292,7 @@ describe('AI Deck Generation Integration', () => {
       vi.mocked(searchSimilarFlashcardsWithScores).mockResolvedValue([
         { id: testFlashcardIds[0], similarity: 0.85 }, // Lower vector sim
         { id: testFlashcardIds[1], similarity: 0.95 }, // Higher vector sim
-        { id: testFlashcardIds[2], similarity: 0.90 },
+        { id: testFlashcardIds[2], similarity: 0.9 },
       ])
 
       // LLM ranks in different order than vector similarity
@@ -322,7 +322,7 @@ describe('AI Deck Generation Integration', () => {
     it('should fall back to vector search when LLM unavailable', async () => {
       vi.mocked(searchSimilarFlashcardsWithScores).mockResolvedValue([
         { id: testFlashcardIds[0], similarity: 0.95 },
-        { id: testFlashcardIds[1], similarity: 0.90 },
+        { id: testFlashcardIds[1], similarity: 0.9 },
         { id: testFlashcardIds[2], similarity: 0.85 },
       ])
 
@@ -565,7 +565,7 @@ describe('AI Deck Generation Integration', () => {
 
       vi.mocked(searchSimilarFlashcardsWithScores).mockResolvedValue([
         { id: testFlashcardIds[0], similarity: 0.95 },
-        { id: fakeId, similarity: 0.90 }, // Non-existent
+        { id: fakeId, similarity: 0.9 }, // Non-existent
         { id: testFlashcardIds[1], similarity: 0.85 },
       ])
 

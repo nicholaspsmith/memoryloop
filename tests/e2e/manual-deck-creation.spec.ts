@@ -86,9 +86,9 @@ test.describe('Manual Deck Creation Flow', () => {
     await page.click('button[type="submit"], button:has-text("Create")')
 
     // Should show validation error
-    await expect(
-      page.locator('text=/required|cannot be empty|enter.*name/i')
-    ).toBeVisible({ timeout: 3000 })
+    await expect(page.locator('text=/required|cannot be empty|enter.*name/i')).toBeVisible({
+      timeout: 3000,
+    })
   })
 })
 
@@ -117,7 +117,9 @@ test.describe('Adding Cards to Deck', () => {
 
   test('can add flashcards to deck', async ({ page }) => {
     // Look for "Add Cards" button
-    const addCardsButton = page.locator('button:has-text("Add Cards"), button:has-text("Add to Deck")')
+    const addCardsButton = page.locator(
+      'button:has-text("Add Cards"), button:has-text("Add to Deck")'
+    )
 
     if ((await addCardsButton.count()) === 0) {
       // Deck might be empty, check for empty state

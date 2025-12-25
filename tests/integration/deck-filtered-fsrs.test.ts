@@ -259,7 +259,9 @@ describe('Deck-Filtered FSRS Integration', () => {
       const cardAfter = await getFlashcardById(flashcard1Id)
       expect(cardAfter).toBeDefined()
       expect(cardAfter!.fsrsState.reps).toBe(initialReps + 1)
-      expect(cardAfter!.fsrsState.due.getTime()).toBeGreaterThan(cardBefore!.fsrsState.due.getTime())
+      expect(cardAfter!.fsrsState.due.getTime()).toBeGreaterThan(
+        cardBefore!.fsrsState.due.getTime()
+      )
     })
 
     it('should persist FSRS state across deck boundaries', async () => {

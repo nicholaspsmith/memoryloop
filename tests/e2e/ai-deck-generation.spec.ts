@@ -33,9 +33,9 @@ test.describe('AI Deck Generation Request', () => {
     await aiButton.first().click()
 
     // Should show AI generation interface
-    await expect(
-      page.locator('text=/topic|describe|what.*study|generate/i')
-    ).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('text=/topic|describe|what.*study|generate/i')).toBeVisible({
+      timeout: 5000,
+    })
   })
 
   test('can submit topic for AI generation', async ({ page }) => {
@@ -84,9 +84,9 @@ test.describe('AI Deck Generation Request', () => {
     await page.click('button:has-text("Generate"), button[type="submit"]')
 
     // Should show validation error
-    await expect(
-      page.locator('text=/required|enter.*topic|cannot be empty/i')
-    ).toBeVisible({ timeout: 3000 })
+    await expect(page.locator('text=/required|enter.*topic|cannot be empty/i')).toBeVisible({
+      timeout: 3000,
+    })
   })
 
   test('shows appropriate message when no cards found', async ({ page }) => {
@@ -106,9 +106,9 @@ test.describe('AI Deck Generation Request', () => {
     await page.click('button:has-text("Generate"), button[type="submit"]')
 
     // Should eventually show no results message
-    await expect(
-      page.locator('text=/no.*found|no.*match|create.*flashcard.*first/i')
-    ).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('text=/no.*found|no.*match|create.*flashcard.*first/i')).toBeVisible({
+      timeout: 15000,
+    })
   })
 })
 
@@ -307,9 +307,9 @@ test.describe('Creating Deck from Suggestions', () => {
     await createButton.first().click()
 
     // Should show error message
-    await expect(
-      page.locator('text=/select.*card|choose.*least|no.*selected/i')
-    ).toBeVisible({ timeout: 3000 })
+    await expect(page.locator('text=/select.*card|choose.*least|no.*selected/i')).toBeVisible({
+      timeout: 3000,
+    })
   })
 
   test('created deck contains selected cards', async ({ page }) => {
@@ -491,9 +491,9 @@ test.describe('Fallback and Error Handling', () => {
     await page.click('button:has-text("Generate")')
 
     // Should show error message
-    await expect(
-      page.locator('text=/error|failed|unavailable|offline/i')
-    ).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('text=/error|failed|unavailable|offline/i')).toBeVisible({
+      timeout: 5000,
+    })
 
     // Restore online
     await page.context().setOffline(false)

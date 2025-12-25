@@ -86,9 +86,9 @@ test.describe('Deck Renaming', () => {
     await page.click('button:has-text("Save"), button[type="submit"]')
 
     // Should show validation error
-    await expect(
-      page.locator('text=/required|cannot be empty|enter.*name/i')
-    ).toBeVisible({ timeout: 3000 })
+    await expect(page.locator('text=/required|cannot be empty|enter.*name/i')).toBeVisible({
+      timeout: 3000,
+    })
   })
 })
 
@@ -114,7 +114,9 @@ test.describe('Adding/Removing Cards', () => {
 
   test('can add multiple cards at once', async ({ page }) => {
     // Click Add Cards button
-    const addCardsButton = page.locator('button:has-text("Add Cards"), button:has-text("Add to Deck")')
+    const addCardsButton = page.locator(
+      'button:has-text("Add Cards"), button:has-text("Add to Deck")'
+    )
 
     if ((await addCardsButton.count()) === 0) {
       test.skip()
@@ -406,9 +408,9 @@ test.describe('Deck Deletion', () => {
     await deleteButton.first().click()
 
     // Should show confirmation dialog
-    await expect(
-      page.locator('text=/are you sure|confirm|delete.*permanently/i')
-    ).toBeVisible({ timeout: 3000 })
+    await expect(page.locator('text=/are you sure|confirm|delete.*permanently/i')).toBeVisible({
+      timeout: 3000,
+    })
 
     // Confirm deletion
     const confirmButton = page.locator('button:has-text("Delete"), button:has-text("Yes")')
