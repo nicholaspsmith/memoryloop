@@ -24,6 +24,7 @@ This guide provides step-by-step integration scenarios for the flashcard deck fe
 ### Step 1: Create New Deck
 
 **Request**:
+
 ```http
 POST /api/decks
 Content-Type: application/json
@@ -34,6 +35,7 @@ Content-Type: application/json
 ```
 
 **Response** (201 Created):
+
 ```json
 {
   "id": "deck-123e4567-e89b-12d3-a456-426614174000",
@@ -50,6 +52,7 @@ Content-Type: application/json
 ### Step 2: Add Cards to Deck
 
 **Request**:
+
 ```http
 POST /api/decks/deck-123e4567-e89b-12d3-a456-426614174000/cards
 Content-Type: application/json
@@ -64,6 +67,7 @@ Content-Type: application/json
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "addedCount": 3,
@@ -75,6 +79,7 @@ Content-Type: application/json
 ### Step 3: Start Deck Study Session
 
 **Request**:
+
 ```http
 POST /api/study/deck-session
 Content-Type: application/json
@@ -85,6 +90,7 @@ Content-Type: application/json
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "sessionId": "session-550e8400-e29b-41d4-a716-446655440000",
@@ -139,6 +145,7 @@ User rates cards using existing study session UI. FSRS state updates globally.
 ### Step 1: Request AI Deck Generation
 
 **Request**:
+
 ```http
 POST /api/decks-ai
 Content-Type: application/json
@@ -152,6 +159,7 @@ Content-Type: application/json
 ```
 
 **Processing** (backend):
+
 1. Generate vector embedding for topic using Nomic embed-text
 2. Query LanceDB for top 40 semantically similar flashcards
 3. Pass 40 candidates to Claude API with prompt:
@@ -162,6 +170,7 @@ Content-Type: application/json
 4. Claude returns filtered and re-ranked results
 
 **Response** (200 OK):
+
 ```json
 {
   "suggestions": [
@@ -188,7 +197,7 @@ Content-Type: application/json
       "front": "How many ATP molecules are produced per glucose molecule?",
       "back": "Approximately 36-38 ATP molecules (net gain)",
       "tags": ["biology", "atp"],
-      "relevanceScore": 0.90,
+      "relevanceScore": 0.9,
       "relevanceReason": "Specifically addresses ATP production, the core of the topic",
       "vectorSimilarity": 0.82
     }
@@ -207,12 +216,14 @@ Content-Type: application/json
 ### Step 2: User Reviews Suggestions (UI Flow)
 
 User sees suggestions in `AIGenerationDialog.tsx`:
+
 - Can accept or reject each card
 - Can adjust selection before creating deck
 
 ### Step 3: Create Deck from Accepted Cards
 
 **Request**:
+
 ```http
 POST /api/decks
 Content-Type: application/json
@@ -223,6 +234,7 @@ Content-Type: application/json
 ```
 
 Then add accepted cards:
+
 ```http
 POST /api/decks/{deckId}/cards
 Content-Type: application/json
@@ -246,6 +258,7 @@ Content-Type: application/json
 ### Step 1: Configure Deck-Specific Settings
 
 **Request**:
+
 ```http
 PATCH /api/decks/deck-123e4567-e89b-12d3-a456-426614174000
 Content-Type: application/json
@@ -257,6 +270,7 @@ Content-Type: application/json
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "id": "deck-123e4567-e89b-12d3-a456-426614174000",
@@ -273,6 +287,7 @@ Content-Type: application/json
 ### Step 2: Start Session with Overrides
 
 **Request**:
+
 ```http
 POST /api/study/deck-session
 Content-Type: application/json
@@ -283,6 +298,7 @@ Content-Type: application/json
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "sessionId": "session-abc12345-e29b-41d4-a716-446655440000",
@@ -314,6 +330,7 @@ Content-Type: application/json
 ### Step 1: Start Study Session
 
 **Request**:
+
 ```http
 POST /api/study/deck-session
 Content-Type: application/json
@@ -328,11 +345,13 @@ Content-Type: application/json
 ### Step 2: Subscribe to Live Updates (SSE)
 
 **Request**:
+
 ```http
 GET /api/study/deck-session/session-abc12345-e29b-41d4-a716-446655440000/live-updates
 ```
 
 **Response** (SSE stream):
+
 ```
 HTTP/1.1 200 OK
 Content-Type: text/event-stream
@@ -346,6 +365,7 @@ Connection: keep-alive
 ### Step 3: User Adds Card to Deck (Different Tab/Device)
 
 **Request** (from another tab):
+
 ```http
 POST /api/decks/deck-123e4567-e89b-12d3-a456-426614174000/cards
 Content-Type: application/json
@@ -358,6 +378,7 @@ Content-Type: application/json
 ### Step 4: Live Update Event Sent to Active Session
 
 **SSE Event** (received by active session):
+
 ```
 event: card-added
 data: {"flashcardId":"card-new11111-e89b-12d3-a456-426614174000","dueDate":"2025-12-24T10:00:00Z","state":"new"}
@@ -365,12 +386,14 @@ data: {"flashcardId":"card-new11111-e89b-12d3-a456-426614174000","dueDate":"2025
 ```
 
 **Client Behavior**:
+
 - If card is FSRS-due: Inject into session queue
 - If card is not due: Ignore (won't appear in this session)
 
 ### Step 5: User Removes Card from Deck (Different Tab)
 
 **Request**:
+
 ```http
 DELETE /api/decks/deck-123e4567-e89b-12d3-a456-426614174000/cards
 Content-Type: application/json
@@ -381,6 +404,7 @@ Content-Type: application/json
 ```
 
 **SSE Event** (received by active session):
+
 ```
 event: card-removed
 data: {"flashcardId":"card-def67890-e89b-12d3-a456-426614174111"}
@@ -388,6 +412,7 @@ data: {"flashcardId":"card-def67890-e89b-12d3-a456-426614174111"}
 ```
 
 **Client Behavior**:
+
 - If card not yet reviewed: Skip when it comes up in queue
 - If card currently being reviewed: Allow completion, then skip
 
@@ -398,6 +423,7 @@ data: {"flashcardId":"card-def67890-e89b-12d3-a456-426614174111"}
 ### Deck Limit Exceeded (100 Decks)
 
 **Request**:
+
 ```http
 POST /api/decks
 Content-Type: application/json
@@ -408,6 +434,7 @@ Content-Type: application/json
 ```
 
 **Response** (403 Forbidden):
+
 ```json
 {
   "error": "Maximum deck limit reached (100 decks). Please delete unused decks before creating new ones."
@@ -417,6 +444,7 @@ Content-Type: application/json
 ### Card Limit Exceeded (1000 Cards/Deck)
 
 **Request**:
+
 ```http
 POST /api/decks/deck-123e4567-e89b-12d3-a456-426614174000/cards
 Content-Type: application/json
@@ -429,6 +457,7 @@ Content-Type: application/json
 ```
 
 **Response** (403 Forbidden):
+
 ```json
 {
   "error": "Deck limit reached (1000 cards maximum). Please create a new deck or remove cards before adding more."
@@ -438,6 +467,7 @@ Content-Type: application/json
 ### Empty Deck Study Session
 
 **Request**:
+
 ```http
 POST /api/study/deck-session
 Content-Type: application/json
@@ -448,6 +478,7 @@ Content-Type: application/json
 ```
 
 **Response** (400 Bad Request):
+
 ```json
 {
   "error": "Cannot start session: deck contains 0 cards. Please add cards to the deck first."
@@ -457,6 +488,7 @@ Content-Type: application/json
 ### No Due Cards in Deck
 
 **Request**:
+
 ```http
 POST /api/study/deck-session
 Content-Type: application/json
@@ -467,6 +499,7 @@ Content-Type: application/json
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "sessionId": "session-550e8400-e29b-41d4-a716-446655440000",
@@ -489,6 +522,7 @@ Content-Type: application/json
 ### AI Generation - Insufficient Cards
 
 **Request**:
+
 ```http
 POST /api/decks-ai
 Content-Type: application/json
@@ -501,6 +535,7 @@ Content-Type: application/json
 ```
 
 **Response** (200 OK with warning):
+
 ```json
 {
   "suggestions": [
@@ -516,9 +551,7 @@ Content-Type: application/json
     "candidateCount": 2,
     "llmFiltered": true,
     "processingTimeMs": 1800,
-    "warnings": [
-      "Only 2 matching cards found. Consider creating more flashcards on this topic."
-    ]
+    "warnings": ["Only 2 matching cards found. Consider creating more flashcards on this topic."]
   }
 }
 ```
@@ -526,6 +559,7 @@ Content-Type: application/json
 ### AI Generation - LanceDB Unavailable
 
 **Response** (503 Service Unavailable):
+
 ```json
 {
   "error": "Vector search service unavailable. Please try manual deck creation.",
@@ -550,20 +584,24 @@ Before implementing, ensure:
 ## Testing Integration
 
 **Unit Tests**:
+
 - Deck creation with limit validation
 - Card addition/removal with limit validation
 - FSRS override precedence logic
 
 **Contract Tests**:
+
 - All API endpoints match OpenAPI specs
 - Request/response schemas validated
 
 **Integration Tests**:
+
 - End-to-end deck creation → add cards → study flow
 - AI generation pipeline (vector search → LLM filter)
 - Live session updates with concurrent edits
 
 **E2E Tests** (Playwright):
+
 - User Story 1: Manual deck creation and study
 - User Story 2: Deck editing
 - User Story 3: AI deck generation

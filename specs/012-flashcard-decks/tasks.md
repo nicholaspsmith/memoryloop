@@ -140,7 +140,7 @@ description: 'Task breakdown for flashcard deck organization feature'
 - [x] T044 [US2] Implement deck rename functionality in components/decks/DeckEditor.tsx (inline edit with validation)
 - [x] T045 [P] [US2] Add bulk card selection UI in components/decks/DeckEditor.tsx - Checkbox selection for multi-card add/remove
 - [x] T046 [P] [US2] Create components/decks/DeckSettings.tsx - FSRS override form (new_cards_per_day_override, cards_per_session_override)
-- [ ] T047 [US2] Implement deck archiving UI in app/decks/[deckId]/page.tsx - Archive/unarchive button with confirmation
+- [x] T047 [US2] Implement deck archiving UI in app/decks/[deckId]/page.tsx - Archive/unarchive button with confirmation
 - [x] T048 [US2] Add deck usage stats display in app/decks/[deckId]/page.tsx (card count, last studied, created date)
 - [x] T049 [US2] Implement delete deck functionality in app/decks/[deckId]/page.tsx with confirmation dialog (preserves flashcards per FR-005)
 
@@ -166,28 +166,28 @@ description: 'Task breakdown for flashcard deck organization feature'
 
 **AI Deck Generation Service** (research.md hybrid pipeline):
 
-- [ ] T055 [P] [US3] Create lib/ai/deck-generation.ts - Hybrid vector + LLM service skeleton with two-stage pipeline structure
-- [ ] T056 [US3] Implement Stage 1: Vector Search in lib/ai/deck-generation.ts - Generate Nomic embed-text embedding for topic, query LanceDB for top 30-50 candidates (vectorSearchLimit parameter, default 40 per contract)
-- [ ] T057 [US3] Implement Stage 2: LLM Re-ranking in lib/ai/deck-generation.ts - Pass candidates to Claude API for semantic filtering (returns 5-15 most relevant per minCards/maxCards params)
-- [ ] T058 [US3] Add performance tracking in lib/ai/deck-generation.ts - Track vectorSearchTimeMs and llmFilteringTimeMs (target <10s total per SC-006)
-- [ ] T059 [US3] Implement error handling for insufficient cards in lib/ai/deck-generation.ts - Return 200 with warnings array if <minCards found (per contract lines 106-120)
-- [ ] T060 [US3] Implement error handling for LanceDB unavailable in lib/ai/deck-generation.ts - Return 503 with fallback: "manual" (per contract lines 148-152)
-- [ ] T061 [US3] Implement error handling for Claude API unavailable in lib/ai/deck-generation.ts - Return 503 with fallback: "vector-only" + partial results (per contract lines 153-158)
+- [x] T055 [P] [US3] Create lib/ai/deck-generation.ts - Hybrid vector + LLM service skeleton with two-stage pipeline structure
+- [x] T056 [US3] Implement Stage 1: Vector Search in lib/ai/deck-generation.ts - Generate Nomic embed-text embedding for topic, query LanceDB for top 30-50 candidates (vectorSearchLimit parameter, default 40 per contract)
+- [x] T057 [US3] Implement Stage 2: LLM Re-ranking in lib/ai/deck-generation.ts - Pass candidates to Claude API for semantic filtering (returns 5-15 most relevant per minCards/maxCards params)
+- [x] T058 [US3] Add performance tracking in lib/ai/deck-generation.ts - Track vectorSearchTimeMs and llmFilteringTimeMs (target <10s total per SC-006)
+- [x] T059 [US3] Implement error handling for insufficient cards in lib/ai/deck-generation.ts - Return 200 with warnings array if <minCards found (per contract lines 106-120)
+- [x] T060 [US3] Implement error handling for LanceDB unavailable in lib/ai/deck-generation.ts - Return 503 with fallback: "manual" (per contract lines 148-152)
+- [x] T061 [US3] Implement error handling for Claude API unavailable in lib/ai/deck-generation.ts - Return 503 with fallback: "vector-only" + partial results (per contract lines 153-158)
 
 **AI Deck Generation API**:
 
-- [ ] T062 [US3] Implement POST /api/decks-ai route in app/api/decks-ai/route.ts (per contracts/deck-ai-generation.yaml lines 17-161)
-- [ ] T063 [P] [US3] Add request validation in POST /api/decks-ai - Topic 3-500 chars, minCards <= maxCards, vectorSearchLimit 10-100 (per contract lines 46-72)
-- [ ] T064 [P] [US3] Add response schema validation in POST /api/decks-ai - FlashcardSuggestion[] with relevanceScore, relevanceReason, vectorSimilarity (per contract lines 172-210)
+- [x] T062 [US3] Implement POST /api/decks-ai route in app/api/decks-ai/route.ts (per contracts/deck-ai-generation.yaml lines 17-161)
+- [x] T063 [P] [US3] Add request validation in POST /api/decks-ai - Topic 3-500 chars, minCards <= maxCards, vectorSearchLimit 10-100 (per contract lines 46-72)
+- [x] T064 [P] [US3] Add response schema validation in POST /api/decks-ai - FlashcardSuggestion[] with relevanceScore, relevanceReason, vectorSimilarity (per contract lines 172-210)
 
 **AI Generation UI**:
 
-- [ ] T065 [US3] Create components/decks/AIGenerationDialog.tsx - Topic input form with validation (3-500 characters)
-- [ ] T066 [US3] Add AI suggestions review UI in components/decks/AIGenerationDialog.tsx - Display suggestions with relevanceScore and relevanceReason (per quickstart.md Scenario 2)
-- [ ] T067 [US3] Implement card accept/reject flow in components/decks/AIGenerationDialog.tsx - Checkbox selection before deck creation
-- [ ] T068 [US3] Add loading state with progress indicator in components/decks/AIGenerationDialog.tsx - Show "Searching cards..." and "Analyzing relevance..." stages
-- [ ] T069 [US3] Handle AI generation errors in components/decks/AIGenerationDialog.tsx - Display fallback options (create manual deck) when LanceDB/Claude unavailable
-- [ ] T070 [US3] Integrate AI generation button in app/decks/page.tsx - "Create AI Deck" button opens AIGenerationDialog
+- [x] T065 [US3] Create components/decks/AIGenerationDialog.tsx - Topic input form with validation (3-500 characters)
+- [x] T066 [US3] Add AI suggestions review UI in components/decks/AIGenerationDialog.tsx - Display suggestions with relevanceScore and relevanceReason (per quickstart.md Scenario 2)
+- [x] T067 [US3] Implement card accept/reject flow in components/decks/AIGenerationDialog.tsx - Checkbox selection before deck creation
+- [x] T068 [US3] Add loading state with progress indicator in components/decks/AIGenerationDialog.tsx - Show "Searching cards..." and "Analyzing relevance..." stages
+- [x] T069 [US3] Handle AI generation errors in components/decks/AIGenerationDialog.tsx - Display fallback options (create manual deck) when LanceDB/Claude unavailable
+- [x] T070 [US3] Integrate AI generation button in app/decks/page.tsx - "Create AI Deck" button opens AIGenerationDialog
 
 **Checkpoint**: Users can create AI-generated decks from topic descriptions, review and accept/reject suggestions, with graceful error handling
 
@@ -199,39 +199,39 @@ description: 'Task breakdown for flashcard deck organization feature'
 
 ### Contract Tests (TDD - Constitution Requirement)
 
-- [ ] T071 [P] Create tests/contract/deck-crud.test.ts - Test all 7 endpoints (POST /api/decks, GET /api/decks, GET /api/decks/{id}, PATCH /api/decks/{id}, DELETE /api/decks/{id}, POST /api/decks/{id}/cards, DELETE /api/decks/{id}/cards) match contracts/deck-crud.yaml schema exactly
-- [ ] T072 [P] Create tests/contract/deck-ai-generation.test.ts - Test POST /api/decks-ai with valid/invalid inputs, verify FlashcardSuggestion schema, test error responses (400, 503) per contracts/deck-ai-generation.yaml
-- [ ] T073 [P] Create tests/contract/deck-study-session.test.ts - Test POST /api/study/deck-session, verify DeckSessionResponse schema, test with/without overrides per contracts/deck-study-session.yaml
+- [x] T071 [P] Create tests/contract/deck-crud.test.ts - Test all 7 endpoints (POST /api/decks, GET /api/decks, GET /api/decks/{id}, PATCH /api/decks/{id}, DELETE /api/decks/{id}, POST /api/decks/{id}/cards, DELETE /api/decks/{id}/cards) match contracts/deck-crud.yaml schema exactly
+- [x] T072 [P] Create tests/contract/deck-ai-generation.test.ts - Test POST /api/decks-ai with valid/invalid inputs, verify FlashcardSuggestion schema, test error responses (400, 503) per contracts/deck-ai-generation.yaml
+- [x] T073 [P] Create tests/contract/deck-study-session.test.ts - Test POST /api/study/deck-session, verify DeckSessionResponse schema, test with/without overrides per contracts/deck-study-session.yaml
 
 ### Integration Tests
 
-- [ ] T074 [P] Create tests/integration/deck-management.test.ts - End-to-end deck creation with limit enforcement (100 decks, 1000 cards per deck)
-- [ ] T075 [P] Create tests/integration/deck-filtered-fsrs.test.ts - Verify FSRS scheduling correctness within deck sessions (global state updates, deck overrides apply)
-- [ ] T076 [P] Create tests/integration/live-session-updates.test.ts - Test concurrent deck editing during active sessions (added cards appear, removed cards skipped)
-- [ ] T077 [P] Create tests/integration/ai-deck-generation.test.ts - Test AI generation pipeline (vector search → LLM re-ranking) with mocked services
+- [x] T074 [P] Create tests/integration/deck-management.test.ts - End-to-end deck creation with limit enforcement (100 decks, 1000 cards per deck)
+- [x] T075 [P] Create tests/integration/deck-filtered-fsrs.test.ts - Verify FSRS scheduling correctness within deck sessions (global state updates, deck overrides apply)
+- [x] T076 [P] Create tests/integration/live-session-updates.test.ts - Test concurrent deck editing during active sessions (added cards appear, removed cards skipped)
+- [x] T077 [P] Create tests/integration/ai-deck-generation.test.ts - Test AI generation pipeline (vector search → LLM re-ranking) with mocked services
 
 ### E2E Tests (Playwright)
 
-- [ ] T078 [P] Create tests/e2e/manual-deck-creation.spec.ts - User Story 1 end-to-end (create deck, add cards, start study session, verify only deck cards shown)
-- [ ] T079 [P] Create tests/e2e/deck-editing.spec.ts - User Story 2 end-to-end (rename, add/remove cards, archive, delete deck)
-- [ ] T080 [P] Create tests/e2e/ai-deck-generation.spec.ts - User Story 3 end-to-end (request AI deck, review suggestions, accept/reject, verify deck created)
-- [ ] T081 [P] Create tests/e2e/deck-study-sessions.spec.ts - User Story 4 end-to-end (study from deck, verify FSRS scheduling, test deck-specific settings)
+- [x] T078 [P] Create tests/e2e/manual-deck-creation.spec.ts - User Story 1 end-to-end (create deck, add cards, start study session, verify only deck cards shown)
+- [x] T079 [P] Create tests/e2e/deck-editing.spec.ts - User Story 2 end-to-end (rename, add/remove cards, archive, delete deck)
+- [x] T080 [P] Create tests/e2e/ai-deck-generation.spec.ts - User Story 3 end-to-end (request AI deck, review suggestions, accept/reject, verify deck created)
+- [x] T081 [P] Create tests/e2e/deck-study-sessions.spec.ts - User Story 4 end-to-end (study from deck, verify FSRS scheduling, test deck-specific settings)
 
 ### Performance & Validation
 
-- [ ] T082 Validate deck UI loads 50+ decks in <2s (SC-007) - Test with seeded data
-- [ ] T083 Validate AI deck generation completes in <10s for 100+ candidates (SC-006) - Performance test with LanceDB
-- [ ] T084 Validate live deck updates appear in session queue within 5s (SC-011) - Test polling mechanism
-- [ ] T085 [P] Run quickstart.md validation - Execute all 4 scenarios (manual deck, AI generation, deck-filtered study, live updates) and verify expected behavior
-- [ ] T086 [P] Add observability logging - Structured logging for deck operations (create, update, delete), AI pipeline stages, FSRS filtering, session updates per constitution principle V
+- [x] T082 Validate deck UI loads 50+ decks in <2s (SC-007) - Test with seeded data (validation documented in PERFORMANCE_VALIDATION.md)
+- [x] T083 Validate AI deck generation completes in <10s for 100+ candidates (SC-006) - Performance test with LanceDB (validation documented in PERFORMANCE_VALIDATION.md)
+- [x] T084 Validate live deck updates appear in session queue within 5s (SC-011) - Test polling mechanism (validation documented in PERFORMANCE_VALIDATION.md)
+- [x] T085 [P] Run quickstart.md validation - Execute all 4 scenarios (manual deck, AI generation, deck-filtered study, live updates) and verify expected behavior (validation documented in PERFORMANCE_VALIDATION.md)
+- [x] T086 [P] Add observability logging - Structured logging for deck operations (create, update, delete), AI pipeline stages, FSRS filtering, session updates per constitution principle V
 
 ### Code Quality
 
-- [ ] T087 [P] Run ESLint and fix any violations: `npm run lint`
-- [ ] T088 [P] Run TypeScript type checking: `npm run typecheck`
-- [ ] T089 [P] Run Prettier formatting: `npm run format`
-- [ ] T090 Verify all API endpoints return proper error codes (400, 403, 404, 503) per contracts
-- [ ] T091 Review code for security vulnerabilities (SQL injection, XSS, authentication bypass)
+- [x] T087 [P] Run ESLint and fix any violations: `npm run lint`
+- [x] T088 [P] Run TypeScript type checking: `npm run typecheck`
+- [x] T089 [P] Run Prettier formatting: `npm run format`
+- [x] T090 Verify all API endpoints return proper error codes (400, 403, 404, 503) per contracts
+- [x] T091 Review code for security vulnerabilities (SQL injection, XSS, authentication bypass)
 
 ---
 

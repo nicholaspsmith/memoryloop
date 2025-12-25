@@ -66,38 +66,38 @@ paths:
                 withCards:
                   summary: Session with due cards
                   value:
-                    sessionId: "550e8400-e29b-41d4-a716-446655440000"
-                    deckId: "123e4567-e89b-12d3-a456-426614174000"
-                    deckName: "Spanish Verbs"
+                    sessionId: '550e8400-e29b-41d4-a716-446655440000'
+                    deckId: '123e4567-e89b-12d3-a456-426614174000'
+                    deckName: 'Spanish Verbs'
                     dueCards:
-                      - id: "abc12345-e89b-12d3-a456-426614174000"
-                        front: "hablar"
-                        back: "to speak"
+                      - id: 'abc12345-e89b-12d3-a456-426614174000'
+                        front: 'hablar'
+                        back: 'to speak'
                         fsrs:
-                          state: "review"
-                          dueDate: "2025-12-24T10:00:00Z"
+                          state: 'review'
+                          dueDate: '2025-12-24T10:00:00Z'
                           difficulty: 5.5
                           stability: 120.0
                     totalDueCards: 10
                     cardsPerSession: 20
                     newCardsPerDay: 10
                     appliedSettings:
-                      source: "deck-override"
+                      source: 'deck-override'
                       newCardsPerDay: 15
                       cardsPerSession: 25
                 noDueCards:
                   summary: No due cards
                   value:
-                    sessionId: "550e8400-e29b-41d4-a716-446655440000"
-                    deckId: "123e4567-e89b-12d3-a456-426614174000"
-                    deckName: "Spanish Verbs"
+                    sessionId: '550e8400-e29b-41d4-a716-446655440000'
+                    deckId: '123e4567-e89b-12d3-a456-426614174000'
+                    deckName: 'Spanish Verbs'
                     dueCards: []
                     totalDueCards: 0
                     nextDueCard:
-                      dueDate: "2025-12-25T09:00:00Z"
+                      dueDate: '2025-12-25T09:00:00Z'
                       count: 3
                     appliedSettings:
-                      source: "global"
+                      source: 'global'
                       newCardsPerDay: 10
                       cardsPerSession: 20
 
@@ -111,11 +111,11 @@ paths:
                 emptyDeck:
                   summary: Empty deck
                   value:
-                    error: "Cannot start session: deck contains 0 cards. Please add cards to the deck first."
+                    error: 'Cannot start session: deck contains 0 cards. Please add cards to the deck first.'
                 invalidSettings:
                   summary: Invalid session settings
                   value:
-                    error: "cardsPerSession must be greater than 0"
+                    error: 'cardsPerSession must be greater than 0'
 
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -127,7 +127,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Deck not found"
+                error: 'Deck not found'
 
         '500':
           $ref: '#/components/responses/InternalError'
@@ -184,7 +184,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Session not found or expired"
+                error: 'Session not found or expired'
 
 components:
   securitySchemes:
@@ -346,7 +346,7 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
           example:
-            error: "Authentication required"
+            error: 'Authentication required'
 
     InternalError:
       description: Internal server error
@@ -355,4 +355,4 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
           example:
-            error: "Internal server error"
+            error: 'Internal server error'

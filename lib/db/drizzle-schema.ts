@@ -97,12 +97,10 @@ export const flashcards = pgTable('flashcards', {
   userId: uuid('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  conversationId: uuid('conversation_id')
-    .notNull()
-    .references(() => conversations.id, { onDelete: 'cascade' }),
-  messageId: uuid('message_id')
-    .notNull()
-    .references(() => messages.id, { onDelete: 'cascade' }),
+  conversationId: uuid('conversation_id').references(() => conversations.id, {
+    onDelete: 'cascade',
+  }),
+  messageId: uuid('message_id').references(() => messages.id, { onDelete: 'cascade' }),
   question: varchar('question', { length: 1000 }).notNull(),
   answer: text('answer').notNull(),
   // Note: Question embeddings stored in LanceDB for efficient vector search

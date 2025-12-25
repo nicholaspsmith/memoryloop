@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auth } from '@/auth'
 import { getDeck } from '@/lib/db/operations/decks'
 import { detectDeckChanges } from '@/lib/fsrs/deck-scheduler'
 import { z } from 'zod'
@@ -74,10 +74,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response, { status: 200 })
   } catch (error) {
     console.error('Error detecting session changes:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 

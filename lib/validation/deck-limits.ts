@@ -37,9 +37,7 @@ export function validateDeckName(name: string): string {
  */
 export function validateDeckCount(currentCount: number): void {
   if (currentCount >= DECK_LIMITS.MAX_DECKS_PER_USER) {
-    throw new Error(
-      `Maximum deck limit reached (${DECK_LIMITS.MAX_DECKS_PER_USER} decks)`
-    )
+    throw new Error(`Maximum deck limit reached (${DECK_LIMITS.MAX_DECKS_PER_USER} decks)`)
   }
 }
 
@@ -47,16 +45,13 @@ export function validateDeckCount(currentCount: number): void {
  * Validate card count for deck
  * @throws Error if limit would be exceeded
  */
-export function validateCardCount(
-  currentCount: number,
-  cardsToAdd: number
-): void {
+export function validateCardCount(currentCount: number, cardsToAdd: number): void {
   const newTotal = currentCount + cardsToAdd
 
   if (newTotal > DECK_LIMITS.MAX_CARDS_PER_DECK) {
     throw new Error(
       `Deck limit reached (${DECK_LIMITS.MAX_CARDS_PER_DECK} cards maximum). ` +
-      `Current: ${currentCount}, Attempting to add: ${cardsToAdd}`
+        `Current: ${currentCount}, Attempting to add: ${cardsToAdd}`
     )
   }
 }
@@ -110,9 +105,7 @@ export function canAddCardsToDeck(
  * Check if user can create a new deck
  * Returns true if operation is allowed
  */
-export function canCreateDeck(
-  currentCount: number
-): { allowed: boolean; reason?: string } {
+export function canCreateDeck(currentCount: number): { allowed: boolean; reason?: string } {
   if (currentCount >= DECK_LIMITS.MAX_DECKS_PER_USER) {
     return {
       allowed: false,

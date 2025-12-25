@@ -19,11 +19,7 @@ import DeckStudyInterface from '@/components/study/DeckStudyInterface'
  * Maps to T039 in Phase 4 (FR-010, FR-027)
  */
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ deckId: string }>
-}) {
+export async function generateMetadata({ params }: { params: Promise<{ deckId: string }> }) {
   const { deckId } = await params
   const deck = await getDeck(deckId)
 
@@ -32,11 +28,7 @@ export async function generateMetadata({
   }
 }
 
-export default async function DeckStudyPage({
-  params,
-}: {
-  params: Promise<{ deckId: string }>
-}) {
+export default async function DeckStudyPage({ params }: { params: Promise<{ deckId: string }> }) {
   const session = await auth()
 
   if (!session?.user?.id) {
@@ -64,10 +56,7 @@ export default async function DeckStudyPage({
             Decks
           </Link>
           <span>/</span>
-          <Link
-            href={`/decks/${deck.id}`}
-            className="hover:text-blue-600 dark:hover:text-blue-400"
-          >
+          <Link href={`/decks/${deck.id}`} className="hover:text-blue-600 dark:hover:text-blue-400">
             {deck.name}
           </Link>
           <span>/</span>

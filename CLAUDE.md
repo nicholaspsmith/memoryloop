@@ -100,6 +100,7 @@ Follow the project principles defined in `.specify/memory/constitution.md`:
 - GitHub Actions
 
 ## Active Technologies
+
 - @anthropic-ai/sdk 0.71.2 ([docs](https://docs.anthropic.com/en/api/client-sdks))
 - @lancedb/lancedb 0.22.3 ([docs](https://lancedb.github.io/lancedb))
 - @types/nodemailer 7.0.4 ([docs](https://www.npmjs.com/package/@types/nodemailer/v/7.0.4))

@@ -389,8 +389,7 @@ export default function DeckStudyInterface({ deckId, deckName }: DeckStudyInterf
             {session.appliedSettings.source !== 'global' && (
               <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-700">
                 <p className="text-xs text-blue-600 dark:text-blue-400">
-                  Using {session.appliedSettings.source === 'deck' ? 'deck' : 'session'}{' '}
-                  settings
+                  Using {session.appliedSettings.source === 'deck' ? 'deck' : 'session'} settings
                 </p>
               </div>
             )}

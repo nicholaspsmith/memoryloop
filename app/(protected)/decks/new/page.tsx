@@ -67,8 +67,8 @@ export default async function NewDeckPage() {
             Deck Limit Reached
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md">
-            You have reached the maximum limit of {maxDecks} decks. Please delete or
-            archive unused decks before creating new ones.
+            You have reached the maximum limit of {maxDecks} decks. Please delete or archive unused
+            decks before creating new ones.
           </p>
           <Link
             href="/decks"
@@ -118,8 +118,8 @@ export default async function NewDeckPage() {
             No Flashcards Yet
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md">
-            You need to create flashcards before you can organize them into decks.
-            Start a conversation with Claude to generate flashcards.
+            You need to create flashcards before you can organize them into decks. Start a
+            conversation with Claude to generate flashcards.
           </p>
           <Link
             href="/chat"
@@ -146,12 +146,7 @@ export default async function NewDeckPage() {
       <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
         <div className="flex items-start gap-3">
           <div className="text-blue-600 dark:text-blue-400 mt-0.5">
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -165,7 +160,8 @@ export default async function NewDeckPage() {
               Deck Usage: {deckCount} / {maxDecks}
             </h3>
             <p className="text-sm text-blue-800 dark:text-blue-200">
-              You can create {maxDecks - deckCount} more {maxDecks - deckCount !== 1 ? 'decks' : 'deck'}.
+              You can create {maxDecks - deckCount} more{' '}
+              {maxDecks - deckCount !== 1 ? 'decks' : 'deck'}.
             </p>
           </div>
         </div>

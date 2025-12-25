@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { listDecks } from '@/lib/db/operations/decks'
 import DeckList from '@/components/decks/DeckList'
+import DeckActions from '@/components/decks/DeckActions'
 
 /**
  * Decks List Page
@@ -44,20 +45,12 @@ export default async function DecksPage() {
     <div className="flex flex-col h-full p-6 max-w-7xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            My Decks
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">My Decks</h1>
           <p className="text-gray-600 dark:text-gray-400">
             Organize your flashcards into focused study collections
           </p>
         </div>
-        <Link
-          href="/decks/new"
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          aria-disabled={totalDecks >= maxDecks}
-        >
-          Create Deck
-        </Link>
+        <DeckActions totalDecks={totalDecks} maxDecks={maxDecks} />
       </div>
 
       {/* Usage Stats */}
@@ -106,8 +99,7 @@ export default async function DecksPage() {
             No decks yet
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md">
-            Create your first deck to organize your flashcards into focused study
-            collections
+            Create your first deck to organize your flashcards into focused study collections
           </p>
           <Link
             href="/decks/new"

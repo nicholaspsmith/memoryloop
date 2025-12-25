@@ -108,12 +108,7 @@ export default function CreateDeckForm() {
         <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
           <div className="flex items-start gap-3">
             <div className="text-red-600 dark:text-red-400 mt-0.5">
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -159,19 +154,12 @@ export default function CreateDeckForm() {
           className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
         >
           <svg
-            className={`w-4 h-4 transition-transform ${
-              showAdvanced ? 'rotate-90' : ''
-            }`}
+            className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
           Advanced FSRS Settings (Optional)
         </button>
@@ -179,8 +167,7 @@ export default function CreateDeckForm() {
         {showAdvanced && (
           <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 space-y-4">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Override global FSRS settings for this deck. Leave empty to use
-              defaults.
+              Override global FSRS settings for this deck. Leave empty to use defaults.
             </p>
 
             <div>

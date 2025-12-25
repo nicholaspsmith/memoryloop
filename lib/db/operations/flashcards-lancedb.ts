@@ -90,3 +90,42 @@ export async function searchSimilarFlashcardIds(
     return []
   }
 }
+
+/**
+ * Search flashcards with similarity scores
+ *
+ * Returns flashcard IDs with their similarity scores (0-1, higher = more similar).
+ * Caller should fetch full flashcard data from PostgreSQL using these IDs.
+ */
+export async function searchSimilarFlashcardsWithScores(
+  queryText: string,
+  userId: string,
+  limit: number = 10
+): Promise<Array<{ id: string; similarity: number }>> {
+  try {
+    const queryEmbedding = await generateEmbedding(queryText)
+
+    if (!queryEmbedding) {
+      throw new Error('Failed to generate query embedding')
+    }
+
+    const db = await getDbConnection()
+    const table = await db.openTable('flashcards')
+
+    const results = await table
+      .vectorSearch(queryEmbedding)
+      .where(`userId = '${userId}'`)
+      .limit(limit)
+      .toArray()
+
+    // LanceDB returns _distance (lower = more similar)
+    // Convert to similarity score (0-1, higher = more similar)
+    return results.map((r: any) => ({
+      id: r.id,
+      similarity: 1 / (1 + r._distance), // Normalize distance to 0-1 range
+    }))
+  } catch (error) {
+    console.error('[LanceDB] Flashcard semantic search with scores failed:', error)
+    return []
+  }
+}

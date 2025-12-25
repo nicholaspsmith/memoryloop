@@ -28,6 +28,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 ### I. Documentation-First Development
 
 ✅ **PASS** - Feature spec complete with:
+
 - 4 prioritized user stories (P1/P2/P3) with independent test criteria
 - 35 functional requirements (FR-001 through FR-035)
 - 13 success criteria with measurable outcomes
@@ -36,6 +37,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 ### II. Test-First Development (TDD)
 
 ✅ **PASS** - Plan includes:
+
 - Contract tests for deck CRUD operations
 - Contract tests for AI generation API
 - Integration tests for deck-filtered FSRS sessions
@@ -46,6 +48,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 ### III. Modularity & Composability
 
 ✅ **PASS** - Design uses independent modules:
+
 - Deck data layer (PostgreSQL operations)
 - AI deck generation service (LanceDB + Claude API)
 - Deck-filtered FSRS scheduler (extends existing FSRS)
@@ -55,6 +58,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 ### IV. Simplicity (YAGNI)
 
 ⚠️ **JUSTIFIED COMPLEXITY**:
+
 - **Live session updates**: Required by spec (FR-030, FR-031) for concurrent editing scenarios
 - **Deck-specific FSRS overrides**: Required by spec (FR-028, FR-029) for advanced users
 - **Hybrid AI approach**: Required by clarification session (vector search + LLM re-ranking)
@@ -64,6 +68,7 @@ All complexity directly maps to explicit requirements. No speculative features.
 ### V. Observability & Debugging
 
 ✅ **PASS** - Plan includes:
+
 - Structured logging for deck operations (create, update, delete)
 - AI generation pipeline logging (vector search results, LLM filtering)
 - Performance metrics for AI generation latency
@@ -73,6 +78,7 @@ All complexity directly maps to explicit requirements. No speculative features.
 ### VI. Atomic Commits & Version Control Discipline
 
 ✅ **PASS** - Implementation will follow:
+
 - Atomic commits per task from tasks.md
 - Commit messages per .claude/rules.md
 - One logical change per commit
@@ -216,6 +222,7 @@ _See [research.md](./research.md) for detailed findings._
 ### Decision Summary
 
 See [research.md](./research.md) for:
+
 - Decision: [what was chosen]
 - Rationale: [why chosen]
 - Alternatives considered: [what else evaluated]
@@ -228,15 +235,18 @@ See [research.md](./research.md) for:
 _See [data-model.md](./data-model.md) for complete entity definitions._
 
 **New Entities**:
+
 - `Deck`: id, user_id, name, created_at, last_studied_at, archived, new_cards_per_day_override, cards_per_session_override
 - `DeckCard`: id, deck_id, flashcard_id, added_at
 
 **Entity Relationships**:
+
 - User 1:N Deck (user owns many decks)
 - Deck N:M Flashcard (through DeckCard join table)
 - Flashcard maintains global FSRS state independent of deck membership
 
 **Constraints**:
+
 - Maximum 100 decks per user (CHECK constraint + application validation)
 - Maximum 1000 cards per deck (application validation before insert)
 - Cascade delete: Delete deck → delete all deck_cards (preserve flashcards)
@@ -247,6 +257,7 @@ _See [data-model.md](./data-model.md) for complete entity definitions._
 _See [contracts/](./contracts/) for OpenAPI specifications._
 
 **Deck CRUD** (`contracts/deck-crud.yaml`):
+
 - `GET /api/decks` - List user's decks with metadata
 - `POST /api/decks` - Create new deck (validates 100-deck limit)
 - `GET /api/decks/{deckId}` - Get deck details with card list
@@ -256,12 +267,14 @@ _See [contracts/](./contracts/) for OpenAPI specifications._
 - `DELETE /api/decks/{deckId}/cards` - Remove cards from deck
 
 **AI Deck Generation** (`contracts/deck-ai-generation.yaml`):
+
 - `POST /api/decks-ai` - Generate deck suggestions from topic
   - Request: { topic: string, minCards?: number, maxCards?: number }
   - Response: { suggestions: FlashcardSuggestion[], candidateCount: number }
   - Pipeline: Vector search (top 30-50) → LLM re-rank → filtered results
 
 **Deck Study Session** (`contracts/deck-study-session.yaml`):
+
 - `POST /api/study/deck-session` - Start deck-filtered FSRS session
   - Request: { deckId: string, settings?: DeckSessionSettings }
   - Response: { sessionId: string, dueCards: FlashcardWithFSRS[] }
@@ -336,6 +349,7 @@ All endpoints must match request/response schemas in contract exactly (validated
 ### Phase 5: Deck-Filtered FSRS (P1 Core)
 
 **References**:
+
 - [research.md](./research.md) "Deck-Filtered FSRS Scheduling" section for filtering architecture
 - [contracts/deck-study-session.yaml](./contracts/deck-study-session.yaml) for session API contract
 - [quickstart.md](./quickstart.md) Scenarios 1, 3, 4 for integration flows
@@ -360,6 +374,7 @@ All endpoints must match request/response schemas in contract exactly (validated
 ### Phase 7: AI Deck Generation (P3)
 
 **References**:
+
 - [research.md](./research.md) "Hybrid AI Deck Generation Architecture" section for pipeline design
 - [contracts/deck-ai-generation.yaml](./contracts/deck-ai-generation.yaml) for API specification
 - [quickstart.md](./quickstart.md) Scenario 2 for complete integration flow
@@ -412,6 +427,7 @@ Implement two-stage hybrid AI pipeline per research.md:
 ### MVP Scope (P1 Only)
 
 Deliver independently testable P1 user stories first:
+
 - Manual deck creation (create, list, view)
 - Add/remove cards to decks
 - Deck-filtered study sessions with FSRS
@@ -445,16 +461,19 @@ _Re-evaluate after data-model.md, contracts/, quickstart.md complete._
 ## Dependencies
 
 ### External Services
+
 - **LanceDB**: Vector similarity search (existing, has embeddings for flashcards)
 - **Claude API**: LLM re-ranking for AI deck generation (existing)
 - **PostgreSQL**: Deck and relationship persistence (existing)
 
 ### Internal Dependencies
+
 - **Flashcard entities**: Must have vector embeddings for AI generation to work
 - **FSRS scheduler**: Must be extended to support deck filtering
 - **Study session system**: Must be modified to accept deck context
 
 ### Assumptions
+
 - Vector embeddings exist for all user flashcards (or generated on-demand)
 - FSRS global state is correctly isolated per user
 - PostgreSQL can handle 100k deck_cards relationships per user without performance degradation

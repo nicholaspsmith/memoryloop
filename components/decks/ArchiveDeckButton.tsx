@@ -52,7 +52,11 @@ export default function ArchiveDeckButton({
       router.push('/decks')
       router.refresh()
     } catch (err) {
-      setError(err instanceof Error ? err.message : `Failed to ${isArchived ? 'unarchive' : 'archive'} deck`)
+      setError(
+        err instanceof Error
+          ? err.message
+          : `Failed to ${isArchived ? 'unarchive' : 'archive'} deck`
+      )
       setIsProcessing(false)
     }
   }

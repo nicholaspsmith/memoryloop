@@ -1,6 +1,7 @@
 import { getDb } from '@/lib/db/pg-client'
 import { decks, deckCards } from '@/lib/db/drizzle-schema'
 import { eq, and, desc, sql, count } from 'drizzle-orm'
+import * as logger from '@/lib/logger'
 
 /**
  * Deck Database Operations
@@ -50,10 +51,18 @@ export async function createDeck(data: {
   }
 
   // Validate override values
-  if (data.newCardsPerDayOverride !== undefined && data.newCardsPerDayOverride !== null && data.newCardsPerDayOverride < 0) {
+  if (
+    data.newCardsPerDayOverride !== undefined &&
+    data.newCardsPerDayOverride !== null &&
+    data.newCardsPerDayOverride < 0
+  ) {
     throw new Error('new_cards_per_day_override must be non-negative')
   }
-  if (data.cardsPerSessionOverride !== undefined && data.cardsPerSessionOverride !== null && data.cardsPerSessionOverride < 0) {
+  if (
+    data.cardsPerSessionOverride !== undefined &&
+    data.cardsPerSessionOverride !== null &&
+    data.cardsPerSessionOverride < 0
+  ) {
     throw new Error('cards_per_session_override must be non-negative')
   }
 
@@ -66,6 +75,13 @@ export async function createDeck(data: {
       cardsPerSessionOverride: data.cardsPerSessionOverride ?? null,
     })
     .returning()
+
+  logger.info('Deck created', {
+    deckId: deck.id,
+    userId: data.userId,
+    name: trimmedName,
+    hasOverrides: !!(data.newCardsPerDayOverride || data.cardsPerSessionOverride),
+  })
 
   return {
     id: deck.id,
@@ -210,22 +226,32 @@ export async function updateDeck(
   }
 
   // Validate override values
-  if (updates.newCardsPerDayOverride !== undefined && updates.newCardsPerDayOverride !== null && updates.newCardsPerDayOverride < 0) {
+  if (
+    updates.newCardsPerDayOverride !== undefined &&
+    updates.newCardsPerDayOverride !== null &&
+    updates.newCardsPerDayOverride < 0
+  ) {
     throw new Error('new_cards_per_day_override must be non-negative')
   }
-  if (updates.cardsPerSessionOverride !== undefined && updates.cardsPerSessionOverride !== null && updates.cardsPerSessionOverride < 0) {
+  if (
+    updates.cardsPerSessionOverride !== undefined &&
+    updates.cardsPerSessionOverride !== null &&
+    updates.cardsPerSessionOverride < 0
+  ) {
     throw new Error('cards_per_session_override must be non-negative')
   }
 
-  const [deck] = await db
-    .update(decks)
-    .set(updates)
-    .where(eq(decks.id, deckId))
-    .returning()
+  const [deck] = await db.update(decks).set(updates).where(eq(decks.id, deckId)).returning()
 
   if (!deck) {
     throw new Error(`Deck not found: ${deckId}`)
   }
+
+  logger.info('Deck updated', {
+    deckId,
+    userId: deck.userId,
+    updatedFields: Object.keys(updates),
+  })
 
   // Get card count
   const [cardCountResult] = await db
@@ -258,4 +284,8 @@ export async function deleteDeck(deckId: string): Promise<void> {
   if (result.rowCount === 0) {
     throw new Error(`Deck not found: ${deckId}`)
   }
+
+  logger.info('Deck deleted', {
+    deckId,
+  })
 }

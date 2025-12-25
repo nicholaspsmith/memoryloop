@@ -124,9 +124,7 @@ async function rerankFlashcardsWithLLM(
   minRelevanceScore: number = 6
 ): Promise<RankedFlashcard[]> {
   // Fetch full flashcard content from PostgreSQL
-  const flashcards = await Promise.all(
-    candidateIds.map(id => getFlashcardById(id))
-  )
+  const flashcards = await Promise.all(candidateIds.map((id) => getFlashcardById(id)))
 
   // Build prompt for Claude
   const flashcardContext = flashcards
@@ -167,8 +165,8 @@ Analyze and rank these flashcards by relevance to the topic.`
 
   // Filter by minimum score and return
   return rankings
-    .filter(r => r.score >= minRelevanceScore)
-    .map(r => ({
+    .filter((r) => r.score >= minRelevanceScore)
+    .map((r) => ({
       flashcardId: r.id,
       relevanceScore: r.score,
       explanation: r.explanation,
@@ -203,23 +201,17 @@ export async function generateDeckFromTopic(
     onProgress?: (progress: AIGenerationProgress) => void
   } = {}
 ): Promise<RankedFlashcard[]> {
-  const {
-    maxCandidates = 50,
-    minRelevanceScore = 6,
-    onProgress,
-  } = options
+  const { maxCandidates = 50, minRelevanceScore = 6, onProgress } = options
 
   // Stage 1: Vector search
   onProgress?.({ stage: 'vector_search' })
 
-  const candidates = await searchCandidateFlashcards(
-    topic,
-    userId,
-    maxCandidates
-  )
+  const candidates = await searchCandidateFlashcards(topic, userId, maxCandidates)
 
   if (candidates.length === 0) {
-    throw new Error('No matching flashcards found. Please create more flashcards related to this topic.')
+    throw new Error(
+      'No matching flashcards found. Please create more flashcards related to this topic.'
+    )
   }
 
   onProgress?.({ stage: 'vector_search', candidatesFound: candidates.length })
@@ -228,7 +220,7 @@ export async function generateDeckFromTopic(
   onProgress?.({ stage: 'llm_reranking' })
 
   const userApiKey = await getUserApiKey(userId)
-  const candidateIds = candidates.map(c => c.flashcardId)
+  const candidateIds = candidates.map((c) => c.flashcardId)
 
   const rankedFlashcards = await rerankFlashcardsWithLLM(
     topic,
@@ -280,28 +272,20 @@ export async function POST(request: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const results = await generateDeckFromTopic(
-            data.topic,
-            session.user!.id,
-            {
-              maxCandidates: data.maxCandidates,
-              minRelevanceScore: data.minRelevanceScore,
-              onProgress: (progress) => {
-                // Send progress via SSE
-                controller.enqueue(
-                  encoder.encode(
-                    `data: ${JSON.stringify({ type: 'progress', ...progress })}\n\n`
-                  )
-                )
-              },
-            }
-          )
+          const results = await generateDeckFromTopic(data.topic, session.user!.id, {
+            maxCandidates: data.maxCandidates,
+            minRelevanceScore: data.minRelevanceScore,
+            onProgress: (progress) => {
+              // Send progress via SSE
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ type: 'progress', ...progress })}\n\n`)
+              )
+            },
+          })
 
           // Send final results
           controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({ type: 'complete', results })}\n\n`
-            )
+            encoder.encode(`data: ${JSON.stringify({ type: 'complete', results })}\n\n`)
           )
 
           controller.close()
@@ -328,10 +312,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('[AIGeneration] Error:', error)
-    return NextResponse.json(
-      { error: 'Failed to generate deck' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to generate deck' }, { status: 500 })
   }
 }
 ```
@@ -339,6 +320,7 @@ export async function POST(request: NextRequest) {
 #### Error Handling Strategy
 
 **LanceDB Failures**:
+
 ```typescript
 try {
   const candidates = await searchCandidateFlashcards(topic, userId)
@@ -358,11 +340,12 @@ try {
     )
     .limit(50)
 
-  return fallbackCandidates.map(f => ({ flashcardId: f.id, similarity: 0.5 }))
+  return fallbackCandidates.map((f) => ({ flashcardId: f.id, similarity: 0.5 }))
 }
 ```
 
 **Claude API Failures**:
+
 ```typescript
 try {
   const ranked = await rerankFlashcardsWithLLM(topic, candidateIds, userApiKey)
@@ -370,7 +353,7 @@ try {
   // Graceful degradation: Return all candidates with equal scores
   console.error('[Claude] LLM re-ranking failed, using vector scores only:', error)
 
-  return candidates.map(c => ({
+  return candidates.map((c) => ({
     flashcardId: c.flashcardId,
     relevanceScore: Math.round(c.similarity * 10), // Convert similarity to 0-10
     explanation: 'Ranked by vector similarity (LLM unavailable)',
@@ -520,10 +503,7 @@ export async function getDueFlashcardsForSession(
     const [deck] = await db
       .select()
       .from(decks)
-      .where(and(
-        eq(decks.id, deckId),
-        eq(decks.userId, userId)
-      ))
+      .where(and(eq(decks.id, deckId), eq(decks.userId, userId)))
       .limit(1)
 
     if (!deck) {
@@ -545,13 +525,13 @@ export async function getDueFlashcardsForSession(
       .innerJoin(flashcards, eq(deckCards.flashcardId, flashcards.id))
       .where(eq(deckCards.deckId, deckId))
 
-    const flashcardIds = deckFlashcards.map(df => df.flashcard.id)
+    const flashcardIds = deckFlashcards.map((df) => df.flashcard.id)
 
     // Get ALL due cards for user (existing function handles FSRS filtering)
     const allDueCards = await getDueFlashcards(userId)
 
     // Filter to only cards in this deck (FR-010)
-    dueCards = allDueCards.filter(card => flashcardIds.includes(card.id))
+    dueCards = allDueCards.filter((card) => flashcardIds.includes(card.id))
   } else {
     // Global session (no deck filter)
     dueCards = await getDueFlashcards(userId)
@@ -562,21 +542,18 @@ export async function getDueFlashcardsForSession(
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
   // Count new cards already seen today (State.New = 0 in FSRS)
-  const newCardsToday = dueCards.filter(card => {
+  const newCardsToday = dueCards.filter((card) => {
     const isNew = card.fsrsState.state === 0 // State.New
-    const reviewedToday = card.fsrsState.last_review &&
-      new Date(card.fsrsState.last_review) >= todayStart
+    const reviewedToday =
+      card.fsrsState.last_review && new Date(card.fsrsState.last_review) >= todayStart
     return isNew && reviewedToday
   }).length
 
-  const remainingNewCards = Math.max(
-    0,
-    effectiveSettings.newCardsPerDay! - newCardsToday
-  )
+  const remainingNewCards = Math.max(0, effectiveSettings.newCardsPerDay! - newCardsToday)
 
   // Separate new cards and review cards
-  const newCards = dueCards.filter(c => c.fsrsState.state === 0)
-  const reviewCards = dueCards.filter(c => c.fsrsState.state !== 0)
+  const newCards = dueCards.filter((c) => c.fsrsState.state === 0)
+  const reviewCards = dueCards.filter((c) => c.fsrsState.state !== 0)
 
   // Apply limits: new cards up to daily limit, review cards fill remaining session
   const sessionNewCards = newCards.slice(0, remainingNewCards)
@@ -613,10 +590,12 @@ import { getDueFlashcardsForSession } from '@/lib/fsrs/deck-scheduler'
 
 const StartDeckSessionSchema = z.object({
   deckId: z.string().uuid(),
-  settings: z.object({
-    newCardsPerDay: z.number().int().min(0).max(100).optional(),
-    cardsPerSession: z.number().int().min(1).max(200).optional(),
-  }).optional(),
+  settings: z
+    .object({
+      newCardsPerDay: z.number().int().min(0).max(100).optional(),
+      cardsPerSession: z.number().int().min(1).max(200).optional(),
+    })
+    .optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -630,13 +609,10 @@ export async function POST(request: NextRequest) {
     const data = StartDeckSessionSchema.parse(body)
 
     // Get due cards for deck with FSRS scheduling
-    const { dueCards, settings } = await getDueFlashcardsForSession(
-      session.user.id,
-      {
-        deckId: data.deckId,
-        settings: data.settings,
-      }
-    )
+    const { dueCards, settings } = await getDueFlashcardsForSession(session.user.id, {
+      deckId: data.deckId,
+      settings: data.settings,
+    })
 
     if (dueCards.length === 0) {
       return NextResponse.json({
@@ -655,10 +631,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('[DeckSession] Error:', error)
-    return NextResponse.json(
-      { error: 'Failed to start deck session' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to start deck session' }, { status: 500 })
   }
 }
 ```
@@ -700,12 +673,14 @@ export async function POST(request: NextRequest) {
 **Scenario**: User has global limit of 20 new cards/day, but sets Deck A to 30 new cards/day and Deck B to 10 new cards/day.
 
 **Behavior** (FR-027, FR-029):
+
 - **Deck A session**: Can see up to 30 new cards from Deck A (deck override takes precedence)
 - **Deck B session**: Can see up to 10 new cards from Deck B (deck override takes precedence)
 - **Global session**: Can see up to 20 new cards across all flashcards (global limit)
 - **Independence**: Studying 10 new cards in Deck A does NOT affect Deck B's limit (each deck tracks independently)
 
 **Implementation**:
+
 ```typescript
 // Count new cards reviewed TODAY in THIS DECK (not globally)
 const newCardsReviewedTodayInDeck = await db
@@ -725,6 +700,7 @@ const remaining = effectiveSettings.newCardsPerDay! - newCardsReviewedTodayInDec
 ```
 
 **Alternative Interpretation** (if global limit should apply across all decks):
+
 - Track new cards globally per day
 - Deck overrides only affect cards_per_session
 - Rejected: Spec says deck-specific overrides (FR-028) implies independent tracking
@@ -812,7 +788,7 @@ export async function createStudySession(
 
   // Insert session cards
   await db.insert(sessionCards).values(
-    cardIds.map(cardId => ({
+    cardIds.map((cardId) => ({
       sessionId: session.id,
       flashcardId: cardId,
       status: 'pending' as const, // 'pending' | 'reviewed' | 'skipped'
@@ -860,10 +836,7 @@ export async function GET(
     const [studySession] = await db
       .select()
       .from(studySessions)
-      .where(and(
-        eq(studySessions.id, sessionId),
-        eq(studySessions.userId, session.user.id)
-      ))
+      .where(and(eq(studySessions.id, sessionId), eq(studySessions.userId, session.user.id)))
       .limit(1)
 
     if (!studySession) {
@@ -885,10 +858,10 @@ export async function GET(
       .from(sessionCards)
       .where(eq(sessionCards.sessionId, sessionId))
 
-    const sessionCardIds = currentSessionCards.map(sc => sc.flashcardId)
+    const sessionCardIds = currentSessionCards.map((sc) => sc.flashcardId)
     const reviewedCardIds = currentSessionCards
-      .filter(sc => sc.status === 'reviewed')
-      .map(sc => sc.flashcardId)
+      .filter((sc) => sc.status === 'reviewed')
+      .map((sc) => sc.flashcardId)
 
     // Get current cards in deck (may have changed since session started)
     const currentDeckCards = await db
@@ -896,28 +869,25 @@ export async function GET(
       .from(deckCards)
       .where(eq(deckCards.deckId, studySession.deckId))
 
-    const deckCardIds = currentDeckCards.map(dc => dc.flashcardId)
+    const deckCardIds = currentDeckCards.map((dc) => dc.flashcardId)
 
     // Detect changes
-    const addedCardIds = deckCardIds.filter(id => !sessionCardIds.includes(id))
-    const removedCardIds = sessionCardIds.filter(id => !deckCardIds.includes(id))
+    const addedCardIds = deckCardIds.filter((id) => !sessionCardIds.includes(id))
+    const removedCardIds = sessionCardIds.filter((id) => !deckCardIds.includes(id))
 
     // For added cards: only include if they're FSRS-due and not already reviewed
     let dueAddedCards: Flashcard[] = []
 
     if (addedCardIds.length > 0) {
-      const { dueCards } = await getDueFlashcardsForSession(
-        session.user.id,
-        { deckId: studySession.deckId }
-      )
+      const { dueCards } = await getDueFlashcardsForSession(session.user.id, {
+        deckId: studySession.deckId,
+      })
 
-      dueAddedCards = dueCards.filter(card => addedCardIds.includes(card.id))
+      dueAddedCards = dueCards.filter((card) => addedCardIds.includes(card.id))
     }
 
     // For removed cards: mark as skipped if not yet reviewed (FR-031)
-    const skippedCardIds = removedCardIds.filter(
-      id => !reviewedCardIds.includes(id)
-    )
+    const skippedCardIds = removedCardIds.filter((id) => !reviewedCardIds.includes(id))
 
     if (skippedCardIds.length > 0) {
       await db
@@ -934,7 +904,7 @@ export async function GET(
     // Add new cards to session
     if (dueAddedCards.length > 0) {
       await db.insert(sessionCards).values(
-        dueAddedCards.map(card => ({
+        dueAddedCards.map((card) => ({
           sessionId,
           flashcardId: card.id,
           status: 'pending' as const,
@@ -949,10 +919,7 @@ export async function GET(
     })
   } catch (error) {
     console.error('[SessionChanges] Error:', error)
-    return NextResponse.json(
-      { error: 'Failed to check for changes' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to check for changes' }, { status: 500 })
   }
 }
 ```
@@ -1079,17 +1046,22 @@ export default function StudySessionPage({ params }: { params: { sessionId: stri
 const sessionCard = await db
   .select()
   .from(sessionCards)
-  .where(and(
-    eq(sessionCards.sessionId, sessionId),
-    eq(sessionCards.flashcardId, flashcardId),
-    eq(sessionCards.status, 'pending')
-  ))
+  .where(
+    and(
+      eq(sessionCards.sessionId, sessionId),
+      eq(sessionCards.flashcardId, flashcardId),
+      eq(sessionCards.status, 'pending')
+    )
+  )
   .limit(1)
 
 if (!sessionCard[0]) {
-  return NextResponse.json({
-    error: 'Card no longer available in session',
-  }, { status: 409 })
+  return NextResponse.json(
+    {
+      error: 'Card no longer available in session',
+    },
+    { status: 409 }
+  )
 }
 
 // Proceed with rating...
@@ -1113,6 +1085,7 @@ if (!sessionCard[0]) {
 ### Decision
 
 Enforce limits at **both database and application layers**:
+
 - **Database constraints**: `CHECK` constraint on decks table for 100-deck limit (validates on INSERT)
 - **Application validation**: Check card count before adding to deck (prevents exceeding 1000-card limit)
 - **Batch operations**: Pre-validate batch size, reject entire batch if any operation would exceed limits
@@ -1241,10 +1214,7 @@ export async function validateDeckLimit(userId: string): Promise<void> {
   const [result] = await db
     .select({ count: sql<number>`COUNT(*)` })
     .from(decks)
-    .where(and(
-      eq(decks.userId, userId),
-      eq(decks.archived, false)
-    ))
+    .where(and(eq(decks.userId, userId), eq(decks.archived, false)))
 
   const deckCount = Number(result.count)
 
@@ -1263,10 +1233,7 @@ export async function validateDeckLimit(userId: string): Promise<void> {
  *
  * @param cardIdsToAdd - IDs of cards being added (for batch validation)
  */
-export async function validateDeckCardLimit(
-  deckId: string,
-  cardIdsToAdd: string[]
-): Promise<void> {
+export async function validateDeckCardLimit(deckId: string, cardIdsToAdd: string[]): Promise<void> {
   const db = getDb()
 
   const [result] = await db
@@ -1304,10 +1271,7 @@ export async function getDeckUsageStats(
   const [deckResult] = await db
     .select({ count: sql<number>`COUNT(*)` })
     .from(decks)
-    .where(and(
-      eq(decks.userId, userId),
-      eq(decks.archived, false)
-    ))
+    .where(and(eq(decks.userId, userId), eq(decks.archived, false)))
 
   let cardCount: number | undefined
 
@@ -1359,12 +1323,15 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof DeckLimitError) {
       // User-friendly limit error (FR-034)
-      return NextResponse.json({
-        error: error.message,
-        code: error.code,
-        current: error.current,
-        limit: error.limit,
-      }, { status: 409 })
+      return NextResponse.json(
+        {
+          error: error.message,
+          code: error.code,
+          current: error.current,
+          limit: error.limit,
+        },
+        { status: 409 }
+      )
     }
 
     // ... other error handling ...
@@ -1405,12 +1372,15 @@ export async function POST(
   } catch (error) {
     if (error instanceof DeckLimitError) {
       // User-friendly limit error (FR-034)
-      return NextResponse.json({
-        error: error.message,
-        code: error.code,
-        current: error.current,
-        limit: error.limit,
-      }, { status: 409 })
+      return NextResponse.json(
+        {
+          error: error.message,
+          code: error.code,
+          current: error.current,
+          limit: error.limit,
+        },
+        { status: 409 }
+      )
     }
 
     // ... other error handling ...
@@ -1575,7 +1545,7 @@ Use standard many-to-many pattern with `deck_cards` join table, indexed on both 
    - Cons: Refresh overhead, complexity
    - Rejected: Trigger-maintained counter is simpler
 
-4. **No denormalization (always COUNT(*) on read)**
+4. **No denormalization (always COUNT(\*) on read)**
    - Pros: Simpler, always accurate
    - Cons: Slow for deck list queries (N+1 COUNT queries)
    - Rejected: Poor UX for deck list page
@@ -1604,23 +1574,27 @@ export const decks = pgTable('decks', {
   cardsPerSessionOverride: integer('cards_per_session_override'),
 })
 
-export const deckCards = pgTable('deck_cards', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  deckId: uuid('deck_id')
-    .notNull()
-    .references(() => decks.id, { onDelete: 'cascade' }),
-  flashcardId: uuid('flashcard_id')
-    .notNull()
-    .references(() => flashcards.id, { onDelete: 'cascade' }),
-  addedAt: timestamp('added_at').notNull().defaultNow(),
-}, (table) => ({
-  // Unique constraint prevents duplicate cards in same deck
-  uniqueDeckCard: uniqueIndex('idx_deck_card_unique').on(table.deckId, table.flashcardId),
+export const deckCards = pgTable(
+  'deck_cards',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    deckId: uuid('deck_id')
+      .notNull()
+      .references(() => decks.id, { onDelete: 'cascade' }),
+    flashcardId: uuid('flashcard_id')
+      .notNull()
+      .references(() => flashcards.id, { onDelete: 'cascade' }),
+    addedAt: timestamp('added_at').notNull().defaultNow(),
+  },
+  (table) => ({
+    // Unique constraint prevents duplicate cards in same deck
+    uniqueDeckCard: uniqueIndex('idx_deck_card_unique').on(table.deckId, table.flashcardId),
 
-  // Indexes for fast JOINs
-  deckIdIndex: index('idx_deck_cards_deck_id').on(table.deckId),
-  flashcardIdIndex: index('idx_deck_cards_flashcard_id').on(table.flashcardId),
-}))
+    // Indexes for fast JOINs
+    deckIdIndex: index('idx_deck_cards_deck_id').on(table.deckId),
+    flashcardIdIndex: index('idx_deck_cards_flashcard_id').on(table.flashcardId),
+  })
+)
 ```
 
 #### Database Trigger for Counter Cache
@@ -1666,10 +1640,7 @@ export async function getDecksByUserId(userId: string): Promise<Deck[]> {
   const decks = await db
     .select()
     .from(decks)
-    .where(and(
-      eq(decks.userId, userId),
-      eq(decks.archived, false)
-    ))
+    .where(and(eq(decks.userId, userId), eq(decks.archived, false)))
     .orderBy(decks.lastStudiedAt)
 
   return decks // Each deck has .cardCount populated
@@ -1690,17 +1661,14 @@ export async function getDeckCards(deckId: string): Promise<Flashcard[]> {
     .where(eq(deckCards.deckId, deckId))
     .orderBy(deckCards.addedAt)
 
-  return results.map(r => r.flashcard)
+  return results.map((r) => r.flashcard)
 }
 ```
 
 **Find which decks contain a specific flashcard**:
 
 ```typescript
-export async function getDecksContainingCard(
-  flashcardId: string,
-  userId: string
-): Promise<Deck[]> {
+export async function getDecksContainingCard(flashcardId: string, userId: string): Promise<Deck[]> {
   const db = getDb()
 
   // Indexed JOIN on deck_cards.flashcard_id
@@ -1708,12 +1676,9 @@ export async function getDecksContainingCard(
     .select({ deck: decks })
     .from(deckCards)
     .innerJoin(decks, eq(deckCards.deckId, decks.id))
-    .where(and(
-      eq(deckCards.flashcardId, flashcardId),
-      eq(decks.userId, userId)
-    ))
+    .where(and(eq(deckCards.flashcardId, flashcardId), eq(decks.userId, userId)))
 
-  return results.map(r => r.deck)
+  return results.map((r) => r.deck)
 }
 ```
 
@@ -1742,6 +1707,7 @@ WHERE deck_cards.deck_id = '...';
 #### Handling Cascade Deletes
 
 **Delete deck → cascade to deck_cards**:
+
 ```typescript
 // Foreign key ON DELETE CASCADE handles cleanup
 await db.delete(decks).where(eq(decks.id, deckId))
@@ -1750,6 +1716,7 @@ await db.delete(decks).where(eq(decks.id, deckId))
 ```
 
 **Delete flashcard → cascade to deck_cards**:
+
 ```typescript
 // Foreign key ON DELETE CASCADE handles cleanup
 // Trigger updates deck.card_count
@@ -1763,15 +1730,12 @@ await db.delete(flashcards).where(eq(flashcards.id, flashcardId))
 **Batch add cards** (avoid N+1 queries):
 
 ```typescript
-export async function addCardsToDeck(
-  deckId: string,
-  flashcardIds: string[]
-): Promise<void> {
+export async function addCardsToDeck(deckId: string, flashcardIds: string[]): Promise<void> {
   const db = getDb()
 
   // Single batch INSERT (not N separate INSERTs)
   await db.insert(deckCards).values(
-    flashcardIds.map(flashcardId => ({
+    flashcardIds.map((flashcardId) => ({
       deckId,
       flashcardId,
       addedAt: new Date(),
@@ -1786,19 +1750,13 @@ export async function addCardsToDeck(
 **Batch remove cards**:
 
 ```typescript
-export async function removeCardsFromDeck(
-  deckId: string,
-  flashcardIds: string[]
-): Promise<void> {
+export async function removeCardsFromDeck(deckId: string, flashcardIds: string[]): Promise<void> {
   const db = getDb()
 
   // Single batch DELETE
   await db
     .delete(deckCards)
-    .where(and(
-      eq(deckCards.deckId, deckId),
-      inArray(deckCards.flashcardId, flashcardIds)
-    ))
+    .where(and(eq(deckCards.deckId, deckId), inArray(deckCards.flashcardId, flashcardIds)))
 
   // Trigger automatically updates deck.card_count
 }

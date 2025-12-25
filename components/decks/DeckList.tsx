@@ -16,11 +16,7 @@ interface DeckListProps {
 
 export default function DeckList({ decks }: DeckListProps) {
   if (decks.length === 0) {
-    return (
-      <div className="text-center py-12 text-gray-600 dark:text-gray-400">
-        No decks found
-      </div>
-    )
+    return <div className="text-center py-12 text-gray-600 dark:text-gray-400">No decks found</div>
   }
 
   return (

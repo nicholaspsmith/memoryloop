@@ -225,10 +225,7 @@ export async function getNewFlashcardsForDeck(
 /**
  * Get all flashcards in deck (for session preparation)
  */
-export async function getAllFlashcardsInDeck(
-  deckId: string,
-  userId: string
-): Promise<Flashcard[]> {
+export async function getAllFlashcardsInDeck(deckId: string, userId: string): Promise<Flashcard[]> {
   const db = getDb()
 
   // Get all flashcard IDs in this deck

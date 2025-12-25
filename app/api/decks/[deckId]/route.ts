@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import {
-  getDeck,
-  updateDeck,
-  deleteDeck,
-} from '@/lib/db/operations/decks'
+import { auth } from '@/auth'
+import { getDeck, updateDeck, deleteDeck } from '@/lib/db/operations/decks'
 import { getDeckCards } from '@/lib/db/operations/deck-cards'
 
 /**
@@ -12,7 +8,7 @@ import { getDeckCards } from '@/lib/db/operations/deck-cards'
  * Get deck with full card list
  */
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ deckId: string }> }
 ) {
   try {
@@ -36,21 +32,18 @@ export async function GET(
     }
 
     // Get cards in deck
-    const cards = await getDeckCards(deckId)
+    const flashcards = await getDeckCards(deckId)
 
     return NextResponse.json(
       {
         ...deck,
-        cards,
+        flashcards,
       },
       { status: 200 }
     )
   } catch (error) {
     console.error('Error getting deck:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -85,23 +78,14 @@ export async function PATCH(
 
     // Validate fields if provided
     if (body.name !== undefined && typeof body.name !== 'string') {
-      return NextResponse.json(
-        { error: 'name must be a string' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'name must be a string' }, { status: 400 })
     }
 
     if (body.archived !== undefined && typeof body.archived !== 'boolean') {
-      return NextResponse.json(
-        { error: 'archived must be a boolean' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'archived must be a boolean' }, { status: 400 })
     }
 
-    if (
-      body.newCardsPerDayOverride !== undefined &&
-      body.newCardsPerDayOverride !== null
-    ) {
+    if (body.newCardsPerDayOverride !== undefined && body.newCardsPerDayOverride !== null) {
       const value = Number(body.newCardsPerDayOverride)
       if (isNaN(value) || value < 0) {
         return NextResponse.json(
@@ -111,10 +95,7 @@ export async function PATCH(
       }
     }
 
-    if (
-      body.cardsPerSessionOverride !== undefined &&
-      body.cardsPerSessionOverride !== null
-    ) {
+    if (body.cardsPerSessionOverride !== undefined && body.cardsPerSessionOverride !== null) {
       const value = Number(body.cardsPerSessionOverride)
       if (isNaN(value) || value < 0) {
         return NextResponse.json(
@@ -137,10 +118,7 @@ export async function PATCH(
       const message = error instanceof Error ? error.message : 'Unknown error'
 
       // Check for validation errors
-      if (
-        message.includes('Deck name') ||
-        message.includes('override must be non-negative')
-      ) {
+      if (message.includes('Deck name') || message.includes('override must be non-negative')) {
         return NextResponse.json({ error: message }, { status: 400 })
       }
 
@@ -149,10 +127,7 @@ export async function PATCH(
     }
   } catch (error) {
     console.error('Error updating deck:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -161,7 +136,7 @@ export async function PATCH(
  * Delete deck (cascade to deck_cards, preserves flashcards)
  */
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ deckId: string }> }
 ) {
   try {
@@ -189,9 +164,6 @@ export async function DELETE(
     return new NextResponse(null, { status: 204 })
   } catch (error) {
     console.error('Error deleting deck:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

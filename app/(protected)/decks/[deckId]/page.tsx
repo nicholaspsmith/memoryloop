@@ -22,11 +22,7 @@ import Link from 'next/link'
  * Maps to T028 in Phase 3 (FR-002, FR-004, FR-005)
  */
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ deckId: string }>
-}) {
+export async function generateMetadata({ params }: { params: Promise<{ deckId: string }> }) {
   const { deckId } = await params
   const deck = await getDeck(deckId)
 
@@ -35,11 +31,7 @@ export async function generateMetadata({
   }
 }
 
-export default async function DeckDetailPage({
-  params,
-}: {
-  params: Promise<{ deckId: string }>
-}) {
+export default async function DeckDetailPage({ params }: { params: Promise<{ deckId: string }> }) {
   const session = await auth()
 
   if (!session?.user?.id) {
@@ -90,12 +82,7 @@ export default async function DeckDetailPage({
             </h1>
             <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
               <div className="flex items-center gap-1">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -106,12 +93,7 @@ export default async function DeckDetailPage({
                 <span>{deck.cardCount} cards</span>
               </div>
               <div className="flex items-center gap-1">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -122,12 +104,7 @@ export default async function DeckDetailPage({
                 <span>Created {formatDate(deck.createdAt)}</span>
               </div>
               <div className="flex items-center gap-1">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -141,11 +118,7 @@ export default async function DeckDetailPage({
           </div>
 
           <div className="flex gap-3">
-            <ArchiveDeckButton
-              deckId={deck.id}
-              deckName={deck.name}
-              isArchived={deck.archived}
-            />
+            <ArchiveDeckButton deckId={deck.id} deckName={deck.name} isArchived={deck.archived} />
             {deck.cardCount > 0 && !deck.archived && (
               <Link
                 href={`/study/deck/${deckId}`}
@@ -158,17 +131,11 @@ export default async function DeckDetailPage({
         </div>
 
         {/* FSRS Overrides */}
-        {(deck.newCardsPerDayOverride !== null ||
-          deck.cardsPerSessionOverride !== null) && (
+        {(deck.newCardsPerDayOverride !== null || deck.cardsPerSessionOverride !== null) && (
           <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
             <div className="flex items-start gap-3">
               <div className="text-blue-600 dark:text-blue-400 mt-0.5">
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"

@@ -9,6 +9,7 @@
 This data model extends the existing flashcard system with deck organization capabilities. Decks are named collections of flashcards that support focused study sessions, AI-powered creation, and deck-specific FSRS settings.
 
 **Key Design Principles**:
+
 - Many-to-many relationship: Flashcards can belong to multiple decks
 - Global FSRS state: Flashcard review state is global, not deck-specific
 - Hard limits: 100 decks per user, 1000 cards per deck
@@ -24,32 +25,36 @@ Represents a named collection of flashcards owned by a user.
 
 **Attributes**:
 
-| Field | Type | Constraints | Description |
-|-------|------|-------------|-------------|
-| id | uuid | PRIMARY KEY | Unique deck identifier |
-| user_id | uuid | NOT NULL, FOREIGN KEY → users(id) | Deck owner |
-| name | varchar(200) | NOT NULL | Deck name (1-200 characters) |
-| created_at | timestamp | NOT NULL, DEFAULT NOW() | Creation timestamp |
-| last_studied_at | timestamp | NULL | Last study session timestamp |
-| archived | boolean | NOT NULL, DEFAULT false | Soft delete flag |
-| new_cards_per_day_override | integer | NULL, CHECK (>= 0) | Override global FSRS new cards/day limit |
-| cards_per_session_override | integer | NULL, CHECK (>= 0) | Override global FSRS cards/session limit |
+| Field                      | Type         | Constraints                       | Description                              |
+| -------------------------- | ------------ | --------------------------------- | ---------------------------------------- |
+| id                         | uuid         | PRIMARY KEY                       | Unique deck identifier                   |
+| user_id                    | uuid         | NOT NULL, FOREIGN KEY → users(id) | Deck owner                               |
+| name                       | varchar(200) | NOT NULL                          | Deck name (1-200 characters)             |
+| created_at                 | timestamp    | NOT NULL, DEFAULT NOW()           | Creation timestamp                       |
+| last_studied_at            | timestamp    | NULL                              | Last study session timestamp             |
+| archived                   | boolean      | NOT NULL, DEFAULT false           | Soft delete flag                         |
+| new_cards_per_day_override | integer      | NULL, CHECK (>= 0)                | Override global FSRS new cards/day limit |
+| cards_per_session_override | integer      | NULL, CHECK (>= 0)                | Override global FSRS cards/session limit |
 
 **Indexes**:
+
 - `idx_decks_user_id` on `user_id` (for listing user's decks)
 - `idx_decks_user_archived` on `(user_id, archived)` (for filtering active/archived)
 
 **Constraints**:
+
 - 100 decks per user limit (enforced at application layer, CHECK constraint not feasible)
 - Name must be 1-200 characters (enforced in schema)
 - Override values must be non-negative if set
 
 **Relationships**:
+
 - `user_id` → `users.id` (ON DELETE CASCADE) - Deleting user deletes all their decks
 - One user has many decks (1:N)
 - One deck has many flashcards through deck_cards (N:M)
 
 **Business Rules**:
+
 - User cannot create more than 100 decks (FR-033)
 - Deck name cannot be empty
 - Archived decks do not count toward 100-deck limit
@@ -65,27 +70,31 @@ Represents the many-to-many relationship between decks and flashcards.
 
 **Attributes**:
 
-| Field | Type | Constraints | Description |
-|-------|------|-------------|-------------|
-| id | uuid | PRIMARY KEY | Unique relationship identifier |
-| deck_id | uuid | NOT NULL, FOREIGN KEY → decks(id) | Deck containing the card |
-| flashcard_id | uuid | NOT NULL, FOREIGN KEY → flashcards(id) | Flashcard in the deck |
-| added_at | timestamp | NOT NULL, DEFAULT NOW() | When card was added to deck |
+| Field        | Type      | Constraints                            | Description                    |
+| ------------ | --------- | -------------------------------------- | ------------------------------ |
+| id           | uuid      | PRIMARY KEY                            | Unique relationship identifier |
+| deck_id      | uuid      | NOT NULL, FOREIGN KEY → decks(id)      | Deck containing the card       |
+| flashcard_id | uuid      | NOT NULL, FOREIGN KEY → flashcards(id) | Flashcard in the deck          |
+| added_at     | timestamp | NOT NULL, DEFAULT NOW()                | When card was added to deck    |
 
 **Indexes**:
+
 - `idx_deck_cards_deck_id` on `deck_id` (for listing cards in deck)
 - `idx_deck_cards_flashcard_id` on `flashcard_id` (for finding decks containing card)
 - `idx_deck_cards_unique` UNIQUE on `(deck_id, flashcard_id)` (prevent duplicate entries)
 
 **Constraints**:
+
 - 1000 cards per deck limit (enforced at application layer before insert)
 - Unique constraint prevents same card added twice to same deck
 
 **Relationships**:
+
 - `deck_id` → `decks.id` (ON DELETE CASCADE) - Deleting deck removes all associations
 - `flashcard_id` → `flashcards.id` (ON DELETE CASCADE) - Deleting flashcard removes from all decks
 
 **Business Rules**:
+
 - Deck cannot contain more than 1000 cards (FR-032)
 - Same flashcard can be in multiple decks (FR-003)
 - Card can be added to deck regardless of FSRS state (FR-002)
@@ -98,12 +107,14 @@ Represents the many-to-many relationship between decks and flashcards.
 Existing flashcard entity remains unchanged. Each flashcard maintains **global FSRS state** independent of deck membership.
 
 **Key Points**:
+
 - FSRS state (difficulty, stability, due_date, state) is **global**, not per-deck
 - Studying a card in deck A updates its global FSRS state
 - Same card in deck B will reflect the updated FSRS state
 - Vector embeddings used for AI deck generation
 
 **FSRS State Management**:
+
 - Deck-filtered study sessions read from global FSRS state
 - Rating a card during deck session updates global FSRS state (FR-011)
 - "New cards per day" limit can be global or deck-specific (FR-027, FR-028)
@@ -115,6 +126,7 @@ Existing flashcard entity remains unchanged. Each flashcard maintains **global F
 Existing user entity. No schema changes required.
 
 **Deck-Related Extensions**:
+
 - User has 0-100 decks (enforced at application layer)
 - Global FSRS settings (new_cards_per_day, cards_per_session) can be overridden per-deck
 
@@ -179,12 +191,14 @@ Flashcard (existing)
 ### Limit Enforcement
 
 **100 Decks Per User** (FR-033):
+
 - Enforced at application layer before INSERT
 - Count active (non-archived) decks for user
 - Block creation if count >= 100
 - Return error: "Maximum deck limit reached (100 decks)"
 
 **1000 Cards Per Deck** (FR-032):
+
 - Enforced at application layer before INSERT into deck_cards
 - Count existing deck_cards for deck
 - Block insert if count >= 1000
@@ -193,11 +207,13 @@ Flashcard (existing)
 ### Concurrency Handling
 
 **Live Session Updates** (FR-030, FR-031):
+
 - Added cards: Query deck_cards with timestamp filter to detect new additions
 - Removed cards: Check if deck_card entry exists before presenting in session
 - No row-level locking required (eventual consistency acceptable)
 
 **Concurrent Edits**:
+
 - Last-write-wins for deck metadata updates
 - Duplicate prevention via UNIQUE constraint on deck_cards(deck_id, flashcard_id)
 
@@ -206,6 +222,7 @@ Flashcard (existing)
 ### Query Patterns
 
 **List User's Decks** (high frequency):
+
 ```sql
 SELECT d.*, COUNT(dc.id) as card_count
 FROM decks d
@@ -214,10 +231,12 @@ WHERE d.user_id = ? AND d.archived = false
 GROUP BY d.id
 ORDER BY d.last_studied_at DESC NULLS LAST;
 ```
+
 - Index: `idx_decks_user_archived` covers WHERE clause
 - Card count computed via LEFT JOIN + COUNT
 
 **Get Deck with Cards** (high frequency):
+
 ```sql
 SELECT f.*
 FROM flashcards f
@@ -225,21 +244,25 @@ INNER JOIN deck_cards dc ON f.id = dc.flashcard_id
 WHERE dc.deck_id = ?
 ORDER BY dc.added_at DESC;
 ```
+
 - Index: `idx_deck_cards_deck_id` for JOIN
 - Returns full flashcard details
 
 **Find Decks Containing Card** (low frequency):
+
 ```sql
 SELECT d.*
 FROM decks d
 INNER JOIN deck_cards dc ON d.id = dc.deck_id
 WHERE dc.flashcard_id = ?;
 ```
+
 - Index: `idx_deck_cards_flashcard_id` for JOIN
 
 ### Indexing Strategy
 
 **Critical Indexes**:
+
 1. `deck_cards(deck_id)` - Most common query (list cards in deck)
 2. `deck_cards(flashcard_id)` - Cascade delete on flashcard removal
 3. `deck_cards(deck_id, flashcard_id) UNIQUE` - Duplicate prevention + compound queries
@@ -247,6 +270,7 @@ WHERE dc.flashcard_id = ?;
 5. `decks(user_id, archived)` - Filter active/archived decks
 
 **Scale Assumptions**:
+
 - 100 decks × 1000 cards = 100,000 deck_cards rows per user (worst case)
 - PostgreSQL handles 100k rows efficiently with proper indexes
 - Card count aggregation may need caching for UI performance (consider materialized view if >50 decks)
@@ -254,6 +278,7 @@ WHERE dc.flashcard_id = ?;
 ### Optimization Opportunities
 
 **Denormalized Card Counts**:
+
 - Add `card_count` column to `decks` table (updated via trigger or application logic)
 - Avoids JOIN + COUNT for deck list queries
 - Trade-off: Consistency complexity vs query performance
@@ -300,6 +325,7 @@ COMMENT ON COLUMN decks.cards_per_session_override IS 'Optional per-deck overrid
 ```
 
 **Rollback**:
+
 ```sql
 DROP TABLE IF EXISTS deck_cards CASCADE;
 DROP TABLE IF EXISTS decks CASCADE;
@@ -309,11 +335,11 @@ DROP TABLE IF EXISTS decks CASCADE;
 
 ### Requirements Traceability
 
-| Entity | Functional Requirements Addressed |
-|--------|----------------------------------|
-| Deck | FR-001, FR-006, FR-007, FR-019, FR-020, FR-021, FR-027, FR-028, FR-029, FR-033 |
-| DeckCard | FR-002, FR-003, FR-004, FR-018, FR-030, FR-031, FR-032 |
-| Flashcard (existing) | FR-009, FR-010, FR-011, FR-017 |
+| Entity               | Functional Requirements Addressed                                              |
+| -------------------- | ------------------------------------------------------------------------------ |
+| Deck                 | FR-001, FR-006, FR-007, FR-019, FR-020, FR-021, FR-027, FR-028, FR-029, FR-033 |
+| DeckCard             | FR-002, FR-003, FR-004, FR-018, FR-030, FR-031, FR-032                         |
+| Flashcard (existing) | FR-009, FR-010, FR-011, FR-017                                                 |
 
 ### Constitution Compliance
 

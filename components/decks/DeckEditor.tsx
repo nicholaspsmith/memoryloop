@@ -189,9 +189,7 @@ export default function DeckEditor({ deck, cards: initialCards }: DeckEditorProp
       {/* Deck Name Editing */}
       <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Deck Name
-          </h3>
+          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Deck Name</h3>
           {!isEditingName && (
             <button
               onClick={() => setIsEditingName(true)}
@@ -246,12 +244,7 @@ export default function DeckEditor({ deck, cards: initialCards }: DeckEditorProp
         <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
           <div className="flex items-start gap-3">
             <div className="text-red-600 dark:text-red-400 mt-0.5">
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -264,8 +257,8 @@ export default function DeckEditor({ deck, cards: initialCards }: DeckEditorProp
               <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
               {error.includes('Deck limit reached') && (
                 <p className="text-sm text-red-700 dark:text-red-300 mt-2">
-                  This deck has reached the maximum capacity of {maxCards} cards. Remove
-                  some cards before adding more.
+                  This deck has reached the maximum capacity of {maxCards} cards. Remove some cards
+                  before adding more.
                 </p>
               )}
             </div>
@@ -290,12 +283,7 @@ export default function DeckEditor({ deck, cards: initialCards }: DeckEditorProp
         <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
           <div className="flex items-start gap-3">
             <div className="text-green-600 dark:text-green-400 mt-0.5">
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -424,14 +412,10 @@ export default function DeckEditor({ deck, cards: initialCards }: DeckEditorProp
                 />
                 <div className="flex-1 min-w-0">
                   <div className="mb-2">
-                    <p className="font-medium text-gray-900 dark:text-gray-100">
-                      {card.question}
-                    </p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{card.question}</p>
                   </div>
                   <div className="mb-3">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {card.answer}
-                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{card.answer}</p>
                   </div>
                   <div className="text-xs text-gray-500 dark:text-gray-500">
                     Added {formatDate(card.addedAt)}

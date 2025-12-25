@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auth } from '@/auth'
 import { getDeck } from '@/lib/db/operations/decks'
 import {
   getDueFlashcardsForDeck,
@@ -39,8 +39,7 @@ export async function POST(request: NextRequest) {
     if (body.settings) {
       if (
         body.settings.newCardsPerDay !== undefined &&
-        (typeof body.settings.newCardsPerDay !== 'number' ||
-          body.settings.newCardsPerDay < 0)
+        (typeof body.settings.newCardsPerDay !== 'number' || body.settings.newCardsPerDay < 0)
       ) {
         return NextResponse.json(
           { error: 'newCardsPerDay must be a non-negative number' },
@@ -50,8 +49,7 @@ export async function POST(request: NextRequest) {
 
       if (
         body.settings.cardsPerSession !== undefined &&
-        (typeof body.settings.cardsPerSession !== 'number' ||
-          body.settings.cardsPerSession <= 0)
+        (typeof body.settings.cardsPerSession !== 'number' || body.settings.cardsPerSession <= 0)
       ) {
         return NextResponse.json(
           { error: 'cardsPerSession must be greater than 0' },
@@ -76,8 +74,7 @@ export async function POST(request: NextRequest) {
     if (deck.cardCount === 0) {
       return NextResponse.json(
         {
-          error:
-            'Cannot start session: deck contains 0 cards. Please add cards to the deck first.',
+          error: 'Cannot start session: deck contains 0 cards. Please add cards to the deck first.',
         },
         { status: 400 }
       )
@@ -151,10 +148,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response, { status: 200 })
   } catch (error) {
     console.error('Error starting deck session:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 

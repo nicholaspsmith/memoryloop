@@ -36,26 +36,16 @@ export default function DeckSettings({ deck }: DeckSettingsProps) {
 
     try {
       // Validate inputs
-      const newCardsValue = newCardsPerDay
-        ? parseInt(newCardsPerDay, 10)
-        : null
-      const cardsSessionValue = cardsPerSession
-        ? parseInt(cardsPerSession, 10)
-        : null
+      const newCardsValue = newCardsPerDay ? parseInt(newCardsPerDay, 10) : null
+      const cardsSessionValue = cardsPerSession ? parseInt(cardsPerSession, 10) : null
 
-      if (
-        newCardsValue !== null &&
-        (isNaN(newCardsValue) || newCardsValue < 0)
-      ) {
+      if (newCardsValue !== null && (isNaN(newCardsValue) || newCardsValue < 0)) {
         setError('New cards per day must be a non-negative number')
         setIsSaving(false)
         return
       }
 
-      if (
-        cardsSessionValue !== null &&
-        (isNaN(cardsSessionValue) || cardsSessionValue < 1)
-      ) {
+      if (cardsSessionValue !== null && (isNaN(cardsSessionValue) || cardsSessionValue < 1)) {
         setError('Cards per session must be greater than 0')
         setIsSaving(false)
         return
@@ -137,13 +127,9 @@ export default function DeckSettings({ deck }: DeckSettingsProps) {
     <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            FSRS Settings
-          </h3>
+          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">FSRS Settings</h3>
           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-            {hasCustomSettings
-              ? 'Using deck-specific settings'
-              : 'Using global defaults'}
+            {hasCustomSettings ? 'Using deck-specific settings' : 'Using global defaults'}
           </p>
         </div>
         {!isEditing && (
@@ -233,18 +219,14 @@ export default function DeckSettings({ deck }: DeckSettingsProps) {
       ) : (
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span className="text-gray-600 dark:text-gray-400">
-              New Cards Per Day:
-            </span>
+            <span className="text-gray-600 dark:text-gray-400">New Cards Per Day:</span>
             <span className="text-gray-900 dark:text-gray-100">
               {deck.newCardsPerDayOverride ?? 20} (
               {deck.newCardsPerDayOverride ? 'custom' : 'global'})
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-600 dark:text-gray-400">
-              Cards Per Session:
-            </span>
+            <span className="text-gray-600 dark:text-gray-400">Cards Per Session:</span>
             <span className="text-gray-900 dark:text-gray-100">
               {deck.cardsPerSessionOverride ?? 50} (
               {deck.cardsPerSessionOverride ? 'custom' : 'global'})

@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auth } from '@/auth'
 import { getDeck } from '@/lib/db/operations/decks'
-import {
-  addCardsToDeck,
-  removeCardsFromDeck,
-} from '@/lib/db/operations/deck-cards'
+import { addCardsToDeck, removeCardsFromDeck, getCardCount } from '@/lib/db/operations/deck-cards'
 
 /**
  * POST /api/decks/[deckId]/cards
@@ -27,20 +24,20 @@ export async function POST(
 
     // Validate request body
     if (!Array.isArray(body.flashcardIds)) {
-      return NextResponse.json(
-        { error: 'flashcard_ids must be an array' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'flashcard_ids must be an array' }, { status: 400 })
     }
 
     if (body.flashcardIds.length === 0) {
+      return NextResponse.json({ error: 'flashcardIds cannot be empty' }, { status: 400 })
+    }
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    const invalidIds = body.flashcardIds.filter((id: string) => !uuidRegex.test(id))
+    if (invalidIds.length > 0) {
       return NextResponse.json(
-        {
-          added: 0,
-          skipped: 0,
-          message: 'No cards to add',
-        },
-        { status: 200 }
+        { error: `Invalid UUID format: ${invalidIds.join(', ')}` },
+        { status: 400 }
       )
     }
 
@@ -57,12 +54,13 @@ export async function POST(
 
     try {
       const result = await addCardsToDeck(deckId, body.flashcardIds)
+      const cardCount = await getCardCount(deckId)
 
       return NextResponse.json(
         {
-          added: result.added,
-          skipped: result.skipped,
-          message: `Added ${result.added} card(s), skipped ${result.skipped} already in deck`,
+          addedCount: result.added,
+          cardCount,
+          limit: 1000,
         },
         { status: 200 }
       )
@@ -85,10 +83,7 @@ export async function POST(
     }
   } catch (error) {
     console.error('Error adding cards to deck:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -114,20 +109,11 @@ export async function DELETE(
 
     // Validate request body
     if (!Array.isArray(body.flashcardIds)) {
-      return NextResponse.json(
-        { error: 'flashcard_ids must be an array' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'flashcard_ids must be an array' }, { status: 400 })
     }
 
     if (body.flashcardIds.length === 0) {
-      return NextResponse.json(
-        {
-          removed: 0,
-          message: 'No cards to remove',
-        },
-        { status: 200 }
-      )
+      return NextResponse.json({ error: 'flashcardIds cannot be empty' }, { status: 400 })
     }
 
     // Verify deck exists and ownership
@@ -142,19 +128,17 @@ export async function DELETE(
     }
 
     const removedCount = await removeCardsFromDeck(deckId, body.flashcardIds)
+    const cardCount = await getCardCount(deckId)
 
     return NextResponse.json(
       {
-        removed: removedCount,
-        message: `Removed ${removedCount} card(s) from deck`,
+        removedCount,
+        cardCount,
       },
       { status: 200 }
     )
   } catch (error) {
     console.error('Error removing cards from deck:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

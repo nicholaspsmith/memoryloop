@@ -77,12 +77,7 @@ export default function DeckCard({ deck }: DeckCardProps) {
         {/* Metadata */}
         <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
           <div className="flex items-center gap-1">
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -93,12 +88,7 @@ export default function DeckCard({ deck }: DeckCardProps) {
             <span>Studied {formatDate(deck.lastStudiedAt)}</span>
           </div>
           <div className="flex items-center gap-1">
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -111,16 +101,10 @@ export default function DeckCard({ deck }: DeckCardProps) {
         </div>
 
         {/* FSRS Overrides Indicator */}
-        {(deck.newCardsPerDayOverride !== null ||
-          deck.cardsPerSessionOverride !== null) && (
+        {(deck.newCardsPerDayOverride !== null || deck.cardsPerSessionOverride !== null) && (
           <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
-              <svg
-                className="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"

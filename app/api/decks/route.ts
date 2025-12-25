@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auth } from '@/auth'
 import { createDeck, listDecks } from '@/lib/db/operations/decks'
 
 /**
@@ -49,10 +49,7 @@ export async function GET(request: NextRequest) {
     )
   } catch (error) {
     console.error('Error listing decks:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -72,17 +69,11 @@ export async function POST(request: NextRequest) {
 
     // Validate request body
     if (!body.name || typeof body.name !== 'string') {
-      return NextResponse.json(
-        { error: 'Deck name is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Deck name is required' }, { status: 400 })
     }
 
     // Validate override values
-    if (
-      body.newCardsPerDayOverride !== undefined &&
-      body.newCardsPerDayOverride !== null
-    ) {
+    if (body.newCardsPerDayOverride !== undefined && body.newCardsPerDayOverride !== null) {
       const value = Number(body.newCardsPerDayOverride)
       if (isNaN(value) || value < 0) {
         return NextResponse.json(
@@ -92,10 +83,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (
-      body.cardsPerSessionOverride !== undefined &&
-      body.cardsPerSessionOverride !== null
-    ) {
+    if (body.cardsPerSessionOverride !== undefined && body.cardsPerSessionOverride !== null) {
       const value = Number(body.cardsPerSessionOverride)
       if (isNaN(value) || value < 0) {
         return NextResponse.json(
@@ -129,10 +117,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Check for validation errors
-      if (
-        message.includes('Deck name') ||
-        message.includes('override must be non-negative')
-      ) {
+      if (message.includes('Deck name') || message.includes('override must be non-negative')) {
         return NextResponse.json({ error: message }, { status: 400 })
       }
 
@@ -141,9 +126,6 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error('Error creating deck:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

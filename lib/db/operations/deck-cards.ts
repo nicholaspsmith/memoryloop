@@ -17,6 +17,19 @@ export interface FlashcardInDeck {
 }
 
 /**
+ * Get number of cards in a deck
+ */
+export async function getCardCount(deckId: string): Promise<number> {
+  const db = getDb()
+  const [result] = await db
+    .select({ count: count() })
+    .from(deckCards)
+    .where(eq(deckCards.deckId, deckId))
+
+  return result?.count ?? 0
+}
+
+/**
  * Add cards to deck
  * Enforces 1000-card limit per deck (FR-032)
  * Idempotent: Silently ignores cards already in deck
@@ -50,12 +63,7 @@ export async function addCardsToDeck(
   const existingCards = await db
     .select({ flashcardId: deckCards.flashcardId })
     .from(deckCards)
-    .where(
-      and(
-        eq(deckCards.deckId, deckId),
-        inArray(deckCards.flashcardId, flashcardIds)
-      )
-    )
+    .where(and(eq(deckCards.deckId, deckId), inArray(deckCards.flashcardId, flashcardIds)))
 
   const existingCardIds = new Set(existingCards.map((c) => c.flashcardId))
 
@@ -85,10 +93,7 @@ export async function addCardsToDeck(
  * Idempotent: Returns count of actually removed cards
  * Preserves flashcards (FR-005)
  */
-export async function removeCardsFromDeck(
-  deckId: string,
-  flashcardIds: string[]
-): Promise<number> {
+export async function removeCardsFromDeck(deckId: string, flashcardIds: string[]): Promise<number> {
   const db = getDb()
 
   if (flashcardIds.length === 0) {
@@ -97,14 +102,9 @@ export async function removeCardsFromDeck(
 
   const result = await db
     .delete(deckCards)
-    .where(
-      and(
-        eq(deckCards.deckId, deckId),
-        inArray(deckCards.flashcardId, flashcardIds)
-      )
-    )
+    .where(and(eq(deckCards.deckId, deckId), inArray(deckCards.flashcardId, flashcardIds)))
 
-  return result.rowCount ?? 0
+  return result.count ?? 0
 }
 
 /**
@@ -138,21 +138,13 @@ export async function getDeckCards(deckId: string): Promise<FlashcardInDeck[]> {
 /**
  * Check if card is in deck
  */
-export async function isCardInDeck(
-  deckId: string,
-  flashcardId: string
-): Promise<boolean> {
+export async function isCardInDeck(deckId: string, flashcardId: string): Promise<boolean> {
   const db = getDb()
 
   const [result] = await db
     .select({ id: deckCards.id })
     .from(deckCards)
-    .where(
-      and(
-        eq(deckCards.deckId, deckId),
-        eq(deckCards.flashcardId, flashcardId)
-      )
-    )
+    .where(and(eq(deckCards.deckId, deckId), eq(deckCards.flashcardId, flashcardId)))
     .limit(1)
 
   return result !== undefined
@@ -161,9 +153,7 @@ export async function isCardInDeck(
 /**
  * Get deck IDs containing a flashcard
  */
-export async function getDecksContainingCard(
-  flashcardId: string
-): Promise<string[]> {
+export async function getDecksContainingCard(flashcardId: string): Promise<string[]> {
   const db = getDb()
 
   const result = await db
