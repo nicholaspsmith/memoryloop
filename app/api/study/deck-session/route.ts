@@ -93,8 +93,23 @@ export async function POST(request: NextRequest) {
       settings.newCardsPerDay
     )
 
-    // Combine due and new cards (limit by cardsPerSession)
-    const allCards = [...dueCards, ...newCards].slice(0, settings.cardsPerSession)
+    // Combine due and new cards, removing duplicates by ID
+    const cardMap = new Map()
+
+    // Add due cards first (priority)
+    for (const card of dueCards) {
+      cardMap.set(card.id, card)
+    }
+
+    // Add new cards (won't overwrite existing due cards)
+    for (const card of newCards) {
+      if (!cardMap.has(card.id)) {
+        cardMap.set(card.id, card)
+      }
+    }
+
+    // Convert back to array and limit by cardsPerSession
+    const allCards = Array.from(cardMap.values()).slice(0, settings.cardsPerSession)
 
     // Generate session ID
     const sessionId = uuidv4()

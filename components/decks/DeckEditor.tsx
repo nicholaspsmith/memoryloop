@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { DeckWithMetadata } from '@/lib/db/operations/decks'
 import type { FlashcardInDeck } from '@/lib/db/operations/deck-cards'
 import DeckSettings from './DeckSettings'
+import AddCardsToDeck from './AddCardsToDeck'
 
 /**
  * DeckEditor Component
@@ -37,10 +38,24 @@ export default function DeckEditor({ deck, cards: initialCards }: DeckEditorProp
   const [isEditingName, setIsEditingName] = useState(false)
   const [editedName, setEditedName] = useState(deck.name)
   const [isSavingName, setIsSavingName] = useState(false)
+  const [showAddCards, setShowAddCards] = useState(false)
 
   const maxCards = 1000
   const cardCountPercentage = (cards.length / maxCards) * 100
   const isNearLimit = cardCountPercentage >= 90
+
+  const refreshCards = async () => {
+    try {
+      const response = await fetch(`/api/decks/${deck.id}`)
+      if (!response.ok) {
+        throw new Error('Failed to refresh cards')
+      }
+      const data = await response.json()
+      setCards(data.flashcards || [])
+    } catch (err) {
+      console.error('Failed to refresh cards:', err)
+    }
+  }
 
   const handleSelectCard = (cardId: string) => {
     const newSelection = new Set(selectedCards)
@@ -310,21 +325,38 @@ export default function DeckEditor({ deck, cards: initialCards }: DeckEditorProp
         </div>
       )}
 
-      {/* Card Count Progress */}
+      {/* Card Count Progress and Add Cards Button */}
       <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
             Deck Capacity
           </span>
-          <span
-            className={`text-sm font-medium ${
-              isNearLimit
-                ? 'text-orange-600 dark:text-orange-400'
-                : 'text-gray-900 dark:text-gray-100'
-            }`}
-          >
-            {cards.length} / {maxCards} cards
-          </span>
+          <div className="flex items-center gap-3">
+            <span
+              className={`text-sm font-medium ${
+                isNearLimit
+                  ? 'text-orange-600 dark:text-orange-400'
+                  : 'text-gray-900 dark:text-gray-100'
+              }`}
+            >
+              {cards.length} / {maxCards} cards
+            </span>
+            <button
+              onClick={() => setShowAddCards(true)}
+              disabled={cards.length >= maxCards}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              Add Cards
+            </button>
+          </div>
         </div>
         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
           <div
@@ -391,6 +423,20 @@ export default function DeckEditor({ deck, cards: initialCards }: DeckEditorProp
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             Add flashcards to start studying this deck
           </p>
+          <button
+            onClick={() => setShowAddCards(true)}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium inline-flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Add Cards to Deck
+          </button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -463,6 +509,21 @@ export default function DeckEditor({ deck, cards: initialCards }: DeckEditorProp
           </div>
         )}
       </div>
+
+      {/* Add Cards Modal */}
+      {showAddCards && (
+        <AddCardsToDeck
+          deckId={deck.id}
+          currentCardCount={cards.length}
+          onClose={() => setShowAddCards(false)}
+          onSuccess={async () => {
+            setShowAddCards(false)
+            await refreshCards()
+            setSuccess('Cards added successfully')
+            router.refresh()
+          }}
+        />
+      )}
     </div>
   )
 }

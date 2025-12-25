@@ -2,7 +2,7 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { listDecks } from '@/lib/db/operations/decks'
-import { db } from '@/lib/db/pg-client'
+import { getDb } from '@/lib/db/pg-client'
 import { flashcards } from '@/lib/db/drizzle-schema'
 import { eq, count } from 'drizzle-orm'
 import CreateDeckForm from '@/components/decks/CreateDeckForm'
@@ -82,6 +82,7 @@ export default async function NewDeckPage() {
   }
 
   // Check if user has any flashcards (FR-034: Empty state handling)
+  const db = getDb()
   const [flashcardCountResult] = await db
     .select({ count: count() })
     .from(flashcards)
