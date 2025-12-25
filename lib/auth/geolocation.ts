@@ -84,10 +84,11 @@ export async function getGeolocation(ipAddress: string): Promise<GeolocationData
 
     // Validate that we weren't redirected to HTTP (security risk)
     if (!response.url.startsWith('https://')) {
-      console.warn(
-        `⚠️  Geolocation lookup for ${ipAddress} was redirected to insecure URL: ${response.url}`
+      const error = new Error(
+        `HTTPS downgrade detected: Geolocation lookup for ${ipAddress} was redirected to insecure URL: ${response.url}`
       )
-      return null
+      console.error('🚨 Security violation:', error.message)
+      throw error
     }
 
     if (!response.ok) {

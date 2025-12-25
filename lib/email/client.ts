@@ -57,11 +57,15 @@ export function initializeEmailClient(): Transporter {
  *
  * If immediate send fails, queues email for retry
  *
+ * IMPORTANT: Do not call this function from queue processor!
+ * Queue processor should call emailClient.sendMail() directly to avoid circular dependency
+ *
  * @param params - Email parameters
  * @param params.to - Recipient email address
  * @param params.subject - Email subject
  * @param params.text - Plain text body
  * @param params.html - Optional HTML body
+ * @param params.fromQueue - Internal flag to prevent circular dependency (do not use externally)
  * @returns Sent message info with messageId
  *
  * @example
@@ -77,8 +81,9 @@ export async function sendEmail(params: {
   subject: string
   text: string
   html?: string
+  fromQueue?: boolean
 }): Promise<{ messageId: string }> {
-  const { to, subject, text, html } = params
+  const { to, subject, text, html, fromQueue = false } = params
 
   // Validation
   if (!to || !to.includes('@')) {
@@ -113,6 +118,11 @@ export async function sendEmail(params: {
     return { messageId: info.messageId }
   } catch (error) {
     console.error('❌ Failed to send email immediately:', error)
+
+    // Prevent circular dependency: do not re-queue if this was called from queue processor
+    if (fromQueue) {
+      throw error
+    }
 
     // Queue for retry
     console.log('📬 Queueing email for retry...')

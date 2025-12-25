@@ -29,7 +29,11 @@ const resetPasswordSchema = z.object({
     .max(72, 'Password must not exceed 72 characters') // Prevent bcrypt DoS
     .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
     .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .regex(/[0-9]/, 'Password must contain at least one number'),
+    .regex(/[0-9]/, 'Password must contain at least one number')
+    .regex(
+      /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/,
+      'Password must contain at least one special character'
+    ),
 })
 
 export async function POST(request: NextRequest) {
@@ -68,13 +72,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate reset token
-    const { valid, userId, tokenId, error } = await validateResetToken(token)
-
-    // Record attempt AFTER rate limit check but regardless of token validity
-    // This ensures invalid tokens count towards rate limit without consuming quota when already limited
+    // Record attempt IMMEDIATELY after rate limit check to prevent race conditions
+    // This ensures concurrent requests cannot bypass rate limits
     const { recordAttempt } = await import('@/lib/auth/rate-limit')
     await recordAttempt(`reset-password:${ipAddress}`)
+
+    // Validate reset token
+    const { valid, userId, tokenId, error } = await validateResetToken(token)
 
     if (!valid || !userId) {
       // Log failed attempt

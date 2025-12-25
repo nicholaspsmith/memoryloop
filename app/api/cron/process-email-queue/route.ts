@@ -13,6 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { processEmailQueue } from '@/lib/email/background-worker'
+import { timingSafeEqual } from 'crypto'
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,7 +24,13 @@ export async function GET(request: NextRequest) {
 
     // If CRON_SECRET is configured (production), require authentication
     if (cronSecret) {
-      if (providedSecret !== cronSecret) {
+      // Use constant-time comparison to prevent timing attacks
+      const isValid =
+        providedSecret &&
+        cronSecret.length === providedSecret.length &&
+        timingSafeEqual(Buffer.from(cronSecret), Buffer.from(providedSecret))
+
+      if (!isValid) {
         console.error('Invalid CRON_SECRET provided')
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       }

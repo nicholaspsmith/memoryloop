@@ -118,14 +118,22 @@ export async function processQueue(): Promise<number> {
         status: 'sending',
       })
 
-      // Attempt to send
-      const info = await emailClient.sendMail({
+      // Attempt to send with 30-second timeout to prevent infinite hangs
+      // IMPORTANT: Call sendMail() directly (NOT sendEmail()) to avoid circular dependency
+      // sendEmail() would re-queue on failure, creating infinite retry loops
+      const sendPromise = emailClient.sendMail({
         from,
         to: email.to,
         subject: email.subject,
         text: email.textBody,
         html: email.htmlBody || undefined,
       })
+
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Email send timeout after 30 seconds')), 30000)
+      })
+
+      const info = await Promise.race([sendPromise, timeoutPromise])
 
       // Success - mark as sent
       await updateEmailStatus(email.id, {

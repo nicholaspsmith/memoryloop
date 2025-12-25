@@ -10,11 +10,19 @@ import type { NextRequest } from 'next/server'
 
 /**
  * Password validation schema
+ * Enforces strong password requirements aligned with NIST guidelines
  */
 export const PasswordSchema = z
   .string()
   .min(8, 'Password must be at least 8 characters')
-  .max(100, 'Password must not exceed 100 characters')
+  .max(72, 'Password must not exceed 72 characters') // Prevent bcrypt DoS
+  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+  .regex(/[0-9]/, 'Password must contain at least one number')
+  .regex(
+    /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/,
+    'Password must contain at least one special character'
+  )
 
 /**
  * Email validation schema
