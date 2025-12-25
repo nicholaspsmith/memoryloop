@@ -155,9 +155,6 @@ test.describe('FSRS Scheduling in Deck Session', () => {
     await page.click('button:has-text("Show Answer")')
     await page.waitForTimeout(700)
 
-    // Get current card info
-    const _currentQuestion = await page.locator('text=/question/i, .question, .front').textContent()
-
     // Rate the card
     const goodButton = page.locator('button:has-text("Good")').first()
     await goodButton.click()
@@ -462,9 +459,6 @@ test.describe('Session Navigation and Controls', () => {
   })
 
   test('maintains session state on page refresh', async ({ page }) => {
-    // Get current card
-    const _currentQuestion = await page.locator('text=/question|Q:|front/i').first().textContent()
-
     // Refresh page
     await page.reload()
 

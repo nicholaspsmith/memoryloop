@@ -213,10 +213,6 @@ test.describe('Deck Study Session', () => {
     // Click first deck
     await deckLinks.first().click()
 
-    // Get deck name to verify later
-    const deckNameElement = page.locator('h1, h2').first()
-    const _deckNameText = await deckNameElement.textContent()
-
     // Start study session
     const studyButton = page.locator(
       'button:has-text("Start Study"), button:has-text("Study"), a:has-text("Study")'
