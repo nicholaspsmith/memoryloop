@@ -211,6 +211,7 @@ jobs:
         env:
           SKIP_ENV_VALIDATION: true
           API_KEY_ENCRYPTION_SECRET: ${{ secrets.API_KEY_ENCRYPTION_SECRET }}
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
 
       - name: Check build output
         run: |
