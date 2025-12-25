@@ -113,10 +113,21 @@ export async function processQueue(): Promise<number> {
 
   for (const email of pendingEmails) {
     try {
-      // Mark as sending (optimistic lock)
-      await updateEmailStatus(email.id, {
-        status: 'sending',
-      })
+      // Mark as sending with race condition protection
+      // Only update if status is still 'pending' - prevents concurrent workers from processing same email
+      const updated = await updateEmailStatus(
+        email.id,
+        {
+          status: 'sending',
+        },
+        'pending' // Only update if current status is 'pending'
+      )
+
+      // If update failed, another worker already grabbed this email - skip it
+      if (!updated) {
+        console.log(`⏭️  Email already being processed by another worker (ID: ${email.id})`)
+        continue
+      }
 
       // Attempt to send with 30-second timeout to prevent infinite hangs
       // IMPORTANT: Call sendMail() directly (NOT sendEmail()) to avoid circular dependency

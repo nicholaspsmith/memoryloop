@@ -31,6 +31,9 @@ export function ResetPasswordForm({ token }: ResetPasswordFormProps) {
     if (!/[0-9]/.test(pwd)) {
       errors.push('Password must contain at least one number')
     }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)) {
+      errors.push('Password must contain at least one special character')
+    }
 
     return errors
   }

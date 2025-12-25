@@ -43,15 +43,21 @@ export async function getPendingEmails(limit: number = 100): Promise<EmailQueueE
  *
  * @param id - Email queue entry ID
  * @param updates - Fields to update (status, attempts, nextRetryAt, error, sentAt)
- * @returns Updated email queue entry
+ * @param currentStatus - Optional: Only update if current status matches (prevents race conditions)
+ * @returns Updated email queue entry, or null if status didn't match
  */
 export async function updateEmailStatus(
   id: string,
-  updates: Partial<EmailQueueEntry>
-): Promise<EmailQueueEntry> {
-  const [result] = await db.update(emailQueue).set(updates).where(eq(emailQueue.id, id)).returning()
+  updates: Partial<EmailQueueEntry>,
+  currentStatus?: string
+): Promise<EmailQueueEntry | null> {
+  const whereConditions = currentStatus
+    ? and(eq(emailQueue.id, id), eq(emailQueue.status, currentStatus))
+    : eq(emailQueue.id, id)
 
-  return result
+  const [result] = await db.update(emailQueue).set(updates).where(whereConditions).returning()
+
+  return result || null
 }
 
 /**
