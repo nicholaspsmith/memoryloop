@@ -3,12 +3,12 @@ import { defineConfig, devices } from '@playwright/test'
 export default defineConfig({
   testDir: './tests/e2e',
 
-  // Global timeout for each test (30 seconds)
-  timeout: 30000,
+  // Global timeout for each test (60 seconds - allows for slower local dev)
+  timeout: 60000,
 
-  // Timeout for expect() assertions (5 seconds)
+  // Timeout for expect() assertions (10 seconds)
   expect: {
-    timeout: 5000,
+    timeout: 10000,
   },
 
   // Run tests sequentially since they share user state and database
@@ -37,11 +37,11 @@ export default defineConfig({
     // Screenshot on failure
     screenshot: 'only-on-failure',
 
-    // Reduce default action timeout from 30s to 10s
-    actionTimeout: 10000,
+    // Action timeout (15s - balance between speed and reliability)
+    actionTimeout: 15000,
 
-    // Reduce navigation timeout from 30s to 15s
-    navigationTimeout: 15000,
+    // Navigation timeout (20s for slower page loads)
+    navigationTimeout: 20000,
   },
 
   // Configure projects for major browsers
