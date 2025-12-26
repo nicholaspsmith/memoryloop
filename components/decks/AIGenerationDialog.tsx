@@ -173,12 +173,22 @@ export default function AIGenerationDialog({ isOpen, onClose }: AIGenerationDial
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      data-testid="ai-generation-dialog"
+    >
+      <div
+        className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        role="dialog"
+        aria-labelledby="ai-dialog-title"
+      >
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <h2
+              id="ai-dialog-title"
+              className="text-2xl font-bold text-gray-900 dark:text-gray-100"
+            >
               AI Deck Generation
             </h2>
             <button
@@ -200,10 +210,15 @@ export default function AIGenerationDialog({ isOpen, onClose }: AIGenerationDial
           {/* Topic Input (T065) */}
           {suggestions.length === 0 && (
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label
+                htmlFor="ai-topic-input"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              >
                 What topic would you like to study?
               </label>
               <textarea
+                id="ai-topic-input"
+                name="topic"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 placeholder="e.g., cellular respiration and ATP production"
@@ -211,6 +226,7 @@ export default function AIGenerationDialog({ isOpen, onClose }: AIGenerationDial
                 rows={3}
                 maxLength={500}
                 disabled={isLoading}
+                data-testid="ai-topic-input"
               />
               <div className="flex items-center justify-between mt-2">
                 <span className="text-xs text-gray-600 dark:text-gray-400">
@@ -220,6 +236,8 @@ export default function AIGenerationDialog({ isOpen, onClose }: AIGenerationDial
                   onClick={handleGenerate}
                   disabled={isLoading || topic.length < 3}
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  data-testid="generate-suggestions-button"
+                  type="submit"
                 >
                   Generate Suggestions
                 </button>
