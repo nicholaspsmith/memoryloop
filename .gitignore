@@ -42,3 +42,4 @@ tests/e2e/.auth/
 
 # LanceDB data
 data/
+lancedb/
