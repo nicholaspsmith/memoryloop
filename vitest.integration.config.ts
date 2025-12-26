@@ -8,7 +8,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./tests/setup.ts'],
-    include: ['**/tests/integration/**/*.test.ts'],
+    include: ['**/tests/integration/**/*.test.ts', '**/tests/contract/**/*.test.ts'],
     exclude: ['**/node_modules/**', '**/dist/**', '**/.next/**'],
     // Run tests sequentially to avoid Ollama resource contention
     fileParallelism: false,

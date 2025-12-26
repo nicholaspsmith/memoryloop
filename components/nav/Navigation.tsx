@@ -18,6 +18,7 @@ interface NavLink {
 const navLinks: NavLink[] = [
   { href: '/chat', label: 'Chat' },
   { href: '/quiz', label: 'Quiz' },
+  { href: '/decks', label: 'Decks' },
   { href: '/settings', label: 'Settings' },
 ]
 
@@ -27,7 +28,7 @@ export default function Navigation() {
   return (
     <nav className="flex space-x-1 -mb-px" role="navigation" aria-label="Main navigation">
       {navLinks.map((link) => {
-        const isActive = pathname === link.href
+        const isActive = pathname === link.href || pathname?.startsWith(link.href + '/')
         return (
           <Link
             key={link.href}
