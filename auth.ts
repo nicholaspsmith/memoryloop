@@ -83,7 +83,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
       }
 
-      // On every request, validate session hasn't been invalidated by password change
+      // On every request, validate session and refresh user data from database
       if (token.id && trigger !== 'signIn' && trigger !== 'signUp') {
         const { getUserById } = await import('@/lib/db/operations/users')
         const dbUser = await getUserById(token.id as string)
@@ -92,6 +92,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!dbUser) {
           return null
         }
+
+        // Refresh emailVerified status from database
+        token.emailVerified = dbUser.emailVerified || false
 
         // If password was changed after this JWT was issued, invalidate session
         const tokenPasswordChangedAt = token.passwordChangedAt as number | undefined
