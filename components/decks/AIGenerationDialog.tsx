@@ -44,8 +44,6 @@ export default function AIGenerationDialog({ isOpen, onClose }: AIGenerationDial
   const [error, setError] = useState<string | null>(null)
   const [warnings, setWarnings] = useState<string[]>([])
 
-  if (!isOpen) return null
-
   const handleGenerate = async () => {
     if (topic.length < 3 || topic.length > 500) {
       setError('Topic must be between 3 and 500 characters')
@@ -174,8 +172,11 @@ export default function AIGenerationDialog({ isOpen, onClose }: AIGenerationDial
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+      className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 transition-opacity ${
+        isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+      }`}
       data-testid="ai-generation-dialog"
+      aria-hidden={!isOpen}
     >
       <div
         className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
