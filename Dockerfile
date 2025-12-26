@@ -26,9 +26,12 @@ COPY . .
 RUN npm ci
 
 # Build Next.js application
-ENV NEXT_TELEMETRY_DISABLED 1
-ENV NODE_ENV production
-ENV API_KEY_ENCRYPTION_SECRET=$API_KEY_ENCRYPTION_SECRET
+# Note: DATABASE_URL is a placeholder for build-time only (not used for actual DB connections)
+# The real DATABASE_URL is provided at runtime via docker-compose or environment
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+ENV API_KEY_ENCRYPTION_SECRET=${API_KEY_ENCRYPTION_SECRET:-placeholder-build-secret-32char}
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 RUN npm run build
 
 # Stage 3: Runner
