@@ -43,3 +43,6 @@ tests/e2e/.auth/
 # LanceDB data
 data/
 lancedb/
+
+# macos directory settings
+.DS_Store
