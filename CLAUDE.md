@@ -101,9 +101,8 @@ Follow the project principles defined in `.specify/memory/constitution.md`:
 
 ### Database
 
-- PostgreSQL (via postgres 3.4.7, drizzle-orm 0.45.1)
-- LanceDB 0.22.3 (vector database)
-- pgvector 0.2.1 (vector embeddings)
+- PostgreSQL (via postgres 3.4.7, drizzle-orm 0.45.1) - users, conversations, messages, API keys
+- LanceDB 0.22.3 - vector embeddings for semantic search (flashcards, review logs)
 
 ### AI/ML
 
@@ -146,7 +145,6 @@ Follow the project principles defined in `.specify/memory/constitution.md`:
 - next 16.0.10 ([docs](https://nextjs.org/docs))
 - next-auth 5.0.0-beta.30 ([docs](https://next-auth.js.org))
 - nodemailer 7.0.12 ([docs](https://www.npmjs.com/package/nodemailer/v/7.0.12))
-- pgvector 0.2.1 ([docs](https://www.npmjs.com/package/pgvector/v/0.2.1))
 - postgres 3.4.7 ([docs](https://www.npmjs.com/package/postgres/v/3.4.7))
 - react 19.2.3 ([docs](https://react.dev))
 - react-dom 19.2.3 ([docs](https://react.dev/reference/react-dom))
