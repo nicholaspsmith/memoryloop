@@ -467,27 +467,41 @@ export async function getChatCompletion(params: {
     // Fall back to Ollama
     const ollamaMessages = [{ role: 'system', content: systemPrompt }, ...messages]
 
-    const response = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        messages: ollamaMessages,
-        stream: false,
-      }),
-    })
+    // Set 120 second timeout for Ollama (LLM responses can be slow)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 120000)
 
-    if (!response.ok) {
-      throw new Error(`Ollama API error: ${response.statusText}`)
+    try {
+      const response = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: OLLAMA_MODEL,
+          messages: ollamaMessages,
+          stream: false,
+        }),
+        signal: controller.signal,
+      })
+
+      if (!response.ok) {
+        throw new Error(`Ollama API error: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+
+      if (!data.message?.content) {
+        throw new Error('No text content in Ollama response')
+      }
+
+      return data.message.content
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Ollama request timed out after 120 seconds')
+      }
+      throw error
+    } finally {
+      clearTimeout(timeoutId)
     }
-
-    const data = await response.json()
-
-    if (!data.message?.content) {
-      throw new Error('No text content in Ollama response')
-    }
-
-    return data.message.content
   }
 }
 
