@@ -44,9 +44,32 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - `gh pr create` - Create pull request
 - `gh pr view` - View PR details
 
-## Pre-Push Workflow
+## Operating Modes
 
-After creating all commits but BEFORE pushing to remote:
+You operate in one of two modes based on the prompt:
+
+### Mode 1: Commit Only (Default for "commit")
+
+When asked to "commit" without explicit "push":
+
+1. Create commits following the rules
+2. Run `npm run format` and commit formatting changes if needed
+3. **DO NOT PUSH** - Return to the main agent with:
+   ```
+   COMMITS_READY: [list of commit hashes and messages]
+   Awaiting review before push.
+   ```
+
+### Mode 2: Push (Only when explicitly told to push)
+
+When explicitly told to "push" or "push the commits":
+
+1. Run `git push` to push commits to remote
+2. Report success/failure
+
+## Pre-Commit Workflow
+
+After creating all commits:
 
 1. Run `npm run format` to apply Prettier formatting
 2. If any files changed, create a formatting commit:
@@ -57,13 +80,12 @@ After creating all commits but BEFORE pushing to remote:
    Co-Authored-By: Claude <noreply@anthropic.com>
    ```
 
-3. Then push all commits to remote
-
 ## Rules
 
 - NEVER use `git commit --amend` unless explicitly asked
 - NEVER force push to main/master
 - ALWAYS read `.claude/rules.md` before committing
-- ALWAYS run `npm run format` before pushing (see Pre-Push Workflow)
+- ALWAYS run `npm run format` after commits
+- DO NOT push unless explicitly told to (review-agent must approve first)
 - Use HEREDOC for multi-line commit messages
 - One responsibility per commit - split if needed
