@@ -1,6 +1,10 @@
 # Claude Code credentials
 .claude/settings.local.json
 .claude/mcp_settings.json
+.mcp.json
+
+# External MCP servers (separate repos)
+lance-context/
 
 # Dependencies
 node_modules/

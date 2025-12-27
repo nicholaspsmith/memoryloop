@@ -13,6 +13,40 @@ specs directory at `specs/[branch-name]/`. If it exists, read these files for fe
 
 This feature-specific context supplements the project-wide information below.
 
+## Context Management
+
+This project uses a context-aware development system to maintain efficiency across sessions.
+
+### Specialized Subagents
+
+Use `/agents` to see available specialized agents:
+
+- **test-agent**: Write, run, fix tests (Vitest, Playwright)
+- **ui-agent**: Build React components and UI
+- **git-agent**: Commits, PRs, rebases
+- **db-agent**: Schema, migrations, queries
+- **deploy-agent**: Docker, CI/CD, production
+- **spec-agent**: Feature planning and specs
+
+### Scoped Ledgers
+
+**Feature Ledger** (`specs/[feature]/ledger.md`):
+
+- Tracks progress on a specific feature
+- Persists decisions and technical context
+- Update after significant milestones
+
+**Session Log** (`.claude/sessions/YYYY-MM-DD.md`):
+
+- Daily session activities
+- Rotates after 7 days
+- Use for handoff notes between sessions
+
+### MCP Tools
+
+- **Serena**: Symbol-level code navigation (`find_symbol`, `find_referencing_symbols`)
+- **lance-context**: Semantic code search (`index_codebase`, `search_code`)
+
 ## Task Tracking
 
 Tasks are tracked in markdown files at `specs/[feature-name]/tasks.md` using simple checkboxes:
