@@ -21,6 +21,7 @@ This project uses a context-aware development system to maintain efficiency acro
 
 Use `/agents` to see available specialized agents:
 
+- **review-agent**: Code review before commits (types, tests, security)
 - **test-agent**: Write, run, fix tests (Vitest, Playwright)
 - **ui-agent**: Build React components and UI
 - **git-agent**: Commits, PRs, rebases

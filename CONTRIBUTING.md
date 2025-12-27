@@ -299,14 +299,15 @@ Numbered aliases exist (`/2.specify`, `/3.plan`, `/4.1.analyze`) for faster auto
 
 Defined in `.claude/agents/` - spawned by Claude Code for focused tasks:
 
-| Agent          | When to Use                               |
-| -------------- | ----------------------------------------- |
-| `test-agent`   | Writing/fixing tests (Vitest, Playwright) |
-| `ui-agent`     | React components, styling                 |
-| `db-agent`     | Schema, migrations, Drizzle queries       |
-| `git-agent`    | Commits, PRs, rebases                     |
-| `deploy-agent` | Docker, CI/CD, production                 |
-| `spec-agent`   | Feature planning                          |
+| Agent          | When to Use                                  |
+| -------------- | -------------------------------------------- |
+| `review-agent` | Code review before commits (types, security) |
+| `test-agent`   | Writing/fixing tests (Vitest, Playwright)    |
+| `ui-agent`     | React components, styling                    |
+| `db-agent`     | Schema, migrations, Drizzle queries          |
+| `git-agent`    | Commits, PRs, rebases                        |
+| `deploy-agent` | Docker, CI/CD, production                    |
+| `spec-agent`   | Feature planning                             |
 
 ### Tool Usage Summary
 
