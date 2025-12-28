@@ -10,13 +10,16 @@ import { eq } from 'drizzle-orm'
 import type { Card } from 'ts-fsrs'
 import { initializeSchema, isSchemaInitialized } from '@/lib/db/schema'
 import { closeDbConnection } from '@/lib/db/client'
-import { createFlashcard } from '@/lib/db/operations/flashcards'
+import { createGoalFlashcard } from '@/lib/db/operations/flashcards'
 
 /**
  * Integration Tests for Study Session Flow
  *
  * Tests the complete study session lifecycle with database.
  * Maps to User Story 3: Study with Multiple Modes
+ *
+ * Note: These tests do NOT require Ollama as they only test database operations.
+ * LanceDB sync is disabled in test mode via NODE_ENV check.
  */
 
 describe('Study Session Flow', () => {
@@ -67,14 +70,14 @@ describe('Study Session Flow', () => {
     })
     testNodeId = node.id
 
-    // Create test flashcards
+    // Create test flashcards linked to the skill node
     for (let i = 0; i < 5; i++) {
-      const card = await createFlashcard({
+      const card = await createGoalFlashcard({
         userId: testUserId,
-        conversationId: null,
-        messageId: null,
+        skillNodeId: testNodeId,
         question: `What is Pod feature ${i}?`,
         answer: `Pod feature ${i} description`,
+        cardType: 'flashcard',
       })
 
       testCardIds.push(card.id)
@@ -179,12 +182,13 @@ describe('Study Session Flow', () => {
     it('should store multiple choice distractors', async () => {
       const db = getDb()
 
-      const mcCard = await createFlashcard({
+      const mcCard = await createGoalFlashcard({
         userId: testUserId,
-        conversationId: null,
-        messageId: null,
+        skillNodeId: testNodeId,
         question: 'Which is a container runtime?',
         answer: 'containerd',
+        cardType: 'multiple_choice',
+        distractors: ['Docker', 'Kubernetes', 'Podman'],
       })
 
       // Update card with metadata in database
