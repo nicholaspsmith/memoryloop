@@ -84,7 +84,8 @@
       "Bash(gh pr list:*)",
       "Bash(chmod:*)",
       "Bash(.claude/hooks/navigation-guardian.sh:*)",
-      "Bash(/Users/nick/Code/memoryloop/.claude/hooks/navigation-guardian.sh)"
+      "Bash(/Users/nick/Code/memoryloop/.claude/hooks/navigation-guardian.sh)",
+      "Bash(shellcheck:*)"
     ]
   },
   "enabledMcpjsonServers": [
