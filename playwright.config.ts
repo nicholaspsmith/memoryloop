@@ -90,8 +90,10 @@ export default defineConfig({
   ],
 
   // Run your local dev server before starting the tests
+  // In CI, use production build (faster, more stable) since npm run build already ran
+  // Locally, use Turbopack dev server for faster hot reloading
   webServer: {
-    command: 'npm run dev:webpack',
+    command: process.env.CI ? 'next start' : 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120000, // 2 minutes for Next.js to start

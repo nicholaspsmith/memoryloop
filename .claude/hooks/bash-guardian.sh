@@ -38,12 +38,18 @@ if [[ "$command" =~ ^git[[:space:]]+push ]] || \
   agent="review-agent → git-agent"
   reason="Before pushing, spawn review-agent to review commits. If REVIEW_PASSED, then spawn git-agent to push."
 
-# git commit should use git-agent
+# git commit should use git-agent (unless it has proper Co-Authored-By format, indicating git-agent is running)
 elif [[ "$command" =~ ^git[[:space:]]+commit ]] || \
      [[ "$command" =~ \&\&[[:space:]]*git[[:space:]]+commit ]] || \
      [[ "$command" =~ \;[[:space:]]*git[[:space:]]+commit ]]; then
-  agent="git-agent"
-  reason="Git commits should be created by git-agent for proper commit message formatting."
+  # Allow commits that follow the required format (have Co-Authored-By: Claude)
+  # This indicates git-agent is properly formatting the commit
+  if [[ "$command" =~ Co-Authored-By:[[:space:]]*Claude ]]; then
+    : # Allow - properly formatted git-agent commit
+  else
+    agent="git-agent"
+    reason="Git commits should be created by git-agent for proper commit message formatting."
+  fi
 
 # git rebase/merge/cherry-pick should use git-agent
 elif [[ "$command" =~ ^git[[:space:]]+(rebase|merge|cherry-pick) ]]; then
