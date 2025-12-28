@@ -10,7 +10,7 @@ This project uses speckit for feature specification and task tracking.
 | ---------------- | -------------------- | ------------------------------------------------ |
 | Git commit/push  | `Bash: git commit`   | Spawn **git-agent**                              |
 | Before push      | Push directly        | Spawn **review-agent** first, THEN git-agent     |
-| Writing tests    | Write tests yourself | Spawn **test-agent**                             |
+| Writing tests    | Write tests yourself | Spawn **test-agent** (HOOK ENFORCED)             |
 | UI components    | Write React code     | Spawn **ui-agent**                               |
 | Database changes | Write migrations     | Spawn **db-agent**                               |
 | Code navigation  | `Read` entire files  | Use **Serena** (`find_symbol`)                   |
@@ -19,6 +19,14 @@ This project uses speckit for feature specification and task tracking.
 **Git workflow is ALWAYS: git-agent (commit) → review-agent → git-agent (push)**
 
 Never bypass this. If you find yourself typing `git commit` or `git push` in Bash, STOP and use the agents.
+
+### Hook Enforcement
+
+Some rules are enforced by hooks (see `.claude/hooks/`):
+
+- **test-file-guardian.sh**: Blocks Write/Edit to `tests/**` files - requires test-agent
+- Hooks output denial reasons that explain which agent to use instead
+- If a hook blocks you, spawn the appropriate agent rather than trying to bypass
 
 ## Feature-Specific Context
 
