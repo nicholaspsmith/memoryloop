@@ -68,9 +68,9 @@
 
 ### Tests for User Story 1
 
-- [ ] T019 [P] [US1] Unit test for goals operations in tests/unit/goals.test.ts
-- [ ] T020 [P] [US1] Unit test for skill tree generator in tests/unit/skill-tree-generator.test.ts
-- [ ] T021 [P] [US1] Integration test for goal creation flow in tests/integration/goal-creation.test.ts
+- [x] T019 [P] [US1] Unit test for goals operations in tests/unit/goals.test.ts
+- [x] T020 [P] [US1] Unit test for skill tree generator in tests/unit/skill-tree-generator.test.ts
+- [x] T021 [P] [US1] Integration test for goal creation flow in tests/integration/goal-creation.test.ts
 
 ### Implementation for User Story 1
 
@@ -102,8 +102,8 @@
 
 ### Tests for User Story 2
 
-- [ ] T037 [P] [US2] Unit test for card generator in tests/unit/card-generator.test.ts
-- [ ] T038 [P] [US2] Integration test for card generation flow in tests/integration/card-generation.test.ts
+- [x] T037 [P] [US2] Unit test for card generator in tests/unit/card-generator.test.ts
+- [x] T038 [P] [US2] Integration test for card generation flow in tests/integration/card-generation.test.ts
 
 ### Implementation for User Story 2
 
@@ -128,9 +128,9 @@
 
 ### Tests for User Story 3
 
-- [ ] T047 [P] [US3] Unit test for study session logic in tests/unit/study-session.test.ts
-- [ ] T048 [P] [US3] Integration test for study flow in tests/integration/study-session.test.ts
-- [ ] T049 [P] [US3] E2E test for complete study session in tests/e2e/study-session.spec.ts
+- [x] T047 [P] [US3] Unit test for study session logic in tests/unit/study-session.test.ts
+- [x] T048 [P] [US3] Integration test for study flow in tests/integration/study-session.test.ts
+- [x] T049 [P] [US3] E2E test for complete study session in tests/e2e/study-session.spec.ts
 
 ### Implementation for User Story 3
 
@@ -158,8 +158,8 @@
 
 ### Tests for User Story 4
 
-- [ ] T061 [P] [US4] Unit test for dashboard stats calculation in tests/unit/dashboard-stats.test.ts
-- [ ] T062 [P] [US4] E2E test for mastery dashboard accuracy in tests/e2e/mastery-dashboard.spec.ts (SC-007)
+- [x] T061 [P] [US4] Unit test for dashboard stats calculation in tests/unit/dashboard-stats.test.ts
+- [x] T062 [P] [US4] E2E test for mastery dashboard accuracy in tests/e2e/mastery-dashboard.spec.ts (SC-007)
 
 ### Implementation for User Story 4
 
@@ -181,8 +181,8 @@
 
 ### Tests for User Story 5
 
-- [ ] T068 [P] [US5] Unit test for achievement trigger logic in tests/unit/achievements.test.ts
-- [ ] T069 [P] [US5] Integration test for achievement unlock flow in tests/integration/achievements.test.ts
+- [x] T068 [P] [US5] Unit test for achievement trigger logic in tests/unit/achievements.test.ts
+- [x] T069 [P] [US5] Integration test for achievement unlock flow in tests/integration/achievements.test.ts
 
 ### Implementation for User Story 5
 
@@ -209,7 +209,7 @@
 
 ### Tests for User Story 6
 
-- [ ] T080 [P] [US6] Unit test for topic normalization in tests/unit/topic-analytics.test.ts
+- [x] T080 [P] [US6] Unit test for topic normalization in tests/unit/topic-analytics.test.ts
 
 ### Implementation for User Story 6
 
