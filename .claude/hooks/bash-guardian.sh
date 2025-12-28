@@ -1,0 +1,82 @@
+#!/bin/bash
+# Bash Guardian Hook
+# Intercepts Bash commands and suggests git-agent for git operations
+# Uses jq for safe JSON parsing
+
+set -euo pipefail
+
+# Read JSON input from stdin
+input=$(cat)
+
+# Validate input is JSON
+if ! echo "$input" | jq empty 2>/dev/null; then
+  exit 0
+fi
+
+# Extract tool name and command safely
+tool_name=$(echo "$input" | jq -r '.tool_name // empty')
+command=$(echo "$input" | jq -r '.tool_input.command // empty')
+
+# Only process Bash operations
+if [[ "$tool_name" != "Bash" ]]; then
+  exit 0
+fi
+
+# Exit if no command
+if [[ -z "$command" ]]; then
+  exit 0
+fi
+
+# Check for git commands that should use git-agent
+agent=""
+reason=""
+
+# git push requires review-agent first, then git-agent
+if [[ "$command" =~ ^git[[:space:]]+push ]] || \
+   [[ "$command" =~ \&\&[[:space:]]*git[[:space:]]+push ]] || \
+   [[ "$command" =~ \;[[:space:]]*git[[:space:]]+push ]]; then
+  agent="review-agent → git-agent"
+  reason="Before pushing, spawn review-agent to review commits. If REVIEW_PASSED, then spawn git-agent to push."
+
+# git commit should use git-agent
+elif [[ "$command" =~ ^git[[:space:]]+commit ]] || \
+     [[ "$command" =~ \&\&[[:space:]]*git[[:space:]]+commit ]] || \
+     [[ "$command" =~ \;[[:space:]]*git[[:space:]]+commit ]]; then
+  agent="git-agent"
+  reason="Git commits should be created by git-agent for proper commit message formatting."
+
+# git rebase/merge/cherry-pick should use git-agent
+elif [[ "$command" =~ ^git[[:space:]]+(rebase|merge|cherry-pick) ]]; then
+  agent="git-agent"
+  reason="Complex git operations should be handled by git-agent."
+
+# git reset --hard is dangerous
+elif [[ "$command" =~ git[[:space:]]+reset[[:space:]]+--hard ]]; then
+  agent="git-agent"
+  reason="Destructive git operations should be handled by git-agent with proper safeguards."
+
+fi
+
+# If an agent should handle this, deny with guidance
+if [[ -n "$agent" ]]; then
+  jq -n \
+    --arg agent "$agent" \
+    --arg cmd "$command" \
+    --arg reason "$reason" \
+    '{
+      hookSpecificOutput: {
+        hookEventName: "PreToolUse",
+        permissionDecision: "deny",
+        permissionDecisionReason: (
+          "Command: " + $cmd + "\n\n" +
+          $reason + "\n\n" +
+          "Use: Task tool with subagent_type=\"git-agent\"\n\n" +
+          "Git workflow: git-agent (commit) → review-agent → git-agent (push)"
+        )
+      }
+    }'
+  exit 0
+fi
+
+# Allow commands not matching git patterns
+exit 0

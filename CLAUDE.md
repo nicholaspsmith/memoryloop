@@ -8,11 +8,11 @@ This project uses speckit for feature specification and task tracking.
 
 | Action           | WRONG                | RIGHT                                            |
 | ---------------- | -------------------- | ------------------------------------------------ |
-| Git commit/push  | `Bash: git commit`   | Spawn **git-agent**                              |
-| Before push      | Push directly        | Spawn **review-agent** first, THEN git-agent     |
+| Git commit/push  | `Bash: git commit`   | Spawn **git-agent** (HOOK ENFORCED)              |
+| Before push      | Push directly        | Spawn **review-agent** first (HOOK ENFORCED)     |
 | Writing tests    | Write tests yourself | Spawn **test-agent** (HOOK ENFORCED)             |
-| UI components    | Write React code     | Spawn **ui-agent**                               |
-| Database changes | Write migrations     | Spawn **db-agent**                               |
+| UI components    | Write React code     | Spawn **ui-agent** (HOOK ENFORCED)               |
+| Database changes | Write migrations     | Spawn **db-agent** (HOOK ENFORCED)               |
 | Code navigation  | `Read` entire files  | Use **Serena** (`find_symbol`)                   |
 | Finding code     | Grep/Glob directly   | Spawn **Explore** agent or use **lance-context** |
 
@@ -22,11 +22,26 @@ Never bypass this. If you find yourself typing `git commit` or `git push` in Bas
 
 ### Hook Enforcement
 
-Some rules are enforced by hooks (see `.claude/hooks/`):
+Rules are enforced by hooks in `.claude/hooks/`. If a hook blocks you, spawn the appropriate agent.
 
-- **test-file-guardian.sh**: Blocks Write/Edit to `tests/**` files - requires test-agent
-- Hooks output denial reasons that explain which agent to use instead
-- If a hook blocks you, spawn the appropriate agent rather than trying to bypass
+**file-agent-guardian.sh** (Write/Edit):
+
+| Pattern                               | Required Agent   |
+| ------------------------------------- | ---------------- |
+| `tests/**`, `*.test.ts`               | **test-agent**   |
+| `components/**`, `app/**/*.tsx`       | **ui-agent**     |
+| `drizzle/**`, `lib/db/**`, `*.sql`    | **db-agent**     |
+| `Dockerfile*`, `.github/workflows/**` | **deploy-agent** |
+| `specs/**/*.md` (except tasks.md)     | **spec-agent**   |
+
+**bash-guardian.sh** (Bash):
+
+| Command Pattern           | Required Action                                  |
+| ------------------------- | ------------------------------------------------ |
+| `git commit`              | Spawn **git-agent**                              |
+| `git push`                | Spawn **review-agent** first, then **git-agent** |
+| `git rebase`, `git merge` | Spawn **git-agent**                              |
+| `git reset --hard`        | Spawn **git-agent** (dangerous operation)        |
 
 ## Feature-Specific Context
 

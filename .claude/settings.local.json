@@ -1,18 +1,4 @@
 {
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/hooks/test-file-guardian.sh",
-            "timeout": 5
-          }
-        ]
-      }
-    ]
-  },
   "permissions": {
     "allow": [
       "Bash(gh issue close:*)",
@@ -89,12 +75,41 @@
       "mcp__lance-context__get_index_status",
       "Bash(gh pr checks:*)",
       "WebFetch(domain:www.anthropic.com)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(.claude/hooks/file-agent-guardian.sh:*)",
+      "Bash(.claude/hooks/bash-guardian.sh:*)",
+      "Bash(jq:*)",
+      "Bash(/Users/nick/Code/memoryloop/.claude/hooks/file-agent-guardian.sh)",
+      "Bash(/Users/nick/Code/memoryloop/.claude/hooks/bash-guardian.sh)"
     ]
   },
   "enabledMcpjsonServers": [
     "lance-context"
   ],
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/file-agent-guardian.sh",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/bash-guardian.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  },
   "outputStyle": "default",
   "spinnerTipsEnabled": true
 }
