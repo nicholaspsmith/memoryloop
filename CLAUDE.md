@@ -2,17 +2,23 @@
 
 This project uses speckit for feature specification and task tracking.
 
-## Tool Priority Checklist (Read First!)
+## MANDATORY: Tool Priority Checklist
 
-Before doing any work, check these priorities:
+**STOP. Before ANY action, check this list. This is non-negotiable.**
 
-1. **Code Navigation** → Use **Serena** (`find_symbol`, `get_symbols_overview`), NOT `Read` for entire files
-2. **Writing Tests** → Spawn **test-agent**, do NOT write tests yourself
-3. **UI Components** → Spawn **ui-agent** for React component work
-4. **Database Work** → Spawn **db-agent** for schema/migrations
-5. **Git Operations** → Spawn **git-agent** for commits/PRs
-6. **Before Push** → ALWAYS spawn **review-agent** first
-7. **Semantic Search** → Use **lance-context** for "where is X?" questions
+| Action           | WRONG                | RIGHT                                            |
+| ---------------- | -------------------- | ------------------------------------------------ |
+| Git commit/push  | `Bash: git commit`   | Spawn **git-agent**                              |
+| Before push      | Push directly        | Spawn **review-agent** first, THEN git-agent     |
+| Writing tests    | Write tests yourself | Spawn **test-agent**                             |
+| UI components    | Write React code     | Spawn **ui-agent**                               |
+| Database changes | Write migrations     | Spawn **db-agent**                               |
+| Code navigation  | `Read` entire files  | Use **Serena** (`find_symbol`)                   |
+| Finding code     | Grep/Glob directly   | Spawn **Explore** agent or use **lance-context** |
+
+**Git workflow is ALWAYS: git-agent (commit) → review-agent → git-agent (push)**
+
+Never bypass this. If you find yourself typing `git commit` or `git push` in Bash, STOP and use the agents.
 
 ## Feature-Specific Context
 
