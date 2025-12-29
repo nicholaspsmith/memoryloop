@@ -50,10 +50,17 @@ const DEFAULT_OPTIONS: Required<DistractorGeneratorOptions> = {
  * - Return JSON format for reliable parsing
  */
 export function buildDistractorPrompt(question: string, answer: string): string {
+  // Security: Limit input length to prevent prompt injection attacks
+  const MAX_QUESTION_LENGTH = 500
+  const MAX_ANSWER_LENGTH = 200
+
+  const sanitizedQuestion = question.slice(0, MAX_QUESTION_LENGTH).trim()
+  const sanitizedAnswer = answer.slice(0, MAX_ANSWER_LENGTH).trim()
+
   return `You are generating multiple choice options for a flashcard study system.
 
-Question: ${question}
-Correct Answer: ${answer}
+Question: ${sanitizedQuestion}
+Correct Answer: ${sanitizedAnswer}
 
 Generate exactly 3 plausible but INCORRECT answer options (distractors) for this flashcard.
 

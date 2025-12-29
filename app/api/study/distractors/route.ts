@@ -20,8 +20,8 @@ import { z } from 'zod'
 
 const GenerateDistractorsRequestSchema = z.object({
   flashcardId: z.string().uuid(),
-  question: z.string().min(1, 'Question is required'),
-  answer: z.string().min(1, 'Answer is required'),
+  question: z.string().min(1, 'Question is required').max(500, 'Question too long'),
+  answer: z.string().min(1, 'Answer is required').max(200, 'Answer too long'),
 })
 
 // ============================================================================
