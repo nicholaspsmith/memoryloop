@@ -125,7 +125,7 @@ export async function searchSimilarMessages(
         embedding: null, // Embeddings stored in LanceDB, not returned in API
         createdAt: m.createdAt.getTime(),
         hasFlashcards: m.hasFlashcards,
-        aiProvider: m.aiProvider as 'claude' | 'ollama' | null,
+        aiProvider: m.aiProvider as 'claude' | null,
       }))
   } catch (error) {
     console.error('[LanceDB] Semantic search failed:', error)

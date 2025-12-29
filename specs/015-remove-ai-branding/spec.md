@@ -61,6 +61,8 @@ The application uses Claude exclusively for all AI-powered features, with the AP
 - What happens when Claude API rate limits are hit? Display "Please try again in a moment" without mentioning API limits or providers.
 - What happens to existing user API keys stored in the database? They should be cleaned up/migrated as part of deployment.
 - What happens if a user inspects network requests? API endpoint names (`/api/chat/`, `/api/flashcards/`, `/api/goals/`) already use neutral terminology and don't reveal AI provider details.
+- What happens when Jina Embeddings API is unavailable? Graceful degradation - semantic search is disabled, core features continue working, warnings are logged, and embedding requests are queued for processing when API becomes available.
+- What happens to existing Ollama-generated embeddings in the database? Keep existing embeddings as-is; only new content will use Jina embeddings. No migration required.
 
 ## Requirements _(mandatory)_
 
@@ -78,19 +80,23 @@ The application uses Claude exclusively for all AI-powered features, with the AP
 
 - **FR-006**: System MUST remove all Ollama-related code, dependencies, and configuration
 - **FR-007**: System MUST use a server-side environment variable (ANTHROPIC_API_KEY) for Claude API access
+- **FR-007a**: System MUST use a server-side environment variable (JINA_API_KEY) for Jina Embeddings API access
 - **FR-008**: System MUST NOT accept or process user-provided API keys
 - **FR-009**: System MUST verify no api_keys database table or related operations exist (already removed in migration 0006)
 - **FR-010**: System MUST update all AI-related API routes to use the server-configured API key
+- **FR-010a**: System MUST replace Ollama embeddings with Jina Embeddings API for vector search functionality
+- **FR-010b**: System MUST implement a database-backed queue for failed embedding requests that persists across restarts
+- **FR-010c**: System MUST fail to start if ANTHROPIC_API_KEY or JINA_API_KEY environment variables are missing
 
 **Infrastructure Changes:**
 
-- **FR-011**: CI/CD pipeline MUST be updated to include ANTHROPIC_API_KEY as a secret
-- **FR-012**: Production environment MUST be configured with ANTHROPIC_API_KEY
-- **FR-013**: Docker configuration MUST be updated to remove Ollama service and add ANTHROPIC_API_KEY
+- **FR-011**: CI/CD pipeline MUST be updated to include ANTHROPIC_API_KEY and JINA_API_KEY as secrets
+- **FR-012**: Production environment MUST be configured with ANTHROPIC_API_KEY and JINA_API_KEY
+- **FR-013**: Docker configuration MUST be updated to remove Ollama service and add ANTHROPIC_API_KEY and JINA_API_KEY
 
 ### Key Entities
 
-- **Environment Configuration**: Server-side secrets including ANTHROPIC_API_KEY, managed through CI/CD and production environment variables
+- **Environment Configuration**: Server-side secrets including ANTHROPIC_API_KEY and JINA_API_KEY, managed through CI/CD and production environment variables
 - **User Settings**: Simplified to exclude API key and AI provider preferences (removed fields: api_keys table, provider selection)
 
 ## Success Criteria _(mandatory)_
@@ -104,9 +110,20 @@ The application uses Claude exclusively for all AI-powered features, with the AP
 - **SC-005**: Users can complete all core workflows without encountering any AI-provider-specific messaging
 - **SC-006**: Error scenarios display user-friendly messages that do not expose technical implementation details
 
+## Clarifications
+
+### Session 2025-12-29
+
+- Q: How should Jina embeddings be integrated? → A: Jina Embeddings API (cloud service, requires API key via JINA_API_KEY environment variable)
+- Q: What should happen when Jina API is unavailable? → A: Graceful degradation with queued retry - semantic search disabled, core features work, log warnings, queue embedding requests for processing when API becomes available
+- Q: What happens to existing Ollama-generated embeddings? → A: Keep existing embeddings, only generate new ones with Jina (no migration required)
+- Q: How should failed embedding requests be queued? → A: Database-backed queue (persistent, survives restarts)
+- Q: What should happen if the application starts with BOTH API keys missing? → A: Fail to start - require both ANTHROPIC_API_KEY and JINA_API_KEY for application boot
+
 ## Assumptions
 
 - The ANTHROPIC_API_KEY will be provisioned and managed by the system administrator
+- The JINA_API_KEY will be provisioned and managed by the system administrator for vector embeddings
 - API costs will be absorbed by the service rather than passed to users
 - Existing user API key data can be safely deleted without data retention requirements
 - No regulatory or compliance requirements mandate disclosing AI usage to users

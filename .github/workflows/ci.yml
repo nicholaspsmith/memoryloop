@@ -112,6 +112,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/memoryloop_test
           API_KEY_ENCRYPTION_SECRET: test-api-key-encryption-secret-32
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Run integration tests
         run: npm run test:integration
@@ -120,6 +121,7 @@ jobs:
           API_KEY_ENCRYPTION_SECRET: test-api-key-encryption-secret-32
           NEXTAUTH_SECRET: test-secret-key-for-ci-pipeline
           ENCRYPTION_KEY: test-encryption-key-32-chars-long
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
