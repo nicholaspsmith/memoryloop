@@ -28,8 +28,10 @@ RUN npm ci
 # Build Next.js application
 # Note: DATABASE_URL is a placeholder for build-time only (not used for actual DB connections)
 # The real DATABASE_URL is provided at runtime via docker-compose or environment
+# SKIP_ENV_VALIDATION=true skips API key validation (JINA_API_KEY, ANTHROPIC_API_KEY) during build
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV SKIP_ENV_VALIDATION=true
 ENV API_KEY_ENCRYPTION_SECRET=${API_KEY_ENCRYPTION_SECRET:-placeholder-build-secret-32char}
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/build
 RUN npm run build
