@@ -21,6 +21,7 @@ interface NodeInfo {
   id: string
   title: string
   description: string | null
+  children?: NodeInfo[]
 }
 
 interface GenerationResult {
@@ -74,6 +75,10 @@ export default function GeneratePage({ params }: { params: Promise<{ goalId: str
         const findNode = (nodes: NodeInfo[]): NodeInfo | null => {
           for (const n of nodes) {
             if (n.id === nodeId) return n
+            if (n.children) {
+              const found = findNode(n.children)
+              if (found) return found
+            }
           }
           return null
         }
