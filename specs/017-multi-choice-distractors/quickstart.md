@@ -2,107 +2,101 @@
 
 **Feature**: 017-multi-choice-distractors
 **Date**: 2025-12-29
+**Updated**: 2025-12-29 (reflects spec clarifications for DB persistence)
 
 ## Overview
 
 This feature enhances multiple choice study mode with:
 
-1. **Dynamic distractor generation** - AI generates 3 plausible wrong answers per card
-2. **Time-based rating** - Fast correct = Good, slow correct = Hard
-3. **Graceful fallback** - Falls back to flip-reveal if generation fails
+1. **Persistent distractor storage** - AI generates 3 plausible wrong answers, stored in database
+2. **Time-based rating** - Fast correct (≤10s) = Good, slow correct (>10s) = Hard
+3. **Progressive generation** - Existing cards get distractors on first MC study
+4. **Graceful fallback** - Falls back to flip-reveal if generation fails
 
 ## Key Files
 
-| File                                        | Purpose                               |
-| ------------------------------------------- | ------------------------------------- |
-| `lib/ai/distractor-generator.ts`            | Core distractor generation service    |
-| `app/api/study/distractors/route.ts`        | API endpoint for on-demand generation |
-| `components/study/MultipleChoiceMode.tsx`   | UI component with timer               |
-| `components/study/StudySessionProvider.tsx` | Session orchestration                 |
+| File                                      | Purpose                                       |
+| ----------------------------------------- | --------------------------------------------- |
+| `lib/db/drizzle-schema.ts`                | Distractors table definition                  |
+| `lib/db/operations/distractors.ts`        | Distractor CRUD operations (NEW)              |
+| `lib/ai/distractor-generator.ts`          | Core distractor generation + persistence      |
+| `lib/claude/flashcard-generator.ts`       | Flashcard creation with distractor generation |
+| `app/api/study/session/route.ts`          | Session start with distractor loading         |
+| `components/study/MultipleChoiceMode.tsx` | UI component with timer                       |
 
 ## Quick Implementation Guide
 
-### 1. Create Distractor Generator
+### 1. Add Distractors Table (Migration)
+
+```sql
+-- drizzle/migrations/XXXX_add_distractors_table.sql
+CREATE TABLE distractors (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  flashcard_id UUID NOT NULL REFERENCES flashcards(id) ON DELETE CASCADE,
+  content VARCHAR(1000) NOT NULL,
+  position INTEGER NOT NULL CHECK (position >= 0 AND position < 3),
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  UNIQUE(flashcard_id, position)
+);
+
+CREATE INDEX idx_distractors_flashcard_id ON distractors(flashcard_id);
+```
+
+### 2. Create Distractor CRUD Operations
+
+```typescript
+// lib/db/operations/distractors.ts
+import { db } from '@/lib/db'
+import { distractors } from '@/lib/db/drizzle-schema'
+import { eq } from 'drizzle-orm'
+
+export async function getDistractorsForFlashcard(flashcardId: string) {
+  return db.select().from(distractors).where(eq(distractors.flashcardId, flashcardId))
+}
+
+export async function createDistractors(flashcardId: string, contents: string[]) {
+  const rows = contents.map((content, position) => ({
+    flashcardId,
+    content,
+    position,
+  }))
+  return db.insert(distractors).values(rows)
+}
+```
+
+### 3. Enhance Distractor Generator with Persistence
 
 ```typescript
 // lib/ai/distractor-generator.ts
-import { getChatCompletion } from '@/lib/claude/client'
-
-const DISTRACTOR_PROMPT = `Generate 3 plausible but incorrect answer options...`
-
-export async function generateDistractors(
+export async function generateAndPersistDistractors(
+  flashcardId: string,
   question: string,
   answer: string
-): Promise<{ success: boolean; distractors?: string[]; error?: string }> {
-  try {
-    const response = await getChatCompletion(
-      [{ role: 'user', content: buildPrompt(question, answer) }],
-      { maxTokens: 256, temperature: 0.9 }
-    )
-
-    const parsed = JSON.parse(response)
-    if (validateDistractors(parsed.distractors, answer)) {
-      return { success: true, distractors: parsed.distractors }
-    }
-    return { success: false, error: 'Invalid distractor format' }
-  } catch (error) {
-    return { success: false, error: String(error) }
-  }
-}
-```
-
-### 2. Add API Endpoint
-
-```typescript
-// app/api/study/distractors/route.ts
-import { generateDistractors } from '@/lib/ai/distractor-generator'
-
-export async function POST(request: Request) {
-  const { question, answer } = await request.json()
-
+): Promise<DistractorGenerationResult> {
   const result = await generateDistractors(question, answer)
 
-  if (result.success) {
-    return Response.json({ distractors: result.distractors })
+  if (result.success && result.distractors) {
+    await createDistractors(flashcardId, result.distractors)
   }
-  return Response.json({ error: result.error, fallbackRequired: true }, { status: 500 })
+
+  return result
 }
 ```
 
-### 3. Modify MultipleChoiceMode
+### 4. Load Distractors in Study Session
 
 ```typescript
-// components/study/MultipleChoiceMode.tsx
-function MultipleChoiceMode({ question, answer, distractors, onRate }) {
-  const startTimeRef = useRef(Date.now())
+// app/api/study/session/route.ts
+// In card loading logic:
+const flashcardsWithDistractors = await db
+  .select()
+  .from(flashcards)
+  .leftJoin(distractors, eq(flashcards.id, distractors.flashcardId))
+  .where(/* due cards filter */)
 
-  const handleSelect = (selected: string) => {
-    const responseTimeMs = Date.now() - startTimeRef.current
-    const isCorrect = selected === answer
-    const rating = isCorrect ? (responseTimeMs <= 10000 ? 3 : 2) : 1
-
-    onRate(rating, responseTimeMs)
-  }
-
-  // ... render options
-}
-```
-
-### 4. Integrate in Session Provider
-
-```typescript
-// In StudySessionProvider.tsx
-const fetchDistractors = async (card: StudyCard) => {
-  try {
-    const res = await fetch('/api/study/distractors', {
-      method: 'POST',
-      body: JSON.stringify({ question: card.question, answer: card.answer }),
-    })
-    const data = await res.json()
-    return data.distractors ?? null
-  } catch {
-    return null // Trigger fallback
-  }
+// For cards without distractors in MC mode:
+for (const card of cardsNeedingDistractors) {
+  await generateAndPersistDistractors(card.id, card.question, card.answer)
 }
 ```
 
@@ -145,11 +139,11 @@ const fetchDistractors = async (card: StudyCard) => {
 
 ## Success Criteria Verification
 
-| Criterion                | How to Verify                                        |
-| ------------------------ | ---------------------------------------------------- |
-| SC-001: < 2s display     | Measure time from answer submission to next question |
-| SC-002: 90%+ quality     | Manual review of generated distractors               |
-| SC-003: < 10min/20 cards | Time a complete session                              |
-| SC-004: Correct FSRS     | Check `review_logs` table ratings                    |
-| SC-005: < 1s fallback    | Simulate API failure, measure switch time            |
-| SC-006: 80% variety      | Study same card twice, compare distractors           |
+| Criterion                  | How to Verify                                               |
+| -------------------------- | ----------------------------------------------------------- |
+| SC-001: < 500ms display    | Distractors pre-loaded from DB; measure render time         |
+| SC-002: 90%+ quality       | Manual review of generated distractors                      |
+| SC-003: < 10min/20 cards   | Time a complete session                                     |
+| SC-004: Correct FSRS       | Check `review_logs` table ratings (1/2/3)                   |
+| SC-005: Immediate fallback | Query distractors table; missing → fallback                 |
+| SC-006: Position variety   | Shuffle at display time (same distractors, different order) |

@@ -19,12 +19,24 @@ vi.mock('@/lib/claude/client', () => ({
   getChatCompletion: vi.fn(),
 }))
 
-import { generateDistractors, validateDistractors } from '@/lib/ai/distractor-generator'
+// Mock the database operations
+vi.mock('@/lib/db/operations/distractors', () => ({
+  createDistractors: vi.fn(),
+}))
+
+import {
+  generateDistractors,
+  validateDistractors,
+  buildDistractorPrompt,
+  generateAndPersistDistractors,
+} from '@/lib/ai/distractor-generator'
 import { getChatCompletion } from '@/lib/claude/client'
+import { createDistractors } from '@/lib/db/operations/distractors'
 import type { Mock } from 'vitest'
 
 // Cast to access mock methods
 const mockGetChatCompletion = getChatCompletion as Mock
+const mockCreateDistractors = createDistractors as Mock
 
 describe('Distractor Generator', () => {
   beforeEach(() => {
@@ -95,7 +107,7 @@ describe('Distractor Generator', () => {
         expect(result.success).toBe(false)
         expect(result.error).toBeDefined()
         expect(duration).toBeLessThan(6000) // Should timeout before 6s
-        expect(duration).toBeGreaterThanOrEqual(5000) // Should wait ~5s
+        expect(duration).toBeGreaterThanOrEqual(4990) // Should wait ~5s (allow 10ms margin for timer precision)
       }, 10000) // Test timeout of 10s
 
       it('should handle invalid JSON response from Claude', async () => {
@@ -132,6 +144,109 @@ describe('Distractor Generator', () => {
 
         expect(result.success).toBe(false)
         expect(result.error).toBeDefined()
+      })
+    })
+  })
+
+  describe('buildDistractorPrompt', () => {
+    describe('T006: Prompt building with FR-012 short answer handling', () => {
+      it('should include question and answer in prompt', () => {
+        const question = 'What is Kubernetes?'
+        const answer = 'A container orchestration platform'
+        const prompt = buildDistractorPrompt(question, answer)
+
+        expect(prompt).toContain(question)
+        expect(prompt).toContain(answer)
+        expect(prompt).toContain('exactly 3 plausible')
+        expect(prompt).toContain('JSON')
+      })
+
+      it('should detect and handle numeric answers', () => {
+        const question = 'What is the default Kubernetes API server port?'
+        const answer = '6443'
+        const prompt = buildDistractorPrompt(question, answer)
+
+        expect(prompt).toContain('IMPORTANT: The correct answer is a number')
+        expect(prompt).toContain('nearby values')
+        expect(prompt).toContain('plausible but incorrect numbers')
+      })
+
+      it('should handle decimal numeric answers', () => {
+        const question = 'What is the value of pi to 2 decimal places?'
+        const answer = '3.14'
+        const prompt = buildDistractorPrompt(question, answer)
+
+        expect(prompt).toContain('IMPORTANT: The correct answer is a number')
+        expect(prompt).toContain('integers vs decimals')
+      })
+
+      it('should detect and handle yes/no answers', () => {
+        const question = 'Is Kubernetes open source?'
+        const answer = 'Yes'
+        const prompt = buildDistractorPrompt(question, answer)
+
+        expect(prompt).toContain('IMPORTANT: The correct answer is "Yes"')
+        expect(prompt).toContain('full-sentence alternatives')
+        expect(prompt).toContain('Yes, because X')
+      })
+
+      it('should handle no/No answers case-insensitively', () => {
+        const question = 'Is Docker a database?'
+        const answer = 'no'
+        const prompt = buildDistractorPrompt(question, answer)
+
+        expect(prompt).toContain('IMPORTANT: The correct answer is "no"')
+      })
+
+      it('should detect generic short answers (≤10 chars)', () => {
+        const question = 'What HTTP verb is used to create resources?'
+        const answer = 'POST'
+        const prompt = buildDistractorPrompt(question, answer)
+
+        expect(prompt).toContain('IMPORTANT: The correct answer is very short')
+        expect(prompt).toContain('similar brevity')
+        expect(prompt).toContain('same domain')
+      })
+
+      it('should not trigger short answer handling for longer answers', () => {
+        const question = 'What is Kubernetes?'
+        const answer = 'A container orchestration platform'
+        const prompt = buildDistractorPrompt(question, answer)
+
+        expect(prompt).not.toContain('IMPORTANT: The correct answer is very short')
+        expect(prompt).not.toContain('IMPORTANT: The correct answer is a number')
+      })
+
+      it('should sanitize overly long questions (security)', () => {
+        const longQuestion = 'Q'.repeat(1000)
+        const answer = 'A'
+        const prompt = buildDistractorPrompt(longQuestion, answer)
+
+        // Should truncate question to 500 chars max
+        // Extract the question from prompt using regex to find "Question: ..."
+        const questionMatch = prompt.match(/Question: ([^\n]+)/)
+        expect(questionMatch).toBeDefined()
+        const extractedQuestion = questionMatch![1]
+        expect(extractedQuestion.length).toBeLessThanOrEqual(500)
+      })
+
+      it('should sanitize overly long answers (security)', () => {
+        const question = 'What is X?'
+        const longAnswer = 'A'.repeat(500)
+        const prompt = buildDistractorPrompt(question, longAnswer)
+
+        // Should truncate answer to 200 chars max
+        // Extract the answer from prompt using regex to find "Correct Answer: ..."
+        const answerMatch = prompt.match(/Correct Answer: ([^\n]+)/)
+        expect(answerMatch).toBeDefined()
+        const extractedAnswer = answerMatch![1]
+        expect(extractedAnswer.length).toBeLessThanOrEqual(200)
+      })
+
+      it('should request exact JSON format', () => {
+        const prompt = buildDistractorPrompt('Q', 'A')
+        expect(prompt).toContain('{"distractors":')
+        expect(prompt).toContain('distractor1')
       })
     })
   })
@@ -271,6 +386,119 @@ describe('Distractor Generator', () => {
         const result = validateDistractors(distractors, correctAnswer)
 
         expect(result).toBe(true)
+      })
+    })
+  })
+
+  describe('generateAndPersistDistractors', () => {
+    const mockFlashcardId = '123e4567-e89b-12d3-a456-426614174000'
+
+    describe('T007: Generate and persist distractors with database integration', () => {
+      it('should generate and persist distractors successfully', async () => {
+        const mockResponse = JSON.stringify({
+          distractors: ['Docker', 'Podman', 'Mesos'],
+        })
+        mockGetChatCompletion.mockResolvedValue(mockResponse)
+        mockCreateDistractors.mockResolvedValue(undefined)
+
+        const result = await generateAndPersistDistractors(
+          mockFlashcardId,
+          'What is Kubernetes?',
+          'A container orchestration platform'
+        )
+
+        expect(result.success).toBe(true)
+        expect(result.distractors).toEqual(['Docker', 'Podman', 'Mesos'])
+        expect(mockCreateDistractors).toHaveBeenCalledWith(mockFlashcardId, [
+          'Docker',
+          'Podman',
+          'Mesos',
+        ])
+      })
+
+      it('should skip persistence if generation fails', async () => {
+        mockGetChatCompletion.mockRejectedValue(new Error('API Error'))
+
+        const result = await generateAndPersistDistractors(mockFlashcardId, 'Q', 'A')
+
+        expect(result.success).toBe(false)
+        expect(mockCreateDistractors).not.toHaveBeenCalled()
+      })
+
+      it('should return error if persistence fails', async () => {
+        const mockResponse = JSON.stringify({
+          distractors: ['A', 'B', 'C'],
+        })
+        mockGetChatCompletion.mockResolvedValue(mockResponse)
+        mockCreateDistractors.mockRejectedValue(new Error('Database error'))
+
+        const result = await generateAndPersistDistractors(mockFlashcardId, 'Q', 'D')
+
+        expect(result.success).toBe(false)
+        expect(result.error).toBe('Database error')
+      })
+
+      it('should handle non-Error database exceptions', async () => {
+        const mockResponse = JSON.stringify({
+          distractors: ['A', 'B', 'C'],
+        })
+        mockGetChatCompletion.mockResolvedValue(mockResponse)
+        mockCreateDistractors.mockRejectedValue('String error')
+
+        const result = await generateAndPersistDistractors(mockFlashcardId, 'Q', 'D')
+
+        expect(result.success).toBe(false)
+        expect(result.error).toBe('Database persistence failed')
+      })
+
+      it('should track total time including persistence', async () => {
+        const mockResponse = JSON.stringify({
+          distractors: ['A', 'B', 'C'],
+        })
+        mockGetChatCompletion.mockResolvedValue(mockResponse)
+        mockCreateDistractors.mockImplementation(
+          () => new Promise((resolve) => setTimeout(resolve, 50))
+        )
+
+        const result = await generateAndPersistDistractors(mockFlashcardId, 'Q', 'D')
+
+        expect(result.success).toBe(true)
+        expect(result.generationTimeMs).toBeGreaterThanOrEqual(50)
+      })
+
+      it('should respect custom generation options', async () => {
+        const mockResponse = JSON.stringify({
+          distractors: ['A', 'B', 'C'],
+        })
+        mockGetChatCompletion.mockResolvedValue(mockResponse)
+        mockCreateDistractors.mockResolvedValue(undefined)
+
+        const options = {
+          maxTokens: 512,
+          temperature: 0.7,
+          timeoutMs: 10000,
+        }
+
+        const result = await generateAndPersistDistractors(mockFlashcardId, 'Q', 'D', options)
+
+        expect(result.success).toBe(true)
+        expect(mockGetChatCompletion).toHaveBeenCalled()
+      })
+
+      it('should handle empty question', async () => {
+        const result = await generateAndPersistDistractors(mockFlashcardId, '', 'Answer')
+
+        expect(result.success).toBe(false)
+        expect(result.error).toBe('Question and answer must be non-empty')
+        expect(mockCreateDistractors).not.toHaveBeenCalled()
+      })
+
+      it('should handle empty answer', async () => {
+        const result = await generateAndPersistDistractors(mockFlashcardId, 'Question', '')
+
+        expect(result.success).toBe(false)
+        expect(result.error).toBe('Question and answer must be non-empty')
+        expect(mockCreateDistractors).not.toHaveBeenCalled()
       })
     })
   })

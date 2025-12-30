@@ -8,6 +8,8 @@ import {
   boolean,
   jsonb,
   real,
+  index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
@@ -123,6 +125,24 @@ export const reviewLogs = pgTable('review_logs', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 })
 
+// Distractors table for multiple choice study mode (017-multi-choice-distractors)
+export const distractors = pgTable(
+  'distractors',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    flashcardId: uuid('flashcard_id')
+      .notNull()
+      .references(() => flashcards.id, { onDelete: 'cascade' }),
+    content: varchar('content', { length: 1000 }).notNull(),
+    position: integer('position').notNull(), // 0, 1, or 2 (3 distractors per card)
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('distractors_flashcard_position_idx').on(table.flashcardId, table.position),
+    index('distractors_flashcard_id_idx').on(table.flashcardId),
+  ]
+)
+
 // ============================================================================
 // Password Reset Tokens Table
 // ============================================================================
@@ -218,6 +238,9 @@ export type NewMessage = typeof messages.$inferInsert
 
 export type Flashcard = typeof flashcards.$inferSelect
 export type NewFlashcard = typeof flashcards.$inferInsert
+
+export type Distractor = typeof distractors.$inferSelect
+export type NewDistractor = typeof distractors.$inferInsert
 
 export type ReviewLog = typeof reviewLogs.$inferSelect
 export type NewReviewLog = typeof reviewLogs.$inferInsert

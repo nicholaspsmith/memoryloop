@@ -2,46 +2,65 @@
 
 **Feature**: 017-multi-choice-distractors
 **Date**: 2025-12-29
+**Updated**: 2025-12-29 (reflects spec clarifications for DB persistence)
 
 ## Research Topics
 
-### 1. Distractor Generation Strategy
+### 1. Distractor Storage Architecture
 
-**Decision**: Use Claude API with structured prompt for on-demand distractor generation
+**Decision**: Create a dedicated `distractors` table and persist distractors at flashcard creation time
 
 **Rationale**:
 
-- Claude already integrated in codebase (`lib/claude/client.ts`)
-- Existing `buildMultipleChoicePrompt()` in `lib/ai/card-generator.ts` provides proven pattern
-- Fresh generation each session ensures variety (FR-010)
-- No storage overhead - ephemeral by design
+- Spec clarification: "Generating distractors is expensive" → persist to avoid repeated generation
+- Enables efficient queries (find cards without distractors for progressive generation)
+- Supports future features (regenerate distractors, track generation metadata)
+- Cleaner data model with proper foreign key relationships
+- Better database normalization
 
 **Alternatives Considered**:
 | Alternative | Why Rejected |
 |-------------|--------------|
-| Pre-generate and cache | Violates FR-009 (on-demand); limits variety |
-| Semantic similarity search | Requires embedding-based distractor corpus; complex |
-| Template-based generation | Poor quality for diverse topics; not "plausible" |
+| On-demand generation each session | Spec clarification explicitly chose persistence due to expense |
+| JSONB in cardMetadata | No efficient way to query cards missing distractors; no separate lifecycle |
+| Embed distractors as array column | Inflexible schema, harder to add generation metadata |
 
-**Prompt Design** (derived from existing `card-generator.ts:122-155`):
+**Database Schema**:
 
-```
-Generate 3 plausible but incorrect answer options for this flashcard:
+```sql
+CREATE TABLE distractors (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  flashcard_id UUID NOT NULL REFERENCES flashcards(id) ON DELETE CASCADE,
+  content VARCHAR(1000) NOT NULL,
+  position INTEGER NOT NULL CHECK (position >= 0 AND position < 3),
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  UNIQUE(flashcard_id, position)
+);
 
-Question: {question}
-Correct Answer: {answer}
-
-Requirements:
-- Each distractor must be factually INCORRECT
-- Each distractor must be PLAUSIBLE (related to the topic)
-- Similar length to the correct answer
-- No obviously absurd options
-- Must be distinct from each other
-
-Return JSON: { "distractors": ["option1", "option2", "option3"] }
+CREATE INDEX idx_distractors_flashcard_id ON distractors(flashcard_id);
 ```
 
-### 2. Response Time Thresholds for FSRS Rating
+### 2. Distractor Generation Trigger Points
+
+**Decision**: Generate distractors at two points:
+
+1. **Flashcard creation** - Immediately after flashcard is created
+2. **Progressive generation** - On first MC study for existing cards without distractors
+
+**Rationale**:
+
+- Creation-time generation ensures distractors are ready when user studies
+- Progressive generation handles existing flashcards without requiring migration
+- Avoids expensive batch processing during deployment
+- Spreads API load over time
+
+**Alternatives Considered**:
+| Alternative | Why Rejected |
+|-------------|--------------|
+| Batch migration | Expensive, slow, blocks deployment; API rate limits could cause failures |
+| On-demand only | Spec clarification explicitly chose persistence due to expense |
+
+### 3. Response Time Thresholds for FSRS Rating
 
 **Decision**: Use 10-second threshold to distinguish "fast" vs "slow" correct answers
 
@@ -72,23 +91,32 @@ Return JSON: { "distractors": ["option1", "option2", "option3"] }
 - Timer stops on answer selection
 - Rating logic in `app/api/study/rate/route.ts` or component
 
-### 3. Batching vs Per-Card Generation
+### 5. Study Session Flow Changes
 
-**Decision**: Generate distractors per-card on-demand (not batched)
+**Decision**: Load distractors from DB at session start; progressive generation during session if missing
 
 **Rationale**:
 
-- Session may end early; batching wastes API calls
-- Per-card allows lazy loading as user progresses
-- Simpler error handling (single failure = single fallback)
-- 1-2s latency acceptable between cards
+- Pre-loading from DB enables 500ms target (no API call during question display)
+- Progressive generation handles legacy cards seamlessly
+- Loading indicator only shown for first-time generation
+
+**Flow**:
+
+```
+Session Start → Load due flashcards
+             → JOIN distractors table
+             → For cards without distractors:
+                 → If MC mode: generate + persist + return
+                 → If flashcard mode: skip distractors
+             → Return StudyCard[] with distractors
+```
 
 **Alternatives Considered**:
 | Alternative | Why Rejected |
 |-------------|--------------|
-| Batch all at session start | High latency (20+ seconds), wasted calls on early exit |
-| Prefetch next N cards | Complexity; marginal benefit for typical sessions |
-| Background worker queue | Over-engineering for single-user sessions |
+| Generate fresh each session | Spec clarification: expensive, must persist |
+| Batch all at session start | High latency for existing cards needing generation |
 
 ### 4. Fallback Strategy
 
@@ -134,32 +162,41 @@ Return JSON: { "distractors": ["option1", "option2", "option3"] }
 - Temperature: 0.8-1.0 (variety in responses)
 - Timeout: 5 seconds (fail fast for fallback)
 
-### 6. Existing Code Integration Points
+### 7. Existing Code Integration Points
 
 **Key Files to Modify**:
 
-| File                                        | Change                                 |
-| ------------------------------------------- | -------------------------------------- |
-| `lib/ai/distractor-generator.ts`            | NEW - Core generation logic            |
-| `components/study/MultipleChoiceMode.tsx`   | Add timer, receive distractors as prop |
-| `components/study/StudySessionProvider.tsx` | Call distractor API, handle fallback   |
-| `app/api/study/rate/route.ts`               | Time-based rating logic                |
-| `app/api/study/distractors/route.ts`        | NEW - On-demand distractor endpoint    |
+| File                                      | Change                                                |
+| ----------------------------------------- | ----------------------------------------------------- |
+| `lib/db/drizzle-schema.ts`                | Add `distractors` table definition                    |
+| `lib/db/operations/flashcards.ts`         | Add distractor CRUD operations                        |
+| `lib/ai/distractor-generator.ts`          | Add persistence after generation                      |
+| `lib/claude/flashcard-generator.ts`       | Integrate distractor generation at flashcard creation |
+| `app/api/study/session/route.ts`          | Load distractors from DB, progressive generation      |
+| `components/study/MultipleChoiceMode.tsx` | Already supports distractors (minor enhancements)     |
+
+**Key Files to Create**:
+
+| File                                                | Purpose                             |
+| --------------------------------------------------- | ----------------------------------- |
+| `lib/db/operations/distractors.ts`                  | Distractor-specific CRUD operations |
+| `drizzle/migrations/XXXX_add_distractors_table.sql` | Database migration                  |
 
 **Key Functions to Reuse**:
 
 - `getChatCompletion()` from `lib/claude/client.ts`
-- `shuffleArray()` from `MultipleChoiceMode.tsx` (move to utility)
+- `shuffleArray()` from `MultipleChoiceMode.tsx`
 - `scheduleCard()` from `lib/fsrs/scheduler.ts`
+- `generateDistractors()` from `lib/ai/distractor-generator.ts` (enhance to persist)
 
 ## Summary
 
-All "NEEDS CLARIFICATION" items from Technical Context have been resolved:
+All spec clarifications have been incorporated into research:
 
-- Distractor generation: Claude API with structured prompt
-- Time threshold: 10 seconds for fast/slow distinction
-- Batching: Per-card on-demand
-- Fallback: Flip-reveal mode with toast notification
-- API config: Existing client with reduced max_tokens
+- **Storage**: Dedicated `distractors` table with FK to flashcards
+- **Generation triggers**: At flashcard creation + progressive for existing cards
+- **Time threshold**: 10 seconds for fast/slow distinction (confirmed)
+- **Fallback**: Flip-reveal mode with toast notification
+- **Session flow**: Pre-load from DB, progressive generation with loading indicator
 
 Ready to proceed to Phase 1: Design & Contracts.

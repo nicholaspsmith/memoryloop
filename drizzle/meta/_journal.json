@@ -57,6 +57,13 @@
       "when": 1767059400000,
       "tag": "0007_add_flashcard_status",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1735536000000,
+      "tag": "0008_add_distractors",
+      "breakpoints": true
     }
   ]
 }

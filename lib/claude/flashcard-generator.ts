@@ -1,3 +1,4 @@
+import { generateAndPersistDistractors } from '@/lib/ai/distractor-generator'
 import { getChatCompletion } from './client'
 
 /**
@@ -313,6 +314,51 @@ export async function generateFlashcardsFromContent(
   } catch (error) {
     console.error('[FlashcardGenerator] Error generating flashcards:', error)
     return []
+  }
+}
+
+/**
+ * Generate distractors for a flashcard after it has been created.
+ * This is called after flashcard creation to generate multiple-choice distractors.
+ * Failures are logged but do not throw - flashcard creation should succeed even if
+ * distractor generation fails.
+ *
+ * @param flashcardId - The ID of the created flashcard
+ * @param question - The flashcard question
+ * @param answer - The correct answer
+ * @returns true if distractors were generated successfully, false otherwise
+ */
+export async function generateDistractorsForFlashcard(
+  flashcardId: string,
+  question: string,
+  answer: string
+): Promise<boolean> {
+  try {
+    console.info('[Flashcard] Generating distractors for flashcard', { flashcardId })
+
+    const result = await generateAndPersistDistractors(flashcardId, question, answer)
+
+    if (result.success) {
+      console.info('[Flashcard] Distractors generated successfully', {
+        flashcardId,
+        generationTimeMs: result.generationTimeMs,
+      })
+      return true
+    } else {
+      console.warn('[Flashcard] Distractor generation failed, continuing without distractors', {
+        flashcardId,
+        error: result.error,
+        generationTimeMs: result.generationTimeMs,
+      })
+      return false
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.warn('[Flashcard] Distractor generation threw error, continuing without distractors', {
+      flashcardId,
+      error: errorMessage,
+    })
+    return false
   }
 }
 

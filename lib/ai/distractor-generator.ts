@@ -53,9 +53,45 @@ export function buildDistractorPrompt(question: string, answer: string): string 
   // Security: Limit input length to prevent prompt injection attacks
   const MAX_QUESTION_LENGTH = 500
   const MAX_ANSWER_LENGTH = 200
+  const SHORT_ANSWER_THRESHOLD = 10
 
   const sanitizedQuestion = question.slice(0, MAX_QUESTION_LENGTH).trim()
   const sanitizedAnswer = answer.slice(0, MAX_ANSWER_LENGTH).trim()
+
+  // FR-012: Handle short answers with context-aware prompts
+  const isShortAnswer = sanitizedAnswer.length <= SHORT_ANSWER_THRESHOLD
+  const isNumericAnswer = /^\d+(\.\d+)?$/.test(sanitizedAnswer)
+  const isYesNoAnswer = /^(yes|no)$/i.test(sanitizedAnswer)
+
+  if (isShortAnswer) {
+    console.info('[Distractor] Short answer detected', {
+      answerLength: sanitizedAnswer.length,
+      isNumeric: isNumericAnswer,
+      isYesNo: isYesNoAnswer,
+    })
+  }
+
+  let additionalGuidance = ''
+  if (isNumericAnswer) {
+    const num = parseFloat(sanitizedAnswer)
+    additionalGuidance = `
+IMPORTANT: The correct answer is a number (${num}). Generate plausible but incorrect numbers:
+- Use nearby values (e.g., if answer is 42, consider 40, 44, 38)
+- Consider common mathematical errors (off-by-one, wrong order of magnitude)
+- Maintain the same format (integers vs decimals)`
+  } else if (isYesNoAnswer) {
+    additionalGuidance = `
+IMPORTANT: The correct answer is "${sanitizedAnswer}". Generate full-sentence alternatives:
+- Create "Yes, because X" or "No, because X" style responses
+- Each distractor should give a plausible but incorrect reasoning
+- Make the reasoning sound logical but be factually wrong for this question`
+  } else if (isShortAnswer) {
+    additionalGuidance = `
+IMPORTANT: The correct answer is very short ("${sanitizedAnswer}"). 
+- Generate distractors of similar brevity
+- Focus on closely related but incorrect terms from the same domain
+- Consider common misconceptions or confusable items`
+  }
 
   return `You are generating multiple choice options for a flashcard study system.
 
@@ -72,7 +108,7 @@ Requirements:
 - If the answer is technical, use related technical terms
 - If the answer is a name, use other names from the same domain
 - If the answer is a number, use plausible but incorrect numbers
-
+${additionalGuidance}
 Respond with ONLY a JSON object in this exact format:
 {"distractors": ["distractor1", "distractor2", "distractor3"]}`
 }
@@ -217,6 +253,78 @@ export async function generateDistractors(
       success: false,
       error: errorMessage,
       generationTimeMs,
+    }
+  }
+}
+
+/**
+ * Generate distractors and persist them to the database.
+ * Combines AI generation with database storage in a single operation.
+ *
+ * @param flashcardId - The ID of the flashcard to associate distractors with
+ * @param question - The flashcard question
+ * @param answer - The correct answer
+ * @param options - Optional generation parameters
+ * @returns DistractorResult with success/error and generation time
+ */
+export async function generateAndPersistDistractors(
+  flashcardId: string,
+  question: string,
+  answer: string,
+  options: DistractorGeneratorOptions = {}
+): Promise<DistractorResult> {
+  const startTime = Date.now()
+
+  console.info('[Distractor] Starting generation and persistence', {
+    flashcardId,
+    questionLength: question.length,
+    answerLength: answer.length,
+  })
+
+  // Generate distractors using AI
+  const result = await generateDistractors(question, answer, options)
+
+  if (!result.success || !result.distractors) {
+    console.warn('[Distractor] Generation failed, skipping persistence', {
+      flashcardId,
+      error: result.error,
+      generationTimeMs: result.generationTimeMs,
+    })
+    return result
+  }
+
+  // Persist to database
+  try {
+    const { createDistractors } = await import('@/lib/db/operations/distractors')
+    await createDistractors(flashcardId, result.distractors)
+
+    const totalTimeMs = Date.now() - startTime
+    console.info('[Distractor] Generation and persistence successful', {
+      flashcardId,
+      generationTimeMs: result.generationTimeMs,
+      totalTimeMs,
+    })
+
+    return {
+      success: true,
+      distractors: result.distractors,
+      generationTimeMs: totalTimeMs,
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Database persistence failed'
+    const totalTimeMs = Date.now() - startTime
+
+    console.error('[Distractor] Persistence failed', {
+      flashcardId,
+      error: errorMessage,
+      generationTimeMs: result.generationTimeMs,
+      totalTimeMs,
+    })
+
+    return {
+      success: false,
+      error: errorMessage,
+      generationTimeMs: totalTimeMs,
     }
   }
 }

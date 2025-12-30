@@ -43,7 +43,7 @@ The system generates high-quality distractors that make the multiple choice form
 
 2. **Given** a flashcard with a numerical or specific factual answer, **When** distractors are generated, **Then** they include similar but incorrect values or facts.
 
-3. **Given** the same flashcard studied multiple times, **When** distractors are generated for each session, **Then** the distractors vary between sessions to prevent memorization of option positions.
+3. **Given** the same flashcard studied multiple times, **When** options are displayed for each session, **Then** the option positions are shuffled randomly to prevent memorization of answer positions.
 
 ---
 
@@ -81,18 +81,20 @@ When the system cannot generate quality distractors (e.g., AI service unavailabl
 - **FR-004**: Distractors MUST be contextually relevant to the flashcard's topic/subject matter.
 - **FR-005**: System MUST provide immediate feedback after answer selection showing whether correct or incorrect.
 - **FR-006**: System MUST highlight the correct answer after any selection (correct or incorrect).
-- **FR-007**: Correct answers MUST update the flashcard's FSRS schedule based on response time: "Hard" (rating 2) for slow responses, "Good" (rating 3) for fast responses.
+- **FR-007**: Correct answers MUST update the flashcard's FSRS schedule based on response time: "Hard" (rating 2) for responses >10 seconds, "Good" (rating 3) for responses ≤10 seconds.
 - **FR-008**: Incorrect answers MUST update the flashcard's FSRS schedule as "Again" (rating 1).
 - **FR-013**: System MUST track response time from question display to answer selection for FSRS rating determination.
-- **FR-009**: System MUST generate distractors on-demand at study time (no persistent caching) while maintaining responsive sessions.
-- **FR-010**: System MUST vary distractors across study sessions through AI generation randomness to prevent answer position memorization.
+- **FR-009**: System MUST generate and persist distractors when a flashcard is created or when its answer is updated.
+- **FR-010**: System MUST shuffle distractor positions randomly at study time to prevent answer position memorization.
 - **FR-011**: System MUST fall back to flip-reveal mode if distractor generation fails.
 - **FR-012**: System MUST handle flashcards with short answers (single words, numbers) appropriately.
+- **FR-014**: For existing flashcards without distractors, system MUST generate distractors on first MC mode study attempt, then persist for future sessions.
+- **FR-015**: During progressive distractor generation, system MUST display a loading indicator until generation completes, then show the MC question.
 
 ### Key Entities
 
-- **Flashcard**: Existing entity with question and answer; no schema changes needed.
-- **Distractor**: A plausible but incorrect answer option generated on-demand (not persisted).
+- **Flashcard**: Existing entity with question and answer; can be studied in either multiple choice or flip-reveal mode.
+- **Distractor**: A plausible but incorrect answer option persisted in database, linked to a flashcard. Each flashcard has 3 distractors.
 - **StudySession**: Tracks mode (multiple-choice vs flip-reveal) and user responses.
 - **FSRS Schedule**: Existing spaced repetition scheduling updated based on correct/incorrect responses.
 
@@ -100,24 +102,29 @@ When the system cannot generate quality distractors (e.g., AI service unavailabl
 
 ### Measurable Outcomes
 
-- **SC-001**: Multiple choice questions display within 2 seconds of the previous question being answered (including distractor generation).
+- **SC-001**: Multiple choice questions display within 500ms of the previous question being answered (distractors pre-loaded from database).
 - **SC-002**: At least 90% of generated distractors are contextually relevant and plausible (not obviously wrong or unrelated).
 - **SC-003**: Users complete a 20-card multiple choice session in under 10 minutes.
 - **SC-004**: FSRS scheduling correctly distinguishes between incorrect, slow-correct, and fast-correct answers (verified through review intervals reflecting Again/Hard/Good ratings).
-- **SC-005**: Fallback to flip-reveal occurs in under 1 second when distractor generation fails.
-- **SC-006**: Distractor variety across sessions - same flashcard shows different distractor sets at least 80% of the time when studied within 7 days.
+- **SC-005**: Fallback to flip-reveal occurs immediately when a flashcard lacks distractors in database.
+- **SC-006**: Distractor position varies across study sessions through random shuffling at presentation time.
 
 ## Clarifications
 
 ### Session 2025-12-29
 
-- Q: What is the distractor storage strategy? → A: Generate fresh each session (no persistence, rely on AI randomness for variety)
+- Q: What is the distractor storage strategy? → A: Generate at flashcard creation time and persist to database (generation is expensive)
 - Q: What FSRS rating granularity for correct/incorrect answers? → A: Incorrect = "Again" (1), slow correct = "Hard" (2), fast correct = "Good" (3)
+- Q: Is there a distinction between flashcard types? → A: No - all flashcards can be used in either multiple choice mode or flashcard mode; distractors are generated for all flashcards
+- Q: How are existing flashcards handled? → A: Progressive generation - generate distractors when an existing flashcard is first studied in MC mode, then persist
+- Q: What response time threshold for fast vs slow correct answers? → A: 10 seconds (fast ≤10s = Good, slow >10s = Hard)
+- Q: UX during progressive distractor generation? → A: Show loading indicator while generating, then display MC question once ready
 
 ## Assumptions
 
 - The existing Multiple Choice Mode UI component (MultipleChoiceMode.tsx) exists but may need enhancement for distractor display.
 - The AI service used for distractor generation is the same Claude API used elsewhere in the application.
-- Distractors are generated fresh each session (no database persistence required).
+- Distractors are generated at flashcard creation time and persisted to database (generation is expensive, avoid on-demand generation).
 - The existing FSRS implementation supports the rating scale needed (Again=1, Hard=2, Good=3).
 - Users have already created flashcards before using multiple choice mode.
+- All flashcards support both study modes (multiple choice and flip-reveal) - no separate card types.

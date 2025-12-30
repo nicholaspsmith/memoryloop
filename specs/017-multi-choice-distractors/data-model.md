@@ -2,12 +2,46 @@
 
 **Feature**: 017-multi-choice-distractors
 **Date**: 2025-12-29
+**Updated**: 2025-12-29 (reflects spec clarifications for DB persistence)
 
 ## Overview
 
-This feature requires **no database schema changes**. Distractors are generated on-demand and not persisted. The existing flashcard and FSRS infrastructure is sufficient.
+This feature adds a dedicated `distractors` table to persist AI-generated distractors for flashcards. Distractors are generated at flashcard creation time (or progressively for existing cards) and stored in PostgreSQL for efficient retrieval during study sessions.
 
 ## Entities
+
+### New Entity: Distractor
+
+```typescript
+// lib/db/drizzle-schema.ts - distractors table (NEW)
+{
+  id: uuid,
+  flashcardId: uuid,     // FK to flashcards.id, ON DELETE CASCADE
+  content: varchar(1000), // The distractor text
+  position: integer,      // 0, 1, or 2 (3 distractors per card)
+  createdAt: timestamp
+}
+
+// Constraints:
+// - UNIQUE(flashcard_id, position) - ensures exactly 3 distractors per card
+// - CHECK(position >= 0 AND position < 3)
+// - INDEX on flashcard_id for efficient joins
+```
+
+**SQL Migration**:
+
+```sql
+CREATE TABLE distractors (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  flashcard_id UUID NOT NULL REFERENCES flashcards(id) ON DELETE CASCADE,
+  content VARCHAR(1000) NOT NULL,
+  position INTEGER NOT NULL CHECK (position >= 0 AND position < 3),
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  UNIQUE(flashcard_id, position)
+);
+
+CREATE INDEX idx_distractors_flashcard_id ON distractors(flashcard_id);
+```
 
 ### Existing Entities (No Changes)
 
@@ -22,14 +56,14 @@ This feature requires **no database schema changes**. Distractors are generated 
   question: text,
   answer: text,
   cardType: 'flashcard' | 'multiple_choice' | 'scenario',
-  cardMetadata: jsonb,  // May contain pre-stored distractors (legacy)
+  cardMetadata: jsonb,  // Legacy; distractors now in separate table
   fsrsState: jsonb,     // FSRS algorithm state
   createdAt: timestamp,
   updatedAt: timestamp
 }
 ```
 
-**Note**: `cardMetadata.distractors` may exist from legacy card creation but will be ignored in favor of dynamic generation.
+**Note**: `cardMetadata.distractors` may exist from legacy card creation. New implementation reads from `distractors` table.
 
 #### ReviewLog
 
@@ -47,19 +81,15 @@ This feature requires **no database schema changes**. Distractors are generated 
 }
 ```
 
-### Runtime Entities (Not Persisted)
+### Runtime Entities
 
-#### Distractor Response
+#### Distractor Generation Result
 
 ```typescript
 // lib/ai/distractor-generator.ts
-interface DistractorResponse {
-  distractors: string[] // Exactly 3 plausible incorrect options
-}
-
 interface DistractorGenerationResult {
   success: boolean
-  distractors?: string[]
+  distractors?: string[] // Exactly 3 plausible incorrect options
   error?: string
   generationTimeMs?: number
 }
@@ -78,9 +108,9 @@ interface StudyCard {
   nodeTitle: string
   fsrsState: FSRSState
 
-  // Dynamic generation (not stored)
-  distractors?: string[] // Generated on-demand
-  distractorsFailed?: boolean // Indicates fallback needed
+  // Loaded from distractors table (or generated progressively)
+  distractors?: string[] // 3 distractors if available
+  distractorsFailed?: boolean // Indicates fallback to flip-reveal needed
 }
 ```
 
@@ -113,23 +143,42 @@ Question Displayed
                      └── responseTime > 10s ─► Rating = 2 (Hard)
 ```
 
-### Distractor Generation Flow
+### Distractor Loading Flow (Study Session)
 
 ```
 Study Session Starts (MC Mode)
        │
        ▼
-   Load Next Card
+   Load Due Flashcards with JOIN distractors
+       │
+       ▼
+   For each card without distractors:
+       │
+       ├─── Generate + Persist (API call)
+       │        │
+       │        ├─── Success ──────► Add to response
+       │        │
+       │        └─── Failure ──────► Mark for fallback
+       │
+       ▼
+   Return StudyCard[] (distractors pre-loaded from DB)
+       │
+       ▼
+   Display MC Question (500ms target, no API call)
+```
+
+### Distractor Creation Flow (Flashcard Creation)
+
+```
+Flashcard Created
        │
        ▼
    Generate Distractors (API call)
        │
-       ├─── Success ──────► Display MC Question
+       ├─── Success ──────► Insert into distractors table
        │
-       └─── Failure ──────► Fallback to Flip-Reveal
-                                    │
-                                    ▼
-                           Display FlashcardMode
+       └─── Failure ──────► Log warning, card saved without distractors
+                           (progressive generation on first MC study)
 ```
 
 ## Validation Rules
@@ -170,12 +219,12 @@ function calculateRating(isCorrect: boolean, responseTimeMs: number): 1 | 2 | 3 
 ## Data Volume Assumptions
 
 - **Cards per session**: 10-30 typical
-- **Distractor generation**: 1-2 seconds per card
-- **No persistence**: Zero storage growth from this feature
-- **API calls**: ~1 per card in MC mode (not batched)
+- **Distractor generation**: 1-2 seconds per card (one-time at creation or first MC study)
+- **Storage growth**: 3 distractor rows per flashcard (~3KB per flashcard)
+- **API calls**: 1 per flashcard (at creation or progressive generation), not repeated
 
 ## Backward Compatibility
 
-- Existing `cardMetadata.distractors` in database will be ignored
-- Legacy cards can still use dynamic generation
-- No migration required
+- Existing `cardMetadata.distractors` in database can be migrated to new table if desired (optional)
+- Legacy cards get distractors generated progressively on first MC study
+- No batch migration required - progressive approach handles existing cards

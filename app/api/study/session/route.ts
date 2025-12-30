@@ -9,7 +9,8 @@ import { getDb } from '@/lib/db/pg-client'
 import { flashcards, skillNodes } from '@/lib/db/drizzle-schema'
 import { eq, and, like, isNotNull } from 'drizzle-orm'
 import * as logger from '@/lib/logger'
-import { generateDistractors } from '@/lib/ai/distractor-generator'
+import { generateAndPersistDistractors } from '@/lib/ai/distractor-generator'
+import { getDistractorsForFlashcard } from '@/lib/db/operations/distractors'
 
 /**
  * POST /api/study/session
@@ -193,25 +194,40 @@ export async function POST(request: NextRequest) {
 
         // For MC cards, ensure we have distractors
         if (needsDistractors && effectiveCardType === 'multiple_choice') {
-          if (metadata?.distractors && metadata.distractors.length >= 3) {
-            // Use existing distractors
+          // T10: First try to load distractors from database
+          const dbDistractors = await getDistractorsForFlashcard(card.id)
+
+          if (dbDistractors.length >= 3) {
+            // Use database distractors
+            studyCard.distractors = shuffleArray(dbDistractors.map((d) => d.content))
+            logger.debug('Using database distractors', {
+              cardId: card.id,
+              count: dbDistractors.length,
+            })
+          } else if (metadata?.distractors && metadata.distractors.length >= 3) {
+            // Fallback to metadata distractors
             studyCard.distractors = shuffleArray([...metadata.distractors])
-            logger.debug('Using existing distractors', {
+            logger.debug('Using metadata distractors', {
               cardId: card.id,
               count: metadata.distractors.length,
             })
           } else {
-            // Generate distractors on-the-fly
-            logger.info('Generating distractors for card without them', {
+            // T11: Progressive generation - generate and persist distractors
+            logger.info('Generating and persisting distractors for card without them', {
               cardId: card.id,
+              hasDbDistractors: dbDistractors.length > 0,
               hasMetadata: !!metadata,
               existingDistractors: metadata?.distractors?.length || 0,
             })
             try {
-              const result = await generateDistractors(card.question, card.answer)
+              const result = await generateAndPersistDistractors(
+                card.id,
+                card.question,
+                card.answer
+              )
               if (result.success && result.distractors) {
                 studyCard.distractors = shuffleArray([...result.distractors])
-                logger.info('Generated distractors for card', {
+                logger.info('Generated and persisted distractors for card', {
                   cardId: card.id,
                   generationTimeMs: result.generationTimeMs,
                 })

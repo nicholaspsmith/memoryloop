@@ -100,7 +100,12 @@
       "Bash(mkdir:*)",
       "mcp__serena__find_referencing_symbols",
       "mcp__serena__initial_instructions",
-      "mcp__serena__insert_after_symbol"
+      "mcp__serena__insert_after_symbol",
+      "Bash(mcp__serena__find_symbol /Users/nick/Code/memoryloop/lib/claude/flashcard-generator.ts generateFlashcardsFromContent --include-body)",
+      "mcp__serena__check_onboarding_performed",
+      "mcp__serena__onboarding",
+      "mcp__serena__list_dir",
+      "Skill(3.1.validate)"
     ]
   },
   "enabledMcpjsonServers": [

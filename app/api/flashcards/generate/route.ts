@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { z } from 'zod'
 import { getMessageById } from '@/lib/db/operations/messages'
-import { generateFlashcardsFromContent } from '@/lib/claude/flashcard-generator'
+import {
+  generateFlashcardsFromContent,
+  generateDistractorsForFlashcard,
+} from '@/lib/claude/flashcard-generator'
 import { createFlashcard, getFlashcardsByMessageId } from '@/lib/db/operations/flashcards'
 
 /**
@@ -97,13 +100,21 @@ export async function POST(request: NextRequest) {
     // Note: createFlashcard handles embedding generation via syncFlashcardToLanceDB
     const flashcards = await Promise.all(
       flashcardPairs.map(async (pair) => {
-        return createFlashcard({
+        const flashcard = await createFlashcard({
           userId,
           conversationId: message.conversationId,
           messageId: message.id,
           question: pair.question,
           answer: pair.answer,
         })
+
+        // Generate distractors for multiple-choice mode (non-blocking)
+        // Failures are logged but don't prevent flashcard creation
+        generateDistractorsForFlashcard(flashcard.id, pair.question, pair.answer).catch(() => {
+          // Error already logged in generateDistractorsForFlashcard
+        })
+
+        return flashcard
       })
     )
 

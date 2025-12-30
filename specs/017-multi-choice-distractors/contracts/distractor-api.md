@@ -2,87 +2,100 @@
 
 **Feature**: 017-multi-choice-distractors
 **Date**: 2025-12-29
+**Updated**: 2025-12-29 (reflects spec clarifications for DB persistence)
 
-## Endpoints
+## Overview
 
-### POST /api/study/distractors
+Distractors are **persisted in the database** and loaded with flashcards during study sessions. Generation happens at flashcard creation time or progressively on first MC study. No separate on-demand API endpoint is needed for study sessions.
 
-Generate 3 plausible but incorrect distractors for a flashcard's correct answer.
+## Internal Functions
 
-#### Request
+### Distractor Generation (Internal Function - No HTTP Endpoint)
 
-```typescript
-interface GenerateDistractorsRequest {
-  flashcardId: string // UUID of the flashcard
-  question: string // The flashcard question (for context)
-  answer: string // The correct answer
-}
-```
+> **Note**: This is NOT exposed as an HTTP endpoint. Generation is triggered internally by:
+>
+> - `lib/claude/flashcard-generator.ts` at card creation (T08)
+> - `app/api/study/session/route.ts` for progressive generation (T11)
 
-**Example**:
+Generate and persist 3 distractors for a flashcard.
 
-```json
-{
-  "flashcardId": "550e8400-e29b-41d4-a716-446655440000",
-  "question": "What is the capital of France?",
-  "answer": "Paris"
-}
-```
-
-#### Response
-
-**Success (200 OK)**:
+#### Function Signature
 
 ```typescript
-interface GenerateDistractorsResponse {
-  distractors: [string, string, string] // Exactly 3 distractors
-  generationTimeMs: number // Time taken to generate
-}
+// lib/ai/distractor-generator.ts
+async function generateAndPersistDistractors(
+  flashcardId: string,
+  question: string,
+  answer: string
+): Promise<DistractorResult>
 ```
 
-**Example**:
+#### Input Parameters
 
-```json
-{
-  "distractors": ["London", "Berlin", "Madrid"],
-  "generationTimeMs": 1243
-}
-```
+| Parameter   | Type   | Description                          |
+| ----------- | ------ | ------------------------------------ |
+| flashcardId | string | UUID of the flashcard                |
+| question    | string | The flashcard question (for context) |
+| answer      | string | The correct answer                   |
 
-**Error (500 Internal Server Error)**:
+**Example call**:
 
 ```typescript
-interface DistractorErrorResponse {
-  error: string
-  fallbackRequired: true
+const result = await generateAndPersistDistractors(
+  '550e8400-e29b-41d4-a716-446655440000',
+  'What is the capital of France?',
+  'Paris'
+)
+```
+
+#### Return Value
+
+```typescript
+interface DistractorResult {
+  success: boolean
+  distractors?: [string, string, string] // Exactly 3 distractors
+  error?: string
+  generationTimeMs: number
 }
 ```
 
-**Example**:
+**Success example**:
 
-```json
+```typescript
 {
-  "error": "Claude API timeout",
-  "fallbackRequired": true
+  success: true,
+  distractors: ["London", "Berlin", "Madrid"],
+  generationTimeMs: 1243
 }
 ```
 
-#### Error Codes
+**Error example**:
 
-| Status | Condition               | Client Action            |
-| ------ | ----------------------- | ------------------------ |
-| 200    | Success                 | Use distractors          |
-| 400    | Missing required fields | Fix request              |
-| 401    | Unauthorized            | Re-authenticate          |
-| 500    | Generation failed       | Use flip-reveal fallback |
-| 503    | Claude API unavailable  | Use flip-reveal fallback |
+```typescript
+{
+  success: false,
+  error: "Claude API timeout",
+  generationTimeMs: 5000
+}
+```
 
-#### Rate Limiting
+#### Error Handling
 
-- No explicit rate limiting (relies on Claude API limits)
+| Condition          | Result                           | Caller Action            |
+| ------------------ | -------------------------------- | ------------------------ |
+| Success            | `success: true` with distractors | Use distractors          |
+| Generation failed  | `success: false` with error      | Use flip-reveal fallback |
+| Claude API timeout | `success: false` with error      | Use flip-reveal fallback |
+
+#### Configuration
+
 - Timeout: 5 seconds (fail fast for fallback)
+- Max tokens: 256
+- Temperature: 0.9 (for variety)
 
 ---
+
+## Endpoints
 
 ### POST /api/study/rate (Modified)
 
@@ -201,44 +214,59 @@ interface StudySessionContextValue {
 
 ## Sequence Diagrams
 
-### Happy Path: Multiple Choice Study
+### Happy Path: Multiple Choice Study (Distractors Pre-loaded)
 
 ```
-User              UI                Provider           API              Claude
-  │                │                    │                │                  │
-  │──Start MC──────►                    │                │                  │
-  │                │──startSession()────►                │                  │
-  │                │                    │──POST /session─►                  │
-  │                │                    │◄───cards[]─────│                  │
-  │                │                    │                │                  │
-  │                │◄──card[0]──────────│                │                  │
-  │                │                    │──POST /distract►                  │
-  │                │                    │                │──generate()──────►
-  │                │                    │                │◄──distractors[]──│
-  │                │                    │◄──distractors──│                  │
-  │                │◄──show MC Q────────│                │                  │
-  │                │                    │                │                  │
-  │──select opt────►                    │                │                  │
-  │                │──rateCard(3,4500)──►                │                  │
-  │                │                    │──POST /rate────►                  │
-  │                │                    │◄──success──────│                  │
-  │                │◄──next card────────│                │                  │
+User              UI                Provider           API              DB
+  │                │                    │                │                │
+  │──Start MC──────►                    │                │                │
+  │                │──startSession()────►                │                │
+  │                │                    │──POST /session─►                │
+  │                │                    │                │──SELECT cards──►
+  │                │                    │                │  LEFT JOIN     │
+  │                │                    │                │  distractors   │
+  │                │                    │◄───cards[]─────│◄──with distrs──│
+  │                │                    │  (pre-loaded)  │                │
+  │                │◄──card + distrs────│                │                │
+  │                │◄──show MC Q────────│ (500ms target) │                │
+  │                │                    │                │                │
+  │──select opt────►                    │                │                │
+  │                │──rateCard(3,4500)──►                │                │
+  │                │                    │──POST /rate────►                │
+  │                │                    │◄──success──────│                │
+  │                │◄──next card────────│                │                │
 ```
 
-### Fallback Path: Distractor Generation Fails
+### Progressive Generation: Existing Card Without Distractors
 
 ```
-User              UI                Provider           API              Claude
-  │                │                    │                │                  │
-  │                │◄──card[0]──────────│                │                  │
-  │                │                    │──POST /distract►                  │
-  │                │                    │                │──generate()──────►
-  │                │                    │                │◄──TIMEOUT────────│
-  │                │                    │◄──{error}──────│                  │
-  │                │                    │                │                  │
-  │                │◄──show Flashcard───│ (fallback)     │                  │
-  │                │   mode + toast     │                │                  │
-  │                │                    │                │                  │
-  │──flip & rate───►                    │                │                  │
-  │                │──rateCard(3)───────► (standard flow)│                  │
+User              UI                Provider           API         DB     Claude
+  │                │                    │                │           │        │
+  │──Start MC──────►                    │                │           │        │
+  │                │──startSession()────►                │           │        │
+  │                │                    │──POST /session─►           │        │
+  │                │                    │                │──SELECT───►        │
+  │                │                    │                │◄──no distrs        │
+  │                │                    │                │──generate────────► │
+  │                │                    │                │◄──distractors[]────│
+  │                │                    │                │──INSERT───►        │
+  │                │                    │◄───cards[]─────│◄──OK──────│        │
+  │                │◄──loading indicator│                │           │        │
+  │                │◄──card + distrs────│                │           │        │
+  │                │◄──show MC Q────────│                │           │        │
+```
+
+### Fallback Path: No Distractors Available
+
+```
+User              UI                Provider           API              DB
+  │                │                    │                │                │
+  │                │◄──card (no distrs)─│ (generation    │                │
+  │                │                    │  failed earlier│                │
+  │                │                    │  or timeout)   │                │
+  │                │◄──show Flashcard───│ (fallback)     │                │
+  │                │   mode + toast     │                │                │
+  │                │                    │                │                │
+  │──flip & rate───►                    │                │                │
+  │                │──rateCard(3)───────► (standard flow)│                │
 ```

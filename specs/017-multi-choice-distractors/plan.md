@@ -5,41 +5,32 @@
 
 ## Summary
 
-Enhance the existing multiple choice study mode to generate distractors dynamically at study time using Claude API, implement time-based FSRS rating for correct answers (Hard for slow, Good for fast), and add graceful fallback to flip-reveal mode when distractor generation fails.
-
-**Key Changes from Current Implementation:**
-
-1. **Dynamic Distractors**: Currently stored at card creation time → Generate fresh per session
-2. **Time-Based Rating**: Currently binary (1 or 3) → Add rating 2 for slow correct answers
-3. **Fallback Mode**: Currently requires distractors → Graceful fallback to flip-reveal
+Implement persistent distractor storage for flashcards, enabling multiple choice study mode with AI-generated plausible-but-incorrect answer options. Distractors are generated at flashcard creation time (or progressively for existing cards on first MC study) and stored in a dedicated database table. FSRS ratings are determined by answer correctness and response time (≤10s = Good, >10s = Hard, incorrect = Again).
 
 ## Technical Context
 
-**Language/Version**: TypeScript 5.7.0 / Node.js 20+
-**Primary Dependencies**: Next.js 16.0.10, React 19.2.3, ts-fsrs 5.2.3, @anthropic-ai/sdk 0.71.2
-**Storage**: PostgreSQL (drizzle-orm 0.45.1) for flashcards/sessions; LanceDB for embeddings
-**Testing**: Vitest 4.0.15 (unit), Playwright 1.57.0 (E2E)
+**Language/Version**: TypeScript 5.7.0 (strict mode)
+**Primary Dependencies**: Next.js 16.0.10, React 19.2.3, @anthropic-ai/sdk 0.71.2 (Claude API), ts-fsrs 5.2.3, drizzle-orm 0.45.1
+**Storage**: PostgreSQL via postgres 3.4.7 + drizzle-orm (distractors persisted to new table)
+**Testing**: Vitest 4.0.15 (unit/integration), Playwright 1.57.0 (E2E)
 **Target Platform**: Web application (Next.js App Router)
-**Project Type**: Web application (full-stack Next.js)
-**Performance Goals**: Distractor generation < 2 seconds, 90%+ distractor relevance
-**Constraints**: AI API latency (~1-2s per request), must not block study flow
-**Scale/Scope**: Single-user study sessions, ~20 cards per session typical
+**Project Type**: Web application (monorepo with frontend + API routes)
+**Performance Goals**: MC question display within 500ms (distractors pre-loaded from DB)
+**Constraints**: 10-second response time threshold for FSRS rating, distractor generation timeout 10s
+**Scale/Scope**: User-specific flashcards, 3 distractors per card, progressive generation for existing cards
 
 ## Constitution Check
 
 _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-| Principle              | Status  | Evidence                                                                       |
-| ---------------------- | ------- | ------------------------------------------------------------------------------ |
-| I. Documentation-First | PASS    | Spec complete with 3 user stories, 13 FRs, 6 success criteria                  |
-| II. Test-First (TDD)   | PASS    | Test Strategy section defines unit/integration/E2E tests before implementation |
-| III. Modularity        | PASS    | Feature isolated to distractor service + component updates                     |
-| IV. Simplicity (YAGNI) | PASS    | No new database tables; reuses existing patterns                               |
-| V. Observability       | PASS    | Logging strategy defined with INFO/WARN/DEBUG levels                           |
-| VI. Atomic Commits     | PENDING | Will follow .claude/rules.md during implementation                             |
-
-**Initial Gate**: PASS - Proceed to Phase 0
-**Post-Design Gate**: PASS - All principles satisfied or documented
+| Principle              | Status   | Evidence                                                                               |
+| ---------------------- | -------- | -------------------------------------------------------------------------------------- |
+| I. Documentation-First | ✅ PASS  | Spec complete with user stories, acceptance criteria, FRs, and clarifications          |
+| II. Test-First (TDD)   | ✅ READY | Tests will be written before implementation per task ordering                          |
+| III. Modularity        | ✅ PASS  | Clear separation: distractor-generator service, DB operations, UI component            |
+| IV. Simplicity (YAGNI) | ✅ PASS  | Single distractor table, no over-engineering; uses existing FSRS/Claude infrastructure |
+| V. Observability       | ✅ PASS  | Existing logging patterns will be extended for distractor generation                   |
+| VI. Atomic Commits     | ✅ READY | Implementation will follow .claude/rules.md commit discipline                          |
 
 ## Project Structure
 
@@ -47,225 +38,172 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 ```text
 specs/017-multi-choice-distractors/
-├── spec.md              # Feature specification (complete)
 ├── plan.md              # This file
 ├── research.md          # Phase 0 output
 ├── data-model.md        # Phase 1 output
 ├── quickstart.md        # Phase 1 output
 ├── contracts/           # Phase 1 output
-│   └── distractor-api.md
-└── tasks.md             # Phase 2 output (via /speckit.tasks)
+└── tasks.md             # Phase 2 output (/speckit.tasks command)
 ```
 
 ### Source Code (repository root)
 
 ```text
+# Next.js App Router structure
+app/
+├── api/
+│   ├── study/
+│   │   ├── session/route.ts    # Load cards with distractors (see contracts/distractor-api.md:Sequence Diagrams)
+│   │   └── rate/route.ts       # Time-based rating (see contracts/distractor-api.md:POST /api/study/rate)
+│   └── flashcards/
+│       └── distractors/route.ts # Internal distractor generation (see contracts/distractor-api.md:POST /api/study/distractors)
+
+components/
+├── study/
+│   ├── MultipleChoiceMode.tsx  # MC UI with timer (see contracts/distractor-api.md:MultipleChoiceMode Props)
+│   ├── StudySessionProvider.tsx # Distractor state management (see contracts/distractor-api.md:Study Session Provider)
+│   └── MixedMode.tsx           # Fallback routing (see research.md:Fallback Strategy)
+
 lib/
 ├── ai/
-│   ├── card-generator.ts          # Existing - card generation orchestration
-│   └── distractor-generator.ts    # NEW - on-demand distractor generation
+│   └── distractor-generator.ts # Generation + persistence (see contracts/distractor-api.md:Distractor Generator Service)
 ├── claude/
-│   └── client.ts                  # Existing - Claude API client
-├── fsrs/
-│   ├── scheduler.ts               # Existing - FSRS scheduling
-│   └── utils.ts                   # Existing - rating utilities
+│   └── flashcard-generator.ts  # Integrate distractor gen at card creation (see research.md:Generation Trigger Points)
+├── db/
+│   ├── drizzle-schema.ts       # Add distractors table (see data-model.md:New Entity: Distractor)
+│   └── operations/
+│       ├── flashcards.ts       # Enhance for distractors JOIN
+│       └── distractors.ts      # CRUD operations (see quickstart.md:Section 2)
+└── fsrs/
+    └── scheduler.ts            # Existing - no changes needed
 
-components/study/
-├── MultipleChoiceMode.tsx         # MODIFY - add time tracking, fallback
-├── StudySessionProvider.tsx       # MODIFY - integrate dynamic distractors
-├── FlashcardMode.tsx              # Existing - fallback mode
-└── MixedMode.tsx                  # MODIFY - improved fallback routing
-
-app/api/study/
-├── session/route.ts               # MODIFY - dynamic distractor generation
-├── rate/route.ts                  # MODIFY - time-based rating logic
-└── distractors/route.ts           # NEW - on-demand distractor endpoint
+drizzle/
+└── migrations/                 # Migration SQL (see data-model.md:SQL Migration)
 
 tests/
 ├── unit/
-│   └── lib/ai/distractor-generator.test.ts  # NEW
+│   └── distractor-generator.test.ts  # US2: Distractor quality validation
 ├── integration/
-│   └── study/multi-choice-rating.test.ts    # NEW
+│   ├── study-session.test.ts         # US1: MC study flow, US3: Fallback
+│   └── flashcard-creation.test.ts    # FR-009: Generation at creation
 └── e2e/
-    └── study/multi-choice-session.spec.ts   # NEW
+    └── multiple-choice-study.spec.ts # US1: Full MC session with FSRS
 ```
 
-**Structure Decision**: Web application with API routes + React components. No new database tables required - distractors generated on-demand and not persisted.
+**Structure Decision**: Next.js App Router with API routes. Distractors stored in dedicated PostgreSQL table linked to flashcards. Existing MultipleChoiceMode component enhanced rather than replaced.
 
 ## Complexity Tracking
 
-> No constitution violations requiring justification. Implementation follows YAGNI by:
->
-> - Reusing existing Claude client instead of new AI service
-> - Not adding database tables for ephemeral distractors
-> - Leveraging existing FSRS rating infrastructure
+> No complexity violations identified. Implementation uses existing patterns and infrastructure.
+
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+| --------- | ---------- | ------------------------------------ |
+| (none)    | -          | -                                    |
 
 ## Core Implementation Steps
 
-### Step 1: Distractor Generator Service (Blocking)
+### Phase 1: Database Layer
 
-**Files**: `lib/ai/distractor-generator.ts` (NEW)
-**References**: [research.md §1 Distractor Generation Strategy](./research.md), [contracts/distractor-api.md §Distractor Generator Service](./contracts/distractor-api.md)
+1. **Add Drizzle schema** definition in `lib/db/drizzle-schema.ts` (see `data-model.md:New Entity: Distractor`)
+2. **Generate migration** using `npx drizzle-kit generate` - creates SQL file in `drizzle/` directory
+3. **Test migration locally** with `npm run db:migrate`
+4. **Create CRUD operations** in `lib/db/operations/distractors.ts` (see `quickstart.md:Section 2`)
+5. **Write unit tests** for distractor CRUD operations
 
-Create the core distractor generation service:
+> **Deployment Note**: Migrations auto-apply on production deploy via `npm start` script (`drizzle-kit migrate && next start`). The new migration file in `drizzle/` will be applied automatically when the Docker container starts.
 
-- `generateDistractors(question, answer, options)` → `DistractorResult`
-- Prompt engineering per research.md prompt design
-- Validation function `validateDistractors()` per data-model.md
-- Error handling with fallback trigger
-- 5-second timeout for fail-fast behavior
+### Phase 2: Generation Layer
 
-**Implements**: FR-003, FR-004, FR-009, FR-010
+6. **Enhance distractor-generator.ts** to include persistence after generation (see `contracts/distractor-api.md:Distractor Generator Service`)
+7. **Write unit tests** for generation logic and validation (see `data-model.md:Validation Rules`)
+8. **Integrate into flashcard-generator.ts** to generate distractors at flashcard creation (see `research.md:Distractor Generation Trigger Points`)
+9. **Write integration tests** for flashcard creation with distractors
 
-### Step 2: Distractor API Endpoint (Blocking)
+### Phase 3: Session Integration
 
-**Files**: `app/api/study/distractors/route.ts` (NEW)
-**References**: [contracts/distractor-api.md §POST /api/study/distractors](./contracts/distractor-api.md)
+10. **Modify session/route.ts** to load distractors via LEFT JOIN (see `contracts/distractor-api.md:Sequence Diagrams`)
+11. **Add progressive generation** logic for cards without distractors (see `data-model.md:Distractor Loading Flow`)
+12. **Write integration tests** for session loading with/without distractors
 
-Create the on-demand distractor endpoint:
+### Phase 4: UI Enhancement
 
-- POST handler with request validation
-- Call `generateDistractors()` from Step 1
-- Return structured response with `generationTimeMs`
-- Error responses with `fallbackRequired: true`
+13. **Add loading state** to MultipleChoiceMode for progressive generation (FR-015)
+14. **Update StudySessionProvider** for distractor state management (see `contracts/distractor-api.md:Study Session Provider`)
+15. **Implement fallback routing** in MixedMode with toast notification (see `research.md:Fallback Strategy`)
+16. **Write E2E tests** for full MC study flow
 
-**Implements**: FR-009
+### Phase 5: Rating Integration
 
-### Step 3: MultipleChoiceMode Timer (Parallel with Step 4-6)
+17. **Verify time-based rating** in rate/route.ts (see `contracts/distractor-api.md:Time-Based Rating Logic`)
+18. **Write integration tests** for rating calculations (correct fast, correct slow, incorrect)
 
-**Files**: `components/study/MultipleChoiceMode.tsx` (MODIFY)
-**References**: [data-model.md §Card Rating Flow](./data-model.md), [research.md §2 Response Time Thresholds](./research.md)
-
-Add response time tracking:
-
-- `useRef` to capture question display timestamp (FR-013)
-- Calculate `responseTimeMs` on answer selection
-- Pass time to `onRate` callback
-- Time-based rating: ≤10s → Good(3), >10s → Hard(2), incorrect → Again(1)
-
-**Implements**: FR-007, FR-008, FR-013
-
-### Step 4: Study Session Provider Integration (Parallel with Step 3, 5-6)
-
-**Files**: `components/study/StudySessionProvider.tsx` (MODIFY)
-**References**: [contracts/distractor-api.md §Study Session Provider](./contracts/distractor-api.md), [contracts/distractor-api.md §Sequence Diagrams](./contracts/distractor-api.md)
-
-Integrate dynamic distractor fetching:
-
-- Add `currentDistractors`, `distractorsLoading`, `distractorsFailed` state
-- Fetch distractors on card navigation
-- Handle API errors → set `distractorsFailed`
-- Pass distractors to `MultipleChoiceMode`
-
-**Implements**: FR-009, FR-011
-
-### Step 5: Fallback Routing (Parallel with Step 3-4, 6)
-
-**Files**: `components/study/MixedMode.tsx` (MODIFY)
-**References**: [research.md §4 Fallback Strategy](./research.md)
-
-Improve fallback to flip-reveal:
-
-- Check `distractorsFailed` flag
-- Route to `FlashcardMode` when true
-- Show toast notification: "Showing as flashcard (distractors unavailable)"
-- Standard 1-4 rating in fallback mode
-
-**Implements**: FR-011
-
-### Step 6: Rate Endpoint Time-Based Logic (Parallel with Step 3-5)
-
-**Files**: `app/api/study/rate/route.ts` (MODIFY)
-**References**: [contracts/distractor-api.md §POST /api/study/rate](./contracts/distractor-api.md)
-
-Add time-based rating for MC mode:
-
-- Accept `responseTimeMs` and `studyMode` in request
-- When `studyMode === 'multiple_choice'`: calculate rating server-side
-- Apply threshold: ≤10,000ms → 3, >10,000ms → 2, incorrect → 1
-
-**Implements**: FR-007, FR-008
-
-### Dependency Graph
+## Task Dependencies
 
 ```
-Step 1 (distractor-generator.ts)
-    │
-    ▼
-Step 2 (distractors/route.ts)
-    │
-    ├──────────────────┬──────────────────┬──────────────────┐
-    ▼                  ▼                  ▼                  ▼
-Step 3             Step 4             Step 5             Step 6
-(MC timer)     (Provider)        (Fallback)         (Rate API)
-    │                  │                  │                  │
-    └──────────────────┴──────────────────┴──────────────────┘
-                              │
-                              ▼
-                     Integration Tests
-                              │
-                              ▼
-                        E2E Tests
+Phase 1 (Database)          Phase 2 (Generation)           Phase 3 (Session)
+┌─────────────────┐         ┌─────────────────┐           ┌─────────────────┐
+│ 1. Schema       │────────►│ 6. Generator    │──────────►│ 10. Session Load│
+│ 2. Generate Mig │         │    Enhancement  │           │ 11. Progressive │
+│ 3. Test Migrate │         │ 8. Flashcard    │           │     Generation  │
+│ 4. CRUD Ops     │────────►│    Integration  │           │ 12. Session     │
+│ 5. CRUD Tests   │         │ 7,9. Tests      │           │     Tests       │
+└─────────────────┘         └─────────────────┘           └─────────────────┘
+                                                                   │
+                                                                   ▼
+Phase 5 (Rating)            Phase 4 (UI)                  Production Deploy
+┌─────────────────┐         ┌─────────────────┐           ┌─────────────────┐
+│ 17. Rating      │◄────────│ 13. Loading UI  │           │ Migration auto- │
+│     Logic       │         │ 14. Provider    │           │ applies via     │
+│ 18. Rating      │         │ 15. Fallback    │           │ npm start       │
+│     Tests       │         │ 16. E2E Tests   │           └─────────────────┘
+└─────────────────┘         └─────────────────┘
 ```
 
-**Parallel Work**: Steps 3-6 can be developed in parallel after Steps 1-2 complete.
+**Blocking Dependencies:**
 
-## Test Strategy
+- Steps 1-4 MUST complete before Step 6 (generator needs schema + CRUD ops)
+- Step 6 MUST complete before Step 10 (session needs generator)
+- Steps 10-11 MUST complete before Step 13 (UI needs session API)
 
-**References**: [quickstart.md §Testing Checklist](./quickstart.md)
+**Parallel Opportunities:**
 
-### Unit Tests (TDD - Write First)
+- Steps 1-2 (schema + migration) are sequential but fast
+- Step 5 (CRUD tests) can run parallel with Step 6 (generator)
+- Phase 5 (rating) can run parallel with Phase 4 (UI) after Phase 3
 
-| Test File                                        | Coverage                                                      |
-| ------------------------------------------------ | ------------------------------------------------------------- |
-| `tests/unit/lib/ai/distractor-generator.test.ts` | Generation logic, validation, prompt building, error handling |
+**Production Deployment:**
 
-**Key Test Cases**:
+- Migration file (`drizzle/XXXX_add_distractors.sql`) is committed to repo
+- On deploy, `npm start` runs `drizzle-kit migrate` before starting Next.js
+- Migration applies automatically - no manual steps required
 
-- Returns exactly 3 distractors
-- Distractors are distinct from correct answer
-- Handles Claude API timeout gracefully
-- Validates JSON response format
+## Test Mapping (TDD Compliance)
 
-### Integration Tests
+| User Story              | Acceptance Scenarios | Test Files                                                                           |
+| ----------------------- | -------------------- | ------------------------------------------------------------------------------------ |
+| US1: MC Study Mode      | AS1-5                | `tests/e2e/multiple-choice-study.spec.ts`, `tests/integration/study-session.test.ts` |
+| US2: Distractor Quality | AS1-3                | `tests/unit/distractor-generator.test.ts`                                            |
+| US3: Fallback           | AS1-2                | `tests/integration/study-session.test.ts` (fallback scenarios)                       |
 
-| Test File                                             | Coverage                                    |
-| ----------------------------------------------------- | ------------------------------------------- |
-| `tests/integration/study/multi-choice-rating.test.ts` | Time-based rating calculation, FSRS updates |
-
-**Key Test Cases**:
-
-- Fast correct (≤10s) → rating 3
-- Slow correct (>10s) → rating 2
-- Incorrect → rating 1
-- FSRS state updates correctly
-
-### E2E Tests
-
-| Test File                                      | Coverage                   |
-| ---------------------------------------------- | -------------------------- |
-| `tests/e2e/study/multi-choice-session.spec.ts` | Full MC study session flow |
-
-**Key Test Cases**:
-
-- Start MC session, answer questions, complete
-- Verify distractors appear shuffled
-- Fallback to flashcard on API failure
-- Session summary reflects ratings
+| Functional Requirement          | Test Coverage                                  |
+| ------------------------------- | ---------------------------------------------- |
+| FR-001 to FR-006 (MC Display)   | `tests/e2e/multiple-choice-study.spec.ts`      |
+| FR-007, FR-008, FR-013 (Rating) | `tests/integration/study-session.test.ts`      |
+| FR-009 (Create-time gen)        | `tests/integration/flashcard-creation.test.ts` |
+| FR-014, FR-015 (Progressive)    | `tests/integration/study-session.test.ts`      |
+| FR-011 (Fallback)               | `tests/integration/study-session.test.ts`      |
 
 ## Observability
 
-### Logging Strategy
+**Logging Points:**
 
-| Event                         | Log Level | Fields                                                 |
-| ----------------------------- | --------- | ------------------------------------------------------ |
-| Distractor generation start   | INFO      | `flashcardId`, `questionLength`                        |
-| Distractor generation success | INFO      | `flashcardId`, `generationTimeMs`                      |
-| Distractor generation failure | WARN      | `flashcardId`, `error`, `fallbackTriggered`            |
-| Time-based rating applied     | DEBUG     | `flashcardId`, `responseTimeMs`, `rating`, `threshold` |
+- `distractor-generator.ts`: Log generation start, success/failure, duration
+- `session/route.ts`: Log progressive generation triggers, fallback decisions
+- `rate/route.ts`: Log rating adjustments (fast→Good, slow→Hard, incorrect→Again)
 
-### Metrics (Future)
+**Metrics to Track:**
 
-- `distractor_generation_duration_ms` - histogram
-- `distractor_generation_failures_total` - counter
-- `mc_fallback_rate` - gauge (failures / total)
+- Distractor generation success rate
+- Average generation time
+- Fallback frequency
+- Response time distribution for rating thresholds
