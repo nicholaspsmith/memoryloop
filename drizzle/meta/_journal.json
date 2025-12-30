@@ -43,6 +43,27 @@
       "when": 1766878202953,
       "tag": "0005_small_purifiers",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1767059217016,
+      "tag": "0006_remove_api_keys",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1767059400000,
+      "tag": "0007_add_flashcard_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1735536000000,
+      "tag": "0008_add_distractors",
+      "breakpoints": true
     }
   ]
 }

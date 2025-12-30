@@ -9,6 +9,8 @@ import { getDb } from '@/lib/db/pg-client'
 import { flashcards, skillNodes } from '@/lib/db/drizzle-schema'
 import { eq, and, like, isNotNull } from 'drizzle-orm'
 import * as logger from '@/lib/logger'
+import { generateAndPersistDistractors } from '@/lib/ai/distractor-generator'
+import { getDistractorsForFlashcard } from '@/lib/db/operations/distractors'
 
 /**
  * POST /api/study/session
@@ -61,6 +63,8 @@ export async function POST(request: NextRequest) {
 
     const { goalId, mode, nodeId, cardLimit } = parseResult.data
 
+    logger.info('Starting study session', { goalId, mode, nodeId, cardLimit })
+
     // Validate goal belongs to user
     const goal = await getGoalByIdForUser(goalId, session.user.id)
     if (!goal) {
@@ -109,6 +113,7 @@ export async function POST(request: NextRequest) {
       .where(
         and(
           eq(flashcards.userId, session.user.id),
+          eq(flashcards.status, 'active'),
           isNotNull(flashcards.skillNodeId),
           filterPath ? like(skillNodes.path, `${filterPath}%`) : undefined
         )
@@ -153,35 +158,101 @@ export async function POST(request: NextRequest) {
     }
 
     // Format cards for study
-    const studyCards: StudyCard[] = dueCards.map((card) => {
-      const fsrs = card.fsrsState as Record<string, unknown>
-      const metadata = card.cardMetadata as { distractors?: string[] } | null
+    // For mixed mode, randomly assign ~50% as multiple choice
+    // For MC/mixed/timed modes, generate distractors if not present
+    const needsDistractors = mode === 'multiple_choice' || mode === 'mixed' || mode === 'timed'
 
-      const studyCard: StudyCard = {
-        id: card.id,
-        question: card.question,
-        answer: card.answer,
-        cardType: card.cardType as 'flashcard' | 'multiple_choice',
-        nodeId: card.skillNodeId!,
-        nodeTitle: card.nodeTitle,
-        fsrsState: {
-          state: ['New', 'Learning', 'Review', 'Relearning'][fsrs.state as number] || 'New',
-          due: new Date(fsrs.due as number).toISOString(),
-          stability: (fsrs.stability as number) || 0,
-          difficulty: (fsrs.difficulty as number) || 0,
-        },
-      }
+    const studyCards: StudyCard[] = await Promise.all(
+      dueCards.map(async (card) => {
+        const fsrs = card.fsrsState as Record<string, unknown>
+        const metadata = card.cardMetadata as { distractors?: string[] } | null
 
-      // Add distractors for MC mode if available
-      if (
-        (mode === 'multiple_choice' || mode === 'mixed' || mode === 'timed') &&
-        metadata?.distractors
-      ) {
-        studyCard.distractors = shuffleArray([...metadata.distractors])
-      }
+        // For mixed mode, randomly decide if card should be MC (50% chance)
+        let effectiveCardType: 'flashcard' | 'multiple_choice' = card.cardType as
+          | 'flashcard'
+          | 'multiple_choice'
+        if (mode === 'mixed') {
+          effectiveCardType = Math.random() < 0.5 ? 'multiple_choice' : 'flashcard'
+        } else if (mode === 'multiple_choice') {
+          effectiveCardType = 'multiple_choice'
+        }
 
-      return studyCard
-    })
+        const studyCard: StudyCard = {
+          id: card.id,
+          question: card.question,
+          answer: card.answer,
+          cardType: effectiveCardType,
+          nodeId: card.skillNodeId!,
+          nodeTitle: card.nodeTitle,
+          fsrsState: {
+            state: ['New', 'Learning', 'Review', 'Relearning'][fsrs.state as number] || 'New',
+            due: new Date(fsrs.due as number).toISOString(),
+            stability: (fsrs.stability as number) || 0,
+            difficulty: (fsrs.difficulty as number) || 0,
+          },
+        }
+
+        // For MC cards, ensure we have distractors
+        if (needsDistractors && effectiveCardType === 'multiple_choice') {
+          // T10: First try to load distractors from database
+          const dbDistractors = await getDistractorsForFlashcard(card.id)
+
+          if (dbDistractors.length >= 3) {
+            // Use database distractors
+            studyCard.distractors = shuffleArray(dbDistractors.map((d) => d.content))
+            logger.debug('Using database distractors', {
+              cardId: card.id,
+              count: dbDistractors.length,
+            })
+          } else if (metadata?.distractors && metadata.distractors.length >= 3) {
+            // Fallback to metadata distractors
+            studyCard.distractors = shuffleArray([...metadata.distractors])
+            logger.debug('Using metadata distractors', {
+              cardId: card.id,
+              count: metadata.distractors.length,
+            })
+          } else {
+            // T11: Progressive generation - generate and persist distractors
+            logger.info('Generating and persisting distractors for card without them', {
+              cardId: card.id,
+              hasDbDistractors: dbDistractors.length > 0,
+              hasMetadata: !!metadata,
+              existingDistractors: metadata?.distractors?.length || 0,
+            })
+            try {
+              const result = await generateAndPersistDistractors(
+                card.id,
+                card.question,
+                card.answer
+              )
+              if (result.success && result.distractors) {
+                studyCard.distractors = shuffleArray([...result.distractors])
+                logger.info('Generated and persisted distractors for card', {
+                  cardId: card.id,
+                  generationTimeMs: result.generationTimeMs,
+                })
+              } else {
+                // Fallback to flashcard if generation fails
+                studyCard.cardType = 'flashcard'
+                logger.warn('Distractor generation failed, falling back to flashcard', {
+                  cardId: card.id,
+                  error: result.error,
+                })
+              }
+            } catch (error) {
+              // Fallback to flashcard on error
+              studyCard.cardType = 'flashcard'
+              logger.warn('Distractor generation error, falling back to flashcard', {
+                cardId: card.id,
+                error: error instanceof Error ? error.message : 'Unknown error',
+              })
+            }
+          }
+        }
+
+        return studyCard
+      })
+    )
 
     // Shuffle cards for variety
     const shuffledCards = shuffleArray(studyCards)

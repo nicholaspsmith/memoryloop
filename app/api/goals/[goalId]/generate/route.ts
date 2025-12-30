@@ -6,6 +6,7 @@ import { getSkillTreeByGoalId } from '@/lib/db/operations/skill-trees'
 import { getSkillNodeById } from '@/lib/db/operations/skill-nodes'
 import { generateCards, generateMixedCards } from '@/lib/ai/card-generator'
 import * as logger from '@/lib/logger'
+import { createDraftFlashcards, deleteNodeDrafts } from '@/lib/db/operations/flashcards'
 
 /**
  * POST /api/goals/[goalId]/generate
@@ -75,6 +76,12 @@ export async function POST(
       return NextResponse.json({ error: 'Node not found in this goal' }, { status: 404 })
     }
 
+    // Delete any existing drafts for this node before generating new ones
+    const deletedCount = await deleteNodeDrafts(nodeId, session.user.id)
+    if (deletedCount > 0) {
+      logger.info('Deleted existing drafts', { nodeId, deletedCount })
+    }
+
     const startTime = Date.now()
 
     logger.info('Card generation started', {
@@ -111,26 +118,55 @@ export async function POST(
       })
     }
 
-    // Transform to preview format with tempIds
-    const cards: GeneratedCard[] = result.cards.map((card, index) => {
-      const base: GeneratedCard = {
-        tempId: `temp-${Date.now()}-${index}`,
-        question: card.question,
+    // Save generated cards as drafts to the database
+    const draftInputs = result.cards.map((card) => {
+      let question = card.question
+      let context: string | undefined
+
+      // For scenario cards, prepend context to question
+      if (card.cardType === 'scenario' && 'context' in card) {
+        question = `${card.context}\n\n${card.question}`
+        context = card.context
+      }
+
+      return {
+        userId: session.user!.id,
+        skillNodeId: nodeId,
+        question,
         answer: card.answer,
-        cardType: card.cardType === 'scenario' ? 'flashcard' : card.cardType,
+        cardType: (card.cardType === 'scenario' ? 'flashcard' : card.cardType) as
+          | 'flashcard'
+          | 'multiple_choice'
+          | 'scenario',
+        distractors:
+          card.cardType === 'multiple_choice' && 'distractors' in card
+            ? card.distractors
+            : undefined,
+        context,
+      }
+    })
+
+    const draftCards = await createDraftFlashcards(draftInputs)
+
+    // Transform to preview format with real IDs
+    const cards: GeneratedCard[] = draftCards.map((draft, index) => {
+      const originalCard = result.cards[index]
+      const base: GeneratedCard = {
+        tempId: draft.id, // Use real database ID
+        question: draft.question,
+        answer: draft.answer,
+        cardType: draft.cardType as 'flashcard' | 'multiple_choice',
         approved: true, // Default to approved, user can uncheck
         edited: false,
       }
 
       // Add type-specific fields
-      if (card.cardType === 'multiple_choice' && 'distractors' in card) {
-        base.distractors = card.distractors
+      if (draft.cardMetadata?.distractors) {
+        base.distractors = draft.cardMetadata.distractors
       }
 
-      if (card.cardType === 'scenario' && 'context' in card) {
-        // Prepend context to question for scenario cards
-        base.question = `${card.context}\n\n${card.question}`
-        base.context = card.context
+      if (originalCard.cardType === 'scenario' && 'context' in originalCard) {
+        base.context = originalCard.context
       }
 
       return base
@@ -138,7 +174,7 @@ export async function POST(
 
     const generationTimeMs = Date.now() - startTime
 
-    logger.info('Card generation completed', {
+    logger.info('Card generation completed (saved as drafts)', {
       goalId,
       nodeId,
       nodeTitle: node.title,
@@ -156,6 +192,7 @@ export async function POST(
         generationTimeMs,
         model: result.metadata.model,
         retryCount: result.metadata.retryCount,
+        savedAsDrafts: true,
       },
     })
   } catch (error) {

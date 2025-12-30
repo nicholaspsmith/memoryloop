@@ -215,6 +215,17 @@ export default function GoalDetailPage({ params }: { params: Promise<{ goalId: s
 
   return (
     <div className="flex flex-col h-full p-6 max-w-7xl mx-auto">
+      {/* Back Button */}
+      <Link
+        href="/goals"
+        className="text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1 mb-4"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        </svg>
+        Back to Goals
+      </Link>
+
       {/* Header */}
       <div className="mb-6 flex items-start justify-between">
         <div className="flex items-start gap-6">

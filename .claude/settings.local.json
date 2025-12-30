@@ -17,7 +17,6 @@
       "Bash(npm run test:unit:*)",
       "Bash(npm run)",
       "Bash(test:*)",
-      "Bash(for task in 'Provision VPS (Hetzner CX22 or DigitalOcean Droplet)' 'Configure firewall (UFW)' 'Install Docker and Docker Compose on VPS' 'Create deploy user with SSH key authentication' 'Configure SSH hardening' 'Create directory structure on VPS' 'Create Nginx configuration for reverse proxy' 'Install Certbot on VPS for SSL certificates' 'Configure DNS A record for memoryloop.nicholaspsmith.com' 'Obtain SSL certificate using Certbot' 'Configure Nginx SSL settings' 'Set up automatic SSL certificate renewal')",
       "Bash(cat:*)",
       "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
       "Bash(.specify/scripts/bash/setup-plan.sh:*)",
@@ -39,8 +38,8 @@
       "Bash(git stash:*)",
       "Bash(git checkout:*)",
       "Bash(git pull:*)",
-      "Bash(if [ -d \"/Users/nick/Code/memoryloop/specs/001-lancedb-schema-fixes/checklists\" ])",
-      "Bash(then find /Users/nick/Code/memoryloop/specs/001-lancedb-schema-fixes/checklists -name \"*.md\" -type f)",
+      "Bash(git rebase:*)",
+      "Bash(git push --force-with-lease:*)",
       "Bash(else echo \"No checklists directory found\")",
       "Bash(fi)",
       "Bash(git rev-parse:*)",
@@ -99,8 +98,14 @@
       "Bash(sed -i:*)",
       "Bash(find:*)",
       "Bash(mkdir:*)",
-      "Bash(# Fix outdated comment in flashcards route and check goals routes sed -i '''' ''s/Uses server-side ANTHROPIC_API_KEY if available, otherwise falls back to Ollama/Uses server-side ANTHROPIC_API_KEY for content generation/'' /Users/nick/Code/memoryloop/app/api/flashcards/generate/route.ts && \\\\ # Check goals routes for API key usage grep -n \"\"ANTHROPIC_API_KEY\\\\|getOllamaUrl\\\\|ollama\\\\|streamChatCompletion\\\\|generateSkillTree\"\" /Users/nick/Code/memoryloop/app/api/goals/*/generate/route.ts)",
-      "Bash(# Check what the goals routes import and use grep -l \"\"ollama\\\\|Ollama\\\\|OLLAMA\"\" /Users/nick/Code/memoryloop/app/api/goals/**/*.ts /Users/nick/Code/memoryloop/lib/**/*.ts || echo \"\"No ollama references in main code\"\" && \\\\ # Run npm run build to verify no Ollama imports \\(T036\\) echo \"\"=== Running build ===\"\" && \\\\ npm run build 2>&1)"
+      "mcp__serena__find_referencing_symbols",
+      "mcp__serena__initial_instructions",
+      "mcp__serena__insert_after_symbol",
+      "Bash(mcp__serena__find_symbol /Users/nick/Code/memoryloop/lib/claude/flashcard-generator.ts generateFlashcardsFromContent --include-body)",
+      "mcp__serena__check_onboarding_performed",
+      "mcp__serena__onboarding",
+      "mcp__serena__list_dir",
+      "Skill(3.1.validate)"
     ]
   },
   "enabledMcpjsonServers": [
