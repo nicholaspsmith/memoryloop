@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+// @vitest-environment node
+import { describe, it, expect, beforeAll, afterAll, vi, beforeEach } from 'vitest'
 import { closeDbConnection } from '@/lib/db/client'
 import { createUser } from '@/lib/db/operations/users'
 import { createConversation } from '@/lib/db/operations/conversations'
@@ -9,7 +10,7 @@ import {
   getFlashcardsByUserId,
   deleteFlashcard,
 } from '@/lib/db/operations/flashcards'
-import { generateFlashcardsFromContent } from '@/lib/claude/flashcard-generator'
+import type { Mock } from 'vitest'
 
 /**
  * Integration Tests for Flashcard Generation Flow
@@ -17,47 +18,34 @@ import { generateFlashcardsFromContent } from '@/lib/claude/flashcard-generator'
  * Tests the complete flashcard generation workflow from content analysis
  * to database persistence and retrieval.
  *
- * Requires Ollama to be running for LLM-based flashcard generation.
+ * Uses mocked Claude API responses to avoid real API calls.
  *
  * Maps to FR-008, FR-009, FR-010, FR-017, FR-018, FR-019
  */
 
-// Check if Ollama is available with a working model
-async function isOllamaAvailable(): Promise<boolean> {
-  try {
-    const response = await fetch('http://localhost:11434/api/tags', {
-      signal: AbortSignal.timeout(2000),
-    })
-    if (!response.ok) return false
+// Mock the Claude client to prevent real API calls
+vi.mock('@/lib/claude/client', () => ({
+  getChatCompletion: vi.fn(),
+}))
 
-    // Check that at least one model is available
-    const data = await response.json()
-    const hasModels = data.models && data.models.length > 0
-    if (!hasModels) {
-      console.log('Ollama running but no models available')
-      return false
-    }
-    return true
-  } catch {
-    return false
-  }
-}
+import { generateFlashcardsFromContent } from '@/lib/claude/flashcard-generator'
+import { getChatCompletion } from '@/lib/claude/client'
 
-// Run sequentially to avoid Ollama resource contention
+// Cast to access mock methods
+const mockGetChatCompletion = getChatCompletion as Mock
+
+// Run sequentially to avoid database conflicts
 describe.sequential('Flashcard Generation Flow Integration', () => {
   let testUserId: string
   let testConversationId: string
   let educationalMessageId: string
   let conversationalMessageId: string
-  let ollamaAvailable = false
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
 
   beforeAll(async () => {
-    // Check Ollama availability first
-    ollamaAvailable = await isOllamaAvailable()
-    if (!ollamaAvailable) {
-      console.log('Ollama not available - some tests will be skipped')
-    }
-
     // Create test user
     const passwordHash = await hashPassword('TestPass123!')
     const user = await createUser({
@@ -107,10 +95,32 @@ Photosynthesis is essential for life on Earth because it produces oxygen and for
   })
 
   it('should generate flashcards from educational content', async function () {
-    if (!ollamaAvailable) {
-      console.log('Skipping: Ollama not available')
-      return
-    }
+    // Mock successful Claude response with photosynthesis flashcards
+    mockGetChatCompletion.mockResolvedValue(
+      JSON.stringify([
+        {
+          question: 'What is photosynthesis?',
+          answer:
+            'The process by which plants convert light energy into chemical energy stored in glucose.',
+        },
+        {
+          question: 'Where does photosynthesis occur in plant cells?',
+          answer: 'In chloroplasts.',
+        },
+        {
+          question: 'What are the three main inputs required for photosynthesis?',
+          answer: 'Sunlight, carbon dioxide, and water.',
+        },
+        {
+          question: 'What are the outputs of photosynthesis?',
+          answer: 'Glucose (sugar) and oxygen.',
+        },
+        {
+          question: 'Why is photosynthesis essential for life on Earth?',
+          answer: 'It produces oxygen and forms the base of most food chains.',
+        },
+      ])
+    )
 
     const message = await getMessageById(educationalMessageId)
     expect(message).toBeDefined()
@@ -132,30 +142,41 @@ Photosynthesis is essential for life on Earth because it produces oxygen and for
       expect(pair.question.length).toBeGreaterThan(0)
       expect(pair.answer.length).toBeGreaterThan(0)
     })
-  }, 15000) // 10 second timeout
+  })
 
   it('should not generate flashcards from conversational content (FR-019)', async function () {
-    if (!ollamaAvailable) {
-      console.log('Skipping: Ollama not available')
-      return
-    }
-
     const message = await getMessageById(conversationalMessageId)
     expect(message).toBeDefined()
 
     // Generate flashcards - should return empty array for conversational content
+    // The function checks content length and educational value before calling API
     const flashcardPairs = await generateFlashcardsFromContent(message!.content, {
       maxFlashcards: 10,
     })
 
     expect(flashcardPairs).toEqual([])
-  }, 15000)
+    // Should not call API for non-educational content
+    expect(mockGetChatCompletion).not.toHaveBeenCalled()
+  })
 
   it('should persist generated flashcards to database (FR-010)', async function () {
-    if (!ollamaAvailable) {
-      console.log('Skipping: Ollama not available')
-      return
-    }
+    // Mock flashcard generation response
+    mockGetChatCompletion.mockResolvedValue(
+      JSON.stringify([
+        {
+          question: 'What is photosynthesis?',
+          answer: 'The process of converting light energy into chemical energy.',
+        },
+        {
+          question: 'What are the inputs of photosynthesis?',
+          answer: 'Sunlight, carbon dioxide, and water.',
+        },
+        {
+          question: 'What are the outputs of photosynthesis?',
+          answer: 'Glucose and oxygen.',
+        },
+      ])
+    )
 
     const { createFlashcard } = await import('@/lib/db/operations/flashcards')
 
@@ -200,7 +221,7 @@ Photosynthesis is essential for life on Earth because it produces oxygen and for
 
     // Clean up created flashcards
     await Promise.all(flashcards.map((fc) => deleteFlashcard(fc.id)))
-  }, 15000) // 10 second timeout
+  })
 
   it('should retrieve flashcards by message ID (FR-017)', async () => {
     const { createFlashcard } = await import('@/lib/db/operations/flashcards')
@@ -327,10 +348,27 @@ Photosynthesis is essential for life on Earth because it produces oxygen and for
   })
 
   it('should handle questions with various formats', async function () {
-    if (!ollamaAvailable) {
-      console.log('Skipping: Ollama not available')
-      return
-    }
+    // Mock response for machine learning content
+    mockGetChatCompletion.mockResolvedValue(
+      JSON.stringify([
+        {
+          question: 'What is supervised learning?',
+          answer: 'A type of machine learning that uses labeled data for training.',
+        },
+        {
+          question: 'What is unsupervised learning?',
+          answer: 'A type of machine learning that finds patterns in unlabeled data.',
+        },
+        {
+          question: 'What is reinforcement learning?',
+          answer: 'A type of machine learning that learns through trial and error.',
+        },
+        {
+          question: 'What are three common machine learning algorithms?',
+          answer: 'Decision trees, neural networks, and support vector machines.',
+        },
+      ])
+    )
 
     const testContent = `Machine Learning concepts:
 - Supervised learning uses labeled data
@@ -355,13 +393,26 @@ Common algorithms include:
       expect(fc.answer.length).toBeGreaterThan(5)
       expect(fc.answer.length).toBeLessThanOrEqual(5000)
     })
-  }, 15000)
+  })
 
   it('should respect maxFlashcards limit', async function () {
-    if (!ollamaAvailable) {
-      console.log('Skipping: Ollama not available')
-      return
-    }
+    // Mock response with exactly 3 flashcards (respecting the limit)
+    mockGetChatCompletion.mockResolvedValue(
+      JSON.stringify([
+        {
+          question: 'What is photosynthesis?',
+          answer: 'A process in plants.',
+        },
+        {
+          question: 'Where does photosynthesis occur?',
+          answer: 'In chloroplasts.',
+        },
+        {
+          question: 'What does photosynthesis produce?',
+          answer: 'Glucose and oxygen.',
+        },
+      ])
+    )
 
     const longContent = `Photosynthesis is a complex process. `.repeat(50)
 
@@ -370,13 +421,30 @@ Common algorithms include:
     })
 
     expect(flashcards.length).toBeLessThanOrEqual(3)
-  }, 15000)
+  })
 
   it('should handle content with code examples', async function () {
-    if (!ollamaAvailable) {
-      console.log('Skipping: Ollama not available')
-      return
-    }
+    // Mock response for JavaScript content
+    mockGetChatCompletion.mockResolvedValue(
+      JSON.stringify([
+        {
+          question: 'What are JavaScript arrow functions?',
+          answer: 'A concise syntax for writing functions.',
+        },
+        {
+          question: 'What is lexical this binding in arrow functions?',
+          answer: 'Arrow functions inherit this from their surrounding scope.',
+        },
+        {
+          question: 'Can arrow functions be used as constructors?',
+          answer: 'No, arrow functions cannot be used as constructors.',
+        },
+        {
+          question: 'What is implicit return in arrow functions?',
+          answer: 'Single expressions are automatically returned without the return keyword.',
+        },
+      ])
+    )
 
     const codeContent = `JavaScript arrow functions are a concise syntax for writing functions.
 
@@ -393,5 +461,5 @@ Key features:
     })
 
     expect(flashcards.length).toBeGreaterThan(0)
-  }, 15000)
+  })
 })
