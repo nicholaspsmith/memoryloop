@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid'
 import { getDb } from '@/lib/db/pg-client'
 import { flashcards } from '@/lib/db/drizzle-schema'
-import { eq } from 'drizzle-orm'
+import { eq, and, inArray } from 'drizzle-orm'
 import { createEmptyCard, State, type Card } from 'ts-fsrs'
 import { syncFlashcardToLanceDB, deleteFlashcardFromLanceDB } from './flashcards-lancedb'
 
@@ -129,7 +129,7 @@ export async function getFlashcardsByUserId(userId: string): Promise<Flashcard[]
   const rows = await db
     .select()
     .from(flashcards)
-    .where(eq(flashcards.userId, userId))
+    .where(and(eq(flashcards.userId, userId), eq(flashcards.status, 'active')))
     .orderBy(flashcards.createdAt)
 
   return rows.map(rowToFlashcard)
@@ -171,9 +171,12 @@ export async function getFlashcardsByConversationId(conversationId: string): Pro
 export async function getDueFlashcards(userId: string): Promise<Flashcard[]> {
   const db = getDb()
 
-  // Get all user's flashcards and filter by due date in memory
+  // Get all user's active flashcards and filter by due date in memory
   // (JSONB date comparison in SQL is complex)
-  const rows = await db.select().from(flashcards).where(eq(flashcards.userId, userId))
+  const rows = await db
+    .select()
+    .from(flashcards)
+    .where(and(eq(flashcards.userId, userId), eq(flashcards.status, 'active')))
 
   const now = new Date()
   return rows
@@ -414,7 +417,7 @@ export async function getFlashcardsBySkillNodeId(nodeId: string): Promise<GoalFl
   const rows = await db
     .select()
     .from(flashcards)
-    .where(eq(flashcards.skillNodeId, nodeId))
+    .where(and(eq(flashcards.skillNodeId, nodeId), eq(flashcards.status, 'active')))
     .orderBy(flashcards.createdAt)
 
   return rows.map(rowToGoalFlashcard)
@@ -426,4 +429,177 @@ export async function getFlashcardsBySkillNodeId(nodeId: string): Promise<GoalFl
 export async function countFlashcardsByNodeId(nodeId: string): Promise<number> {
   const cards = await getFlashcardsBySkillNodeId(nodeId)
   return cards.length
+}
+
+// ============================================================================
+// Draft Flashcard Operations (for background generation)
+// ============================================================================
+
+export type FlashcardStatus = 'draft' | 'active'
+
+export interface CreateDraftFlashcardInput {
+  userId: string
+  skillNodeId: string
+  question: string
+  answer: string
+  cardType: 'flashcard' | 'multiple_choice' | 'scenario'
+  distractors?: string[]
+  context?: string
+}
+
+export interface DraftFlashcard extends GoalFlashcard {
+  status: FlashcardStatus
+}
+
+/**
+ * Creates flashcards with draft status. These cards are not yet committed
+ * and won't appear in study sessions until committed.
+ */
+export async function createDraftFlashcards(
+  cards: CreateDraftFlashcardInput[]
+): Promise<DraftFlashcard[]> {
+  if (cards.length === 0) return []
+
+  const db = getDb()
+
+  const values = cards.map((data) => {
+    const fsrsCard = createEmptyCard()
+    let cardMetadata: Record<string, unknown> | null = null
+    if (data.cardType === 'multiple_choice' && data.distractors) {
+      cardMetadata = { distractors: data.distractors }
+    } else if (data.cardType === 'scenario' && data.context) {
+      cardMetadata = { context: data.context }
+    }
+
+    return {
+      id: uuidv4(),
+      userId: data.userId,
+      conversationId: null,
+      messageId: null,
+      question: data.question,
+      answer: data.answer,
+      fsrsState: cardToJson(fsrsCard),
+      skillNodeId: data.skillNodeId,
+      cardType: data.cardType,
+      cardMetadata,
+      status: 'draft' as const,
+    }
+  })
+
+  const rows = await db.insert(flashcards).values(values).returning()
+
+  console.log(`[Flashcards] Created ${rows.length} draft flashcards`)
+
+  return rows.map((row) => ({
+    ...rowToGoalFlashcard(row),
+    status: (row.status as FlashcardStatus) || 'active',
+  }))
+}
+
+/**
+ * Gets all draft flashcards for a specific skill node
+ */
+export async function getDraftsByNodeId(nodeId: string): Promise<DraftFlashcard[]> {
+  const db = getDb()
+  const rows = await db
+    .select()
+    .from(flashcards)
+    .where(and(eq(flashcards.skillNodeId, nodeId), eq(flashcards.status, 'draft')))
+    .orderBy(flashcards.createdAt)
+
+  return rows.map((row) => ({
+    ...rowToGoalFlashcard(row),
+    status: (row.status as FlashcardStatus) || 'active',
+  }))
+}
+
+/**
+ * Gets all draft flashcards for a user (across all goals/nodes)
+ */
+export async function getDraftsByUserId(userId: string): Promise<DraftFlashcard[]> {
+  const db = getDb()
+  const rows = await db
+    .select()
+    .from(flashcards)
+    .where(and(eq(flashcards.userId, userId), eq(flashcards.status, 'draft')))
+    .orderBy(flashcards.createdAt)
+
+  return rows.map((row) => ({
+    ...rowToGoalFlashcard(row),
+    status: (row.status as FlashcardStatus) || 'active',
+  }))
+}
+
+/**
+ * Commits draft flashcards by changing their status to 'active'.
+ * Also syncs embeddings to LanceDB.
+ */
+export async function commitDraftFlashcards(cardIds: string[]): Promise<number> {
+  if (cardIds.length === 0) return 0
+
+  const db = getDb()
+
+  // Get the cards first so we can sync to LanceDB
+  const cardsToCommit = await db
+    .select()
+    .from(flashcards)
+    .where(and(inArray(flashcards.id, cardIds), eq(flashcards.status, 'draft')))
+
+  if (cardsToCommit.length === 0) return 0
+
+  // Update status to active
+  await db.update(flashcards).set({ status: 'active' }).where(inArray(flashcards.id, cardIds))
+
+  // Sync embeddings to LanceDB asynchronously
+  if (process.env.NODE_ENV !== 'test') {
+    for (const row of cardsToCommit) {
+      syncFlashcardToLanceDB({
+        id: row.id,
+        userId: row.userId,
+        question: row.question,
+      }).catch((error) => {
+        console.error(`[Flashcards] Failed to sync flashcard ${row.id} to LanceDB:`, error)
+      })
+    }
+  }
+
+  console.log(`[Flashcards] Committed ${cardsToCommit.length} draft flashcards`)
+
+  return cardsToCommit.length
+}
+
+/**
+ * Deletes draft flashcards by IDs.
+ * Used to clean up unapproved drafts after commit.
+ */
+export async function deleteDraftFlashcards(cardIds: string[]): Promise<number> {
+  if (cardIds.length === 0) return 0
+
+  const db = getDb()
+
+  const result = await db
+    .delete(flashcards)
+    .where(and(inArray(flashcards.id, cardIds), eq(flashcards.status, 'draft')))
+    .returning({ id: flashcards.id })
+
+  console.log(`[Flashcards] Deleted ${result.length} draft flashcards`)
+
+  return result.length
+}
+
+/**
+ * Deletes all draft flashcards for a specific node.
+ * Used when user wants to regenerate or abandon drafts.
+ */
+export async function deleteNodeDrafts(nodeId: string): Promise<number> {
+  const db = getDb()
+
+  const result = await db
+    .delete(flashcards)
+    .where(and(eq(flashcards.skillNodeId, nodeId), eq(flashcards.status, 'draft')))
+    .returning({ id: flashcards.id })
+
+  console.log(`[Flashcards] Deleted ${result.length} draft flashcards for node ${nodeId}`)
+
+  return result.length
 }

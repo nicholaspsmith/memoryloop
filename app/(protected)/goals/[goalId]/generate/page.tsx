@@ -191,6 +191,7 @@ export default function GeneratePage({ params }: { params: Promise<{ goalId: str
       // Redirect to goal page after short delay
       setTimeout(() => {
         router.push(`/goals/${goalId}`)
+        router.refresh() // Force page to refetch data
       }, 1500)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to commit cards')

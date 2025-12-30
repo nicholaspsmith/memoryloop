@@ -95,6 +95,8 @@ export const flashcards = pgTable('flashcards', {
   // 'flashcard' | 'multiple_choice' | 'scenario'
   cardMetadata: jsonb('card_metadata'),
   // For MC: { distractors: ["wrong1", "wrong2", "wrong3"] }
+  // Card status: 'draft' | 'active' (017-multi-choice-distractors)
+  status: varchar('status', { length: 20 }).notNull().default('active'),
 })
 
 // ============================================================================

@@ -5,9 +5,9 @@ import { getGoalByIdForUser } from '@/lib/db/operations/goals'
 import { getSkillTreeByGoalId } from '@/lib/db/operations/skill-trees'
 import { getSkillNodeById, updateSkillNode } from '@/lib/db/operations/skill-nodes'
 import {
-  createGoalFlashcards,
   countFlashcardsByNodeId,
-  type CreateGoalFlashcardInput,
+  commitDraftFlashcards,
+  deleteDraftFlashcards,
 } from '@/lib/db/operations/flashcards'
 import * as logger from '@/lib/logger'
 
@@ -21,6 +21,7 @@ import * as logger from '@/lib/logger'
  */
 
 const CardSchema = z.object({
+  tempId: z.string(), // Now the actual database ID from draft creation
   question: z.string().min(1),
   answer: z.string().min(1),
   cardType: z.enum(['flashcard', 'multiple_choice']),
@@ -75,34 +76,37 @@ export async function POST(
       return NextResponse.json({ error: 'Node not found in this goal' }, { status: 404 })
     }
 
-    // Filter to approved cards only
-    const approvedCards = cards.filter((card) => card.approved)
+    // Separate approved and unapproved cards
+    // tempId is now the actual database ID from draft creation
+    const approvedCardIds = cards.filter((card) => card.approved).map((card) => card.tempId)
+    const unapprovedCardIds = cards.filter((card) => !card.approved).map((card) => card.tempId)
 
-    if (approvedCards.length === 0) {
+    if (approvedCardIds.length === 0) {
+      // Delete all drafts if none approved
+      if (unapprovedCardIds.length > 0) {
+        await deleteDraftFlashcards(unapprovedCardIds)
+      }
       return NextResponse.json({ error: 'No approved cards to commit' }, { status: 400 })
     }
 
-    logger.info('Committing cards', {
+    logger.info('Committing draft cards', {
       goalId,
       nodeId,
       nodeTitle: node.title,
       totalCards: cards.length,
-      approvedCards: approvedCards.length,
+      approvedCards: approvedCardIds.length,
+      unapprovedCards: unapprovedCardIds.length,
     })
 
-    // Create flashcards in batch
-    const flashcardInputs: CreateGoalFlashcardInput[] = approvedCards.map((card) => ({
-      userId: session.user.id,
-      skillNodeId: nodeId,
-      question: card.question,
-      answer: card.answer,
-      cardType: card.cardType,
-      distractors: card.cardType === 'multiple_choice' ? card.distractors : undefined,
-    }))
+    // Commit approved drafts (change status to 'active')
+    const committedCount = await commitDraftFlashcards(approvedCardIds)
 
-    const createdCards = await createGoalFlashcards(flashcardInputs)
+    // Delete unapproved drafts
+    if (unapprovedCardIds.length > 0) {
+      await deleteDraftFlashcards(unapprovedCardIds)
+    }
 
-    // Update node's card count
+    // Update node's card count (only count active cards)
     const newCardCount = await countFlashcardsByNodeId(nodeId)
     await updateSkillNode(nodeId, { cardCount: newCardCount })
 
@@ -110,20 +114,16 @@ export async function POST(
       goalId,
       nodeId,
       nodeTitle: node.title,
-      committedCount: createdCards.length,
+      committedCount,
+      deletedDrafts: unapprovedCardIds.length,
       newCardCount,
     })
 
     return NextResponse.json(
       {
-        committed: createdCards.length,
-        skipped: cards.length - approvedCards.length,
+        committed: committedCount,
+        skipped: unapprovedCardIds.length,
         nodeId,
-        cards: createdCards.map((card) => ({
-          id: card.id,
-          question: card.question,
-          cardType: card.cardType,
-        })),
       },
       { status: 201 }
     )
