@@ -51,7 +51,7 @@ export default function GeneratePage({ params }: { params: Promise<{ goalId: str
   const [success, setSuccess] = useState<string | null>(null)
 
   // Form state
-  const [cardType, setCardType] = useState<'flashcard' | 'multiple_choice' | 'mixed'>('flashcard')
+  // Card type removed - all cards support both modes
   const [count, setCount] = useState(10)
   const [refineFeedback, setRefineFeedback] = useState('')
   const [showRefineInput, setShowRefineInput] = useState(false)
@@ -109,7 +109,7 @@ export default function GeneratePage({ params }: { params: Promise<{ goalId: str
       const response = await fetch(`/api/goals/${goalId}/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nodeId, count, cardType }),
+        body: JSON.stringify({ nodeId, count, cardType: 'mixed' }),
       })
 
       if (!response.ok) {
@@ -281,26 +281,8 @@ export default function GeneratePage({ params }: { params: Promise<{ goalId: str
             Generation Settings
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {/* Card Type */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Card Type
-              </label>
-              <select
-                value={cardType}
-                onChange={(e) =>
-                  setCardType(e.target.value as 'flashcard' | 'multiple_choice' | 'mixed')
-                }
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="flashcard">Flashcards</option>
-                <option value="multiple_choice">Multiple Choice</option>
-                <option value="mixed">Mixed (Both)</option>
-              </select>
-            </div>
-
-            {/* Count */}
+          <div className="mb-6">
+            {/* Number of Cards */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Number of Cards
