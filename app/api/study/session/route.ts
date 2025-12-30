@@ -9,6 +9,7 @@ import { getDb } from '@/lib/db/pg-client'
 import { flashcards, skillNodes } from '@/lib/db/drizzle-schema'
 import { eq, and, like, isNotNull } from 'drizzle-orm'
 import * as logger from '@/lib/logger'
+import { generateDistractors } from '@/lib/ai/distractor-generator'
 
 /**
  * POST /api/study/session
@@ -18,8 +19,6 @@ import * as logger from '@/lib/logger'
  *
  * Per contracts/study.md
  */
-
-import { generateDistractors } from '@/lib/ai/distractor-generator'
 
 const SessionRequestSchema = z.object({
   goalId: z.string().uuid(),
@@ -62,6 +61,8 @@ export async function POST(request: NextRequest) {
     }
 
     const { goalId, mode, nodeId, cardLimit } = parseResult.data
+
+    logger.info('Starting study session', { goalId, mode, nodeId, cardLimit })
 
     // Validate goal belongs to user
     const goal = await getGoalByIdForUser(goalId, session.user.id)
@@ -111,6 +112,7 @@ export async function POST(request: NextRequest) {
       .where(
         and(
           eq(flashcards.userId, session.user.id),
+          eq(flashcards.status, 'active'),
           isNotNull(flashcards.skillNodeId),
           filterPath ? like(skillNodes.path, `${filterPath}%`) : undefined
         )
@@ -194,8 +196,17 @@ export async function POST(request: NextRequest) {
           if (metadata?.distractors && metadata.distractors.length >= 3) {
             // Use existing distractors
             studyCard.distractors = shuffleArray([...metadata.distractors])
+            logger.debug('Using existing distractors', {
+              cardId: card.id,
+              count: metadata.distractors.length,
+            })
           } else {
             // Generate distractors on-the-fly
+            logger.info('Generating distractors for card without them', {
+              cardId: card.id,
+              hasMetadata: !!metadata,
+              existingDistractors: metadata?.distractors?.length || 0,
+            })
             try {
               const result = await generateDistractors(card.question, card.answer)
               if (result.success && result.distractors) {
