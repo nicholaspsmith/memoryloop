@@ -105,7 +105,14 @@
       "mcp__serena__check_onboarding_performed",
       "mcp__serena__onboarding",
       "mcp__serena__list_dir",
-      "Skill(3.1.validate)"
+      "Skill(3.1.validate)",
+      "mcp__lance-context__search_code",
+      "mcp__serena__list_memories",
+      "Skill(speckit.clarify)",
+      "Skill(speckit.plan)",
+      "Skill(speckit.plan.validate)",
+      "Skill(speckit.tasks)",
+      "mcp__serena__write_memory"
     ]
   },
   "enabledMcpjsonServers": [

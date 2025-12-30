@@ -28,7 +28,7 @@ export function getDb() {
     // Create postgres.js client
     client = postgres(connectionString, {
       max: 10, // Maximum connections in pool
-      idle_timeout: 20, // Close idle connections after 20 seconds
+      idle_timeout: 60, // Close idle connections after 60 seconds (increased from 20 to handle long AI operations)
       connect_timeout: 10, // Timeout connection attempts after 10 seconds
       connection: {
         timezone: 'UTC', // Use UTC to avoid timezone conversion issues

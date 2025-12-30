@@ -14,6 +14,8 @@ import { flashcards } from '@/lib/db/drizzle-schema'
 import { eq } from 'drizzle-orm'
 import * as logger from '@/lib/logger'
 
+import { withRetry } from '@/lib/db/utils/retry'
+
 interface RouteContext {
   params: Promise<{ goalId: string }>
 }
@@ -43,9 +45,22 @@ export async function GET(_request: Request, context: RouteContext) {
     // Get skill tree with nodes
     const treeData = await getSkillTreeByGoalIdWithNodes(goalId)
 
-    // Calculate stats from flashcards
+    // Calculate stats from flashcards with retry for transient DB errors
     const db = getDb()
-    const allCards = await db.select().from(flashcards).where(eq(flashcards.userId, userId))
+    const allCards = await withRetry(
+      () => db.select().from(flashcards).where(eq(flashcards.userId, userId)),
+      {
+        maxAttempts: 3,
+        onRetry: (attempt, error) => {
+          logger.warn('Retrying flashcards query', {
+            attempt,
+            goalId,
+            userId,
+            error: error.message,
+          })
+        },
+      }
+    )
 
     // Filter cards linked to this goal's skill tree nodes
     const nodeIds = treeData?.nodes.map((n) => n.id) || []

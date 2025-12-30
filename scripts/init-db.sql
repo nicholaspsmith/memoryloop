@@ -270,6 +270,45 @@ CREATE TABLE IF NOT EXISTS user_titles (
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- Distractors table (for multiple-choice flashcard distractors)
+CREATE TABLE IF NOT EXISTS distractors (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  flashcard_id UUID NOT NULL REFERENCES flashcards(id) ON DELETE CASCADE,
+  content VARCHAR(1000) NOT NULL,
+  position INTEGER NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  CONSTRAINT distractors_position_check CHECK (position >= 0 AND position <= 2)
+);
+
+-- Background Jobs Queue table
+CREATE TABLE IF NOT EXISTS background_jobs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type VARCHAR(50) NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  payload JSONB NOT NULL,
+  result JSONB,
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  priority INTEGER NOT NULL DEFAULT 0,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  max_attempts INTEGER NOT NULL DEFAULT 3,
+  error TEXT,
+  next_retry_at TIMESTAMP,
+  started_at TIMESTAMP,
+  completed_at TIMESTAMP,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- Job Rate Limits table
+CREATE TABLE IF NOT EXISTS job_rate_limits (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  job_type VARCHAR(50) NOT NULL,
+  window_start TIMESTAMP NOT NULL,
+  count INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  UNIQUE(user_id, job_type, window_start)
+);
+
 -- Indexes for common queries
 CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON conversations(user_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at DESC);
@@ -297,3 +336,18 @@ CREATE INDEX IF NOT EXISTS idx_skill_nodes_parent_id ON skill_nodes(parent_id);
 CREATE INDEX IF NOT EXISTS idx_user_achievements_user_id ON user_achievements(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_titles_user_id ON user_titles(user_id);
 CREATE INDEX IF NOT EXISTS idx_topic_analytics_normalized_topic ON topic_analytics(normalized_topic);
+
+-- Indexes for distractors table
+CREATE UNIQUE INDEX IF NOT EXISTS idx_distractors_flashcard_position ON distractors(flashcard_id, position);
+CREATE INDEX IF NOT EXISTS idx_distractors_flashcard_id ON distractors(flashcard_id);
+
+-- Indexes for background jobs
+CREATE INDEX IF NOT EXISTS idx_background_jobs_pending 
+  ON background_jobs(status, next_retry_at, priority DESC) 
+  WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_background_jobs_user ON background_jobs(user_id, type);
+CREATE INDEX IF NOT EXISTS idx_background_jobs_status ON background_jobs(status);
+
+-- Indexes for job rate limits
+CREATE INDEX IF NOT EXISTS idx_job_rate_limits_lookup 
+  ON job_rate_limits(user_id, job_type, window_start);
