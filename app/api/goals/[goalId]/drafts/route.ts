@@ -131,8 +131,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Goal not found' }, { status: 404 })
     }
 
-    // Delete drafts for this node
-    const deletedCount = await deleteNodeDrafts(nodeId)
+    // Delete drafts for this node (only user's own drafts)
+    const deletedCount = await deleteNodeDrafts(nodeId, session.user.id)
 
     logger.info('Deleted drafts', { goalId, nodeId, deletedCount })
 

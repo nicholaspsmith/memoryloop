@@ -77,7 +77,7 @@ export async function POST(
     }
 
     // Delete any existing drafts for this node before generating new ones
-    const deletedCount = await deleteNodeDrafts(nodeId)
+    const deletedCount = await deleteNodeDrafts(nodeId, session.user.id)
     if (deletedCount > 0) {
       logger.info('Deleted existing drafts', { nodeId, deletedCount })
     }

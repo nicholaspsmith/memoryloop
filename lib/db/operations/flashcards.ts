@@ -534,21 +534,31 @@ export async function getDraftsByUserId(userId: string): Promise<DraftFlashcard[
  * Commits draft flashcards by changing their status to 'active'.
  * Also syncs embeddings to LanceDB.
  */
-export async function commitDraftFlashcards(cardIds: string[]): Promise<number> {
+export async function commitDraftFlashcards(cardIds: string[], userId: string): Promise<number> {
   if (cardIds.length === 0) return 0
 
   const db = getDb()
 
   // Get the cards first so we can sync to LanceDB
+  // Also verify cards belong to the requesting user
   const cardsToCommit = await db
     .select()
     .from(flashcards)
-    .where(and(inArray(flashcards.id, cardIds), eq(flashcards.status, 'draft')))
+    .where(
+      and(
+        inArray(flashcards.id, cardIds),
+        eq(flashcards.status, 'draft'),
+        eq(flashcards.userId, userId)
+      )
+    )
 
   if (cardsToCommit.length === 0) return 0
 
-  // Update status to active
-  await db.update(flashcards).set({ status: 'active' }).where(inArray(flashcards.id, cardIds))
+  // Get the IDs of cards that actually belong to this user
+  const validCardIds = cardsToCommit.map((c) => c.id)
+
+  // Update status to active only for verified cards
+  await db.update(flashcards).set({ status: 'active' }).where(inArray(flashcards.id, validCardIds))
 
   // Sync embeddings to LanceDB asynchronously
   if (process.env.NODE_ENV !== 'test') {
@@ -572,14 +582,20 @@ export async function commitDraftFlashcards(cardIds: string[]): Promise<number> 
  * Deletes draft flashcards by IDs.
  * Used to clean up unapproved drafts after commit.
  */
-export async function deleteDraftFlashcards(cardIds: string[]): Promise<number> {
+export async function deleteDraftFlashcards(cardIds: string[], userId: string): Promise<number> {
   if (cardIds.length === 0) return 0
 
   const db = getDb()
 
   const result = await db
     .delete(flashcards)
-    .where(and(inArray(flashcards.id, cardIds), eq(flashcards.status, 'draft')))
+    .where(
+      and(
+        inArray(flashcards.id, cardIds),
+        eq(flashcards.status, 'draft'),
+        eq(flashcards.userId, userId)
+      )
+    )
     .returning({ id: flashcards.id })
 
   console.log(`[Flashcards] Deleted ${result.length} draft flashcards`)
@@ -591,12 +607,18 @@ export async function deleteDraftFlashcards(cardIds: string[]): Promise<number> 
  * Deletes all draft flashcards for a specific node.
  * Used when user wants to regenerate or abandon drafts.
  */
-export async function deleteNodeDrafts(nodeId: string): Promise<number> {
+export async function deleteNodeDrafts(nodeId: string, userId: string): Promise<number> {
   const db = getDb()
 
   const result = await db
     .delete(flashcards)
-    .where(and(eq(flashcards.skillNodeId, nodeId), eq(flashcards.status, 'draft')))
+    .where(
+      and(
+        eq(flashcards.skillNodeId, nodeId),
+        eq(flashcards.status, 'draft'),
+        eq(flashcards.userId, userId)
+      )
+    )
     .returning({ id: flashcards.id })
 
   console.log(`[Flashcards] Deleted ${result.length} draft flashcards for node ${nodeId}`)

@@ -84,7 +84,7 @@ export async function POST(
     if (approvedCardIds.length === 0) {
       // Delete all drafts if none approved
       if (unapprovedCardIds.length > 0) {
-        await deleteDraftFlashcards(unapprovedCardIds)
+        await deleteDraftFlashcards(unapprovedCardIds, session.user.id)
       }
       return NextResponse.json({ error: 'No approved cards to commit' }, { status: 400 })
     }
@@ -99,11 +99,11 @@ export async function POST(
     })
 
     // Commit approved drafts (change status to 'active')
-    const committedCount = await commitDraftFlashcards(approvedCardIds)
+    const committedCount = await commitDraftFlashcards(approvedCardIds, session.user.id)
 
     // Delete unapproved drafts
     if (unapprovedCardIds.length > 0) {
-      await deleteDraftFlashcards(unapprovedCardIds)
+      await deleteDraftFlashcards(unapprovedCardIds, session.user.id)
     }
 
     // Update node's card count (only count active cards)
