@@ -82,6 +82,11 @@ export async function GET(_request: Request, context: RouteContext) {
     const nodeIds = nodes.map((n) => n.id)
 
     // Get flashcard generation jobs for these nodes
+    // Use sql.join to construct proper PostgreSQL array syntax
+    const nodeIdsSql = sql.join(
+      nodeIds.map((id) => sql`${id}`),
+      sql`, `
+    )
     const jobs = await db
       .select()
       .from(backgroundJobs)
@@ -89,7 +94,7 @@ export async function GET(_request: Request, context: RouteContext) {
         and(
           eq(backgroundJobs.type, 'flashcard_generation'),
           eq(backgroundJobs.userId, userId),
-          sql`${backgroundJobs.payload}->>'nodeId' = ANY(${nodeIds})`
+          sql`${backgroundJobs.payload}->>'nodeId' IN (${nodeIdsSql})`
         )
       )
 
