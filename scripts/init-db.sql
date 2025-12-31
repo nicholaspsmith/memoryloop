@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS flashcards (
   skill_node_id UUID,
   card_type VARCHAR(20) NOT NULL DEFAULT 'flashcard',
   card_metadata JSONB,
+  status VARCHAR(20) NOT NULL DEFAULT 'active',
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
@@ -92,6 +93,9 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'flashcards' AND column_name = 'card_metadata') THEN
     ALTER TABLE flashcards ADD COLUMN card_metadata JSONB;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'flashcards' AND column_name = 'status') THEN
+    ALTER TABLE flashcards ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'active';
   END IF;
 END $$;
 
