@@ -2,11 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { z } from 'zod'
 import { getMessageById } from '@/lib/db/operations/messages'
-import {
-  generateFlashcardsFromContent,
-  generateDistractorsForFlashcard,
-} from '@/lib/claude/flashcard-generator'
-import { createFlashcard, getFlashcardsByMessageId } from '@/lib/db/operations/flashcards'
+import { getFlashcardsByMessageId } from '@/lib/db/operations/flashcards'
+import { createJob, checkRateLimit, incrementRateLimit } from '@/lib/db/operations/background-jobs'
+import { JobType } from '@/lib/db/drizzle-schema'
 
 /**
  * POST /api/flashcards/generate
@@ -74,71 +72,51 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`[FlashcardGenerate] Generating flashcards from message ${messageId}`)
-
-    // Generate flashcards using Claude (FR-009)
-    // Uses server-side ANTHROPIC_API_KEY for content generation
-    const flashcardPairs = await generateFlashcardsFromContent(message.content, {
-      maxFlashcards,
-      userApiKey: process.env.ANTHROPIC_API_KEY,
-    })
-
-    // Check for insufficient content (FR-019)
-    if (flashcardPairs.length === 0) {
+    // Check rate limit before creating job
+    const rateLimit = await checkRateLimit(userId, JobType.FLASHCARD_GENERATION)
+    if (!rateLimit.allowed) {
+      const retryAfter = Math.ceil((rateLimit.resetAt.getTime() - Date.now()) / 1000)
       return NextResponse.json(
         {
-          error: 'Insufficient educational content for flashcard generation',
-          code: 'INSUFFICIENT_CONTENT',
-          details:
-            'The message contains only conversational content without factual information suitable for flashcards.',
+          error: 'Rate limit exceeded. Maximum 20 jobs per hour.',
+          code: 'RATE_LIMITED',
+          retryAfter,
         },
-        { status: 400 }
+        { status: 429 }
       )
     }
 
-    // Create flashcard records in database (FR-010)
-    // Note: createFlashcard handles embedding generation via syncFlashcardToLanceDB
-    const flashcards = await Promise.all(
-      flashcardPairs.map(async (pair) => {
-        const flashcard = await createFlashcard({
-          userId,
-          conversationId: message.conversationId,
-          messageId: message.id,
-          question: pair.question,
-          answer: pair.answer,
-        })
+    console.log(`[FlashcardGenerate] Creating background job for message ${messageId}`)
 
-        // Generate distractors for multiple-choice mode (non-blocking)
-        // Failures are logged but don't prevent flashcard creation
-        generateDistractorsForFlashcard(flashcard.id, pair.question, pair.answer).catch(() => {
-          // Error already logged in generateDistractorsForFlashcard
-        })
+    // Create background job instead of sync generation
+    const job = await createJob({
+      type: JobType.FLASHCARD_GENERATION,
+      payload: {
+        messageId,
+        content: message.content,
+        maxFlashcards,
+      },
+      userId,
+    })
 
-        return flashcard
-      })
-    )
+    // Increment rate limit counter
+    await incrementRateLimit(userId, JobType.FLASHCARD_GENERATION)
 
-    // Note: We don't need to mark the message with hasFlashcards flag
-    // Duplicate prevention (FR-017) is handled by checking existing flashcards above
-    // The hasFlashcards field can be populated when fetching messages if needed for UI optimization
+    console.log(`[FlashcardGenerate] Created job ${job.id} for message ${messageId}`)
 
-    console.log(
-      `[FlashcardGenerate] Created ${flashcards.length} flashcards from message ${messageId}`
-    )
-
-    // Return success with count (FR-018)
+    // Return job info for polling
     return NextResponse.json(
       {
         success: true,
-        flashcards,
-        count: flashcards.length,
-        sourceMessage: {
-          id: messageId,
-          conversationId: message.conversationId,
-          hasFlashcards: true,
+        job: {
+          id: job.id,
+          type: job.type,
+          status: job.status,
+          createdAt: job.createdAt,
         },
+        message: 'Flashcard generation started. Poll /api/jobs/{jobId} for status.',
       },
-      { status: 201 }
+      { status: 202 }
     )
   } catch (error) {
     console.error('[FlashcardGenerate] Error:', error)
@@ -158,7 +136,7 @@ export async function POST(request: NextRequest) {
     // Generic error
     return NextResponse.json(
       {
-        error: 'Failed to generate flashcards',
+        error: 'Failed to create flashcard generation job',
         code: 'INTERNAL_ERROR',
       },
       { status: 500 }
