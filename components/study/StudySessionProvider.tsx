@@ -15,6 +15,7 @@ interface StudyCard {
   answer: string
   cardType: 'flashcard' | 'multiple_choice'
   distractors?: string[]
+  distractorsJobId?: string
   nodeId: string
   nodeTitle: string
   fsrsState: {

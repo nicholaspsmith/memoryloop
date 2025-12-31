@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import FlashcardMode from './FlashcardMode'
-import MultipleChoiceMode from './MultipleChoiceMode'
+import MultipleChoiceModeWrapper from './MultipleChoiceModeWrapper'
 
 /**
  * MixedMode Component
@@ -22,6 +22,7 @@ interface StudyCard {
   answer: string
   cardType: 'flashcard' | 'multiple_choice'
   distractors?: string[]
+  distractorsJobId?: string
 }
 
 interface MixedModeProps {
@@ -60,21 +61,18 @@ export default function MixedMode({
     return null
   }
 
-  // T037-T038: Check distractorsFailed flag and fallback if needed
-  // Use multiple choice only if:
-  // 1. Card type is multiple_choice
-  // 2. Distractors are available (at least 3)
-  // 3. Distractor generation hasn't failed
-  const hasValidDistractors = currentCard.distractors && currentCard.distractors.length >= 3
-  const useMultipleChoice =
-    currentCard.cardType === 'multiple_choice' && hasValidDistractors && !distractorsFailed
-
-  if (useMultipleChoice) {
+  // T037-T038: Use MultipleChoiceModeWrapper for MC cards
+  // The wrapper handles:
+  // 1. Background distractor generation
+  // 2. Fallback to flashcard mode on failure
+  // 3. Checking for valid distractors
+  if (currentCard.cardType === 'multiple_choice') {
     return (
-      <MultipleChoiceMode
+      <MultipleChoiceModeWrapper
         question={currentCard.question}
         answer={currentCard.answer}
-        distractors={currentCard.distractors || []}
+        distractors={currentCard.distractors}
+        distractorsJobId={currentCard.distractorsJobId}
         onRate={(rating, responseTimeMs) => onRate(rating, responseTimeMs)}
         cardNumber={currentIndex + 1}
         totalCards={cards.length}
@@ -82,7 +80,7 @@ export default function MixedMode({
     )
   }
 
-  // Fallback to FlashcardMode
+  // Flashcard mode for non-MC cards
   return (
     <FlashcardMode
       question={currentCard.question}

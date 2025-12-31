@@ -1,0 +1,309 @@
+openapi: 3.0.3
+info:
+  title: Background Jobs API
+  description: API for managing background LLM generation jobs
+  version: 1.0.0
+
+paths:
+  /api/jobs:
+    get:
+      summary: List user's jobs
+      description: Returns all background jobs for the authenticated user
+      parameters:
+        - name: type
+          in: query
+          description: Filter by job type
+          schema:
+            $ref: '#/components/schemas/JobType'
+        - name: status
+          in: query
+          description: Filter by job status
+          schema:
+            $ref: '#/components/schemas/JobStatus'
+        - name: limit
+          in: query
+          description: Maximum number of jobs to return
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: List of jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Job'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Create a new job
+      description: Queue a new background generation job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateJobRequest'
+      responses:
+        '201':
+          description: Job created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/jobs/{jobId}:
+    get:
+      summary: Get job status
+      description: Returns current status of a job. Also triggers job processing if pending.
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Job details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      summary: Retry failed job
+      description: Creates a new job with the same payload as a failed job
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: New job created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '400':
+          description: Job is not in failed state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+components:
+  schemas:
+    JobType:
+      type: string
+      enum:
+        - flashcard_generation
+        - distractor_generation
+        - skill_tree_generation
+
+    JobStatus:
+      type: string
+      enum:
+        - pending
+        - processing
+        - completed
+        - failed
+
+    Job:
+      type: object
+      required:
+        - id
+        - type
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          $ref: '#/components/schemas/JobType'
+        status:
+          $ref: '#/components/schemas/JobStatus'
+        payload:
+          type: object
+          description: Job-specific input data
+        result:
+          type: object
+          nullable: true
+          description: Job output (null until completed)
+        error:
+          type: string
+          nullable: true
+          description: Error message if failed
+        attempts:
+          type: integer
+          description: Number of processing attempts
+        maxAttempts:
+          type: integer
+          description: Maximum retry attempts
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateJobRequest:
+      type: object
+      required:
+        - type
+        - payload
+      properties:
+        type:
+          $ref: '#/components/schemas/JobType'
+        payload:
+          oneOf:
+            - $ref: '#/components/schemas/FlashcardPayload'
+            - $ref: '#/components/schemas/DistractorPayload'
+            - $ref: '#/components/schemas/SkillTreePayload'
+        priority:
+          type: integer
+          default: 0
+          description: Higher values = higher priority
+
+    FlashcardPayload:
+      type: object
+      required:
+        - messageId
+        - content
+      properties:
+        messageId:
+          type: string
+          format: uuid
+        content:
+          type: string
+          minLength: 50
+        goalId:
+          type: string
+          format: uuid
+        nodeId:
+          type: string
+          format: uuid
+
+    DistractorPayload:
+      type: object
+      required:
+        - flashcardId
+        - question
+        - answer
+      properties:
+        flashcardId:
+          type: string
+          format: uuid
+        question:
+          type: string
+          maxLength: 500
+        answer:
+          type: string
+          maxLength: 200
+
+    SkillTreePayload:
+      type: object
+      required:
+        - goalId
+        - topic
+      properties:
+        goalId:
+          type: string
+          format: uuid
+        topic:
+          type: string
+        feedback:
+          type: string
+          description: Optional user feedback for regeneration
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        details:
+          type: object
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: 'Unauthorized'
+            code: 'AUTH_REQUIRED'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: 'Job not found'
+            code: 'NOT_FOUND'
+
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: 'Invalid payload'
+            code: 'VALIDATION_ERROR'
+
+    RateLimited:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+              retryAfter:
+                type: integer
+                description: Seconds until rate limit resets
+          example:
+            error: 'Rate limit exceeded. Maximum 20 jobs per hour per type.'
+            code: 'RATE_LIMITED'
+            retryAfter: 1800

@@ -439,6 +439,82 @@ export type TopicAnalytic = typeof topicAnalytics.$inferSelect
 export type NewTopicAnalytic = typeof topicAnalytics.$inferInsert
 
 // ============================================================================
+// Background Jobs Queue Table (for async flashcard/distractor generation)
+// ============================================================================
+
+export const backgroundJobs = pgTable('background_jobs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  type: varchar('type', { length: 50 }).notNull(),
+  // 'flashcard_generation' | 'distractor_generation'
+  status: varchar('status', { length: 20 }).notNull().default('pending'),
+  // 'pending' | 'processing' | 'completed' | 'failed'
+  payload: jsonb('payload').notNull(),
+  // Job-specific input data
+  result: jsonb('result'),
+  // Job output (e.g., created flashcard IDs)
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  priority: integer('priority').notNull().default(0),
+  // Higher = more urgent
+  attempts: integer('attempts').notNull().default(0),
+  maxAttempts: integer('max_attempts').notNull().default(3),
+  error: text('error'),
+  nextRetryAt: timestamp('next_retry_at'),
+  startedAt: timestamp('started_at'),
+  completedAt: timestamp('completed_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+})
+
+export type BackgroundJob = typeof backgroundJobs.$inferSelect
+export type NewBackgroundJob = typeof backgroundJobs.$inferInsert
+
+// Job type constants
+export const JobType = {
+  FLASHCARD_GENERATION: 'flashcard_generation',
+  DISTRACTOR_GENERATION: 'distractor_generation',
+  SKILL_TREE_GENERATION: 'skill_tree_generation',
+} as const
+
+export type JobTypeValue = (typeof JobType)[keyof typeof JobType]
+
+// Job status constants
+export const JobStatus = {
+  PENDING: 'pending',
+  PROCESSING: 'processing',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+} as const
+
+export type JobStatusValue = (typeof JobStatus)[keyof typeof JobStatus]
+
+// ============================================================================
+// Job Rate Limits Table (for preventing abuse)
+// ============================================================================
+
+export const jobRateLimits = pgTable(
+  'job_rate_limits',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    jobType: varchar('job_type', { length: 50 }).notNull(),
+    windowStart: timestamp('window_start').notNull(),
+    count: integer('count').notNull().default(0),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('job_rate_limits_user_type_window_idx').on(
+      table.userId,
+      table.jobType,
+      table.windowStart
+    ),
+  ]
+)
+
+export type JobRateLimit = typeof jobRateLimits.$inferSelect
+export type NewJobRateLimit = typeof jobRateLimits.$inferInsert
+
+// ============================================================================
 // Drizzle Relations (014-goal-based-learning)
 // ============================================================================
 
