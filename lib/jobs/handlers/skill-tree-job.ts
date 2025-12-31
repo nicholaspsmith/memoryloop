@@ -16,13 +16,15 @@ import {
   updateSkillTreeStats,
   getSkillTreeByGoalId,
 } from '@/lib/db/operations/skill-trees'
-import { createSkillNodes } from '@/lib/db/operations/skill-nodes'
+import { createSkillNodes, getNodesByTreeId } from '@/lib/db/operations/skill-nodes'
 import { getGoalByIdForUser } from '@/lib/db/operations/goals'
+import { createJob } from '@/lib/db/operations/background-jobs'
 import { registerHandler } from '@/lib/jobs/processor'
 import { JobType } from '@/lib/db/drizzle-schema'
 import type {
   SkillTreeGenerationPayload,
   SkillTreeGenerationResult,
+  FlashcardGenerationPayload,
   JobHandler,
 } from '@/lib/jobs/types'
 import * as logger from '@/lib/logger'
@@ -134,11 +136,43 @@ export async function handleSkillTreeGeneration(
   // Update tree statistics
   await updateSkillTreeStats(tree.id)
 
+  // Queue flashcard generation jobs for each node (019-auto-gen-guided-study)
+  const allNodes = await getNodesByTreeId(tree.id)
+  const FREE_TIER_MAX_CARDS = 5
+
+  logger.info('[SkillTreeJob] Queuing flashcard generation for nodes', {
+    treeId: tree.id,
+    nodeCount: allNodes.length,
+    maxCardsPerNode: FREE_TIER_MAX_CARDS,
+  })
+
+  for (const node of allNodes) {
+    const flashcardPayload: FlashcardGenerationPayload = {
+      nodeId: node.id,
+      nodeTitle: node.title,
+      nodeDescription: node.description ?? undefined,
+      maxCards: FREE_TIER_MAX_CARDS,
+    }
+
+    await createJob({
+      type: JobType.FLASHCARD_GENERATION,
+      payload: flashcardPayload,
+      userId,
+      priority: 0, // Lower priority than tree generation
+    })
+
+    logger.info('[SkillTreeJob] Queued flashcard job for node', {
+      nodeId: node.id,
+      nodeTitle: node.title,
+    })
+  }
+
   logger.info('[SkillTreeJob] Skill tree creation completed', {
     goalId: payload.goalId,
     treeId: tree.id,
     nodeCount: generated.metadata.nodeCount,
     maxDepth: generated.metadata.maxDepth,
+    flashcardJobsQueued: allNodes.length,
   })
 
   return {
