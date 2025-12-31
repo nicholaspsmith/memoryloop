@@ -18,6 +18,9 @@ import { processJob, canProcessJob } from '@/lib/jobs/processor'
 import { JobStatus } from '@/lib/db/drizzle-schema'
 import type { JobTypeValue } from '@/lib/jobs/types'
 
+// Register job handlers (side-effect import)
+import '@/lib/jobs/handlers'
+
 type RouteParams = { params: Promise<{ jobId: string }> }
 
 /**
