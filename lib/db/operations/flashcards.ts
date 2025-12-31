@@ -18,6 +18,7 @@ export interface CreateFlashcardInput {
   messageId: string | null
   question: string
   answer: string
+  skillNodeId?: string | null
 }
 
 export interface Flashcard {
@@ -89,6 +90,7 @@ export async function createFlashcard(data: CreateFlashcardInput): Promise<Flash
       messageId: data.messageId,
       question: data.question,
       answer: data.answer,
+      skillNodeId: data.skillNodeId ?? null,
       fsrsState: cardToJson(fsrsCard),
     })
     .returning()
