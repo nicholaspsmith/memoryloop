@@ -143,6 +143,68 @@ export default function GoalDetailPage({ params }: { params: Promise<{ goalId: s
     retry()
   }
 
+  // Poll flashcard generation jobs when skill tree exists but no cards yet
+  const [flashcardJobsStatus, setFlashcardJobsStatus] = useState<{
+    pending: number
+    processing: number
+    completed: number
+    total: number
+  } | null>(null)
+
+  useEffect(() => {
+    // Only poll if we have a skill tree but no cards
+    if (!goalId || !goal?.skillTree || goal.stats.totalCards > 0) {
+      setFlashcardJobsStatus(null)
+      return
+    }
+
+    let isMounted = true
+    let pollCount = 0
+    let timeoutId: NodeJS.Timeout
+
+    const pollFlashcardJobs = async () => {
+      if (!isMounted) return
+
+      try {
+        const response = await fetch(`/api/goals/${goalId}/flashcard-jobs`)
+        if (!response.ok) return
+
+        const data = await response.json()
+        if (!isMounted) return
+
+        setFlashcardJobsStatus(data)
+
+        // If all jobs completed, refresh goal data
+        if (data.total > 0 && data.pending === 0 && data.processing === 0) {
+          const goalResponse = await fetch(`/api/goals/${goalId}`)
+          if (goalResponse.ok && isMounted) {
+            const goalData = await goalResponse.json()
+            setGoal(goalData)
+          }
+          return // Stop polling
+        }
+
+        // Continue polling
+        pollCount++
+        const delay = pollCount < 10 ? 3000 : pollCount < 30 ? 5000 : 10000
+        if (pollCount < 100) {
+          timeoutId = setTimeout(pollFlashcardJobs, delay)
+        }
+      } catch {
+        // Retry on error
+        timeoutId = setTimeout(pollFlashcardJobs, 5000)
+      }
+    }
+
+    // Start polling after a short delay
+    timeoutId = setTimeout(pollFlashcardJobs, 1000)
+
+    return () => {
+      isMounted = false
+      clearTimeout(timeoutId)
+    }
+  }, [goalId, goal?.skillTree, goal?.stats.totalCards])
+
   // Handle archive
   const handleArchive = async () => {
     if (!goalId || !confirm('Are you sure you want to archive this goal?')) return
@@ -229,7 +291,12 @@ export default function GoalDetailPage({ params }: { params: Promise<{ goalId: s
           {goal.skillTree && goal.skillTree.nodeCount > 0 && goal.stats.totalCards === 0 && (
             <div className="px-4 py-2 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 rounded-lg flex items-center gap-2 text-sm">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600 dark:border-yellow-400"></div>
-              <span>Generating flashcards...</span>
+              <span>
+                Generating flashcards
+                {flashcardJobsStatus && flashcardJobsStatus.total > 0
+                  ? ` (${flashcardJobsStatus.completed}/${flashcardJobsStatus.total} topics)`
+                  : '...'}
+              </span>
             </div>
           )}
           <button
