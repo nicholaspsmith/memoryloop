@@ -3,16 +3,16 @@ import { auth } from '@/auth'
 import { z } from 'zod'
 import { getGoalByIdForUser } from '@/lib/db/operations/goals'
 import { getSkillTreeByGoalId } from '@/lib/db/operations/skill-trees'
-import { getSkillNodeById } from '@/lib/db/operations/skill-nodes'
+import { getSkillNodeById, incrementNodeCardCount } from '@/lib/db/operations/skill-nodes'
 import { generateCards, generateMixedCards } from '@/lib/ai/card-generator'
 import * as logger from '@/lib/logger'
-import { createDraftFlashcards, deleteNodeDrafts } from '@/lib/db/operations/flashcards'
+import { createFlashcard } from '@/lib/db/operations/flashcards'
 
 /**
  * POST /api/goals/[goalId]/generate
  *
  * Generate cards for a skill tree node using AI.
- * Cards are returned for preview/editing before committing to database.
+ * Cards are created directly as active (no draft/commit step).
  *
  * Per contracts/cards.md
  */
@@ -23,17 +23,6 @@ const GenerateRequestSchema = z.object({
   cardType: z.enum(['flashcard', 'multiple_choice', 'mixed']).optional().default('flashcard'),
   feedback: z.string().optional(),
 })
-
-interface GeneratedCard {
-  tempId: string
-  question: string
-  answer: string
-  cardType: 'flashcard' | 'multiple_choice'
-  distractors?: string[]
-  context?: string // For scenario cards
-  approved: boolean
-  edited: boolean
-}
 
 export async function POST(
   request: NextRequest,
@@ -76,12 +65,6 @@ export async function POST(
       return NextResponse.json({ error: 'Node not found in this goal' }, { status: 404 })
     }
 
-    // Delete any existing drafts for this node before generating new ones
-    const deletedCount = await deleteNodeDrafts(nodeId, session.user.id)
-    if (deletedCount > 0) {
-      logger.info('Deleted existing drafts', { nodeId, deletedCount })
-    }
-
     const startTime = Date.now()
 
     logger.info('Card generation started', {
@@ -118,73 +101,45 @@ export async function POST(
       })
     }
 
-    // Save generated cards as drafts to the database
-    const draftInputs = result.cards.map((card) => {
+    // Create cards directly as active (no draft step)
+    const createdCardIds: string[] = []
+    for (const card of result.cards) {
       let question = card.question
-      let context: string | undefined
 
       // For scenario cards, prepend context to question
       if (card.cardType === 'scenario' && 'context' in card) {
         question = `${card.context}\n\n${card.question}`
-        context = card.context
       }
 
-      return {
+      const createdCard = await createFlashcard({
         userId: session.user!.id,
+        conversationId: null,
+        messageId: null,
         skillNodeId: nodeId,
         question,
         answer: card.answer,
-        cardType: (card.cardType === 'scenario' ? 'flashcard' : card.cardType) as
-          | 'flashcard'
-          | 'multiple_choice'
-          | 'scenario',
-        distractors:
-          card.cardType === 'multiple_choice' && 'distractors' in card
-            ? card.distractors
-            : undefined,
-        context,
-      }
-    })
+      })
 
-    const draftCards = await createDraftFlashcards(draftInputs)
+      createdCardIds.push(createdCard.id)
+    }
 
-    // Transform to preview format with real IDs
-    const cards: GeneratedCard[] = draftCards.map((draft, index) => {
-      const originalCard = result.cards[index]
-      const base: GeneratedCard = {
-        tempId: draft.id, // Use real database ID
-        question: draft.question,
-        answer: draft.answer,
-        cardType: draft.cardType as 'flashcard' | 'multiple_choice',
-        approved: true, // Default to approved, user can uncheck
-        edited: false,
-      }
-
-      // Add type-specific fields
-      if (draft.cardMetadata?.distractors) {
-        base.distractors = draft.cardMetadata.distractors
-      }
-
-      if (originalCard.cardType === 'scenario' && 'context' in originalCard) {
-        base.context = originalCard.context
-      }
-
-      return base
-    })
+    // Update node card count
+    await incrementNodeCardCount(nodeId, createdCardIds.length)
 
     const generationTimeMs = Date.now() - startTime
 
-    logger.info('Card generation completed (saved as drafts)', {
+    logger.info('Card generation completed (created as active)', {
       goalId,
       nodeId,
       nodeTitle: node.title,
-      cardCount: cards.length,
+      cardCount: createdCardIds.length,
       generationTimeMs,
       model: result.metadata.model,
     })
 
     return NextResponse.json({
-      cards,
+      success: true,
+      created: createdCardIds.length,
       nodeId,
       nodeTitle: node.title,
       generatedAt: new Date().toISOString(),
@@ -192,7 +147,6 @@ export async function POST(
         generationTimeMs,
         model: result.metadata.model,
         retryCount: result.metadata.retryCount,
-        savedAsDrafts: true,
       },
     })
   } catch (error) {
