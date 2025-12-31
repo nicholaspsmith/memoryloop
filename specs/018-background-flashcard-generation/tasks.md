@@ -1,7 +1,7 @@
 # Tasks: Background Flashcard Generation
 
 **Input**: Design documents from `/specs/018-background-flashcard-generation/`
-**Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/job-api.yaml, quickstart.md
+**Prerequisites**: plan.md, spec.md, contracts/job-api.yaml, quickstart.md
 
 **Tests**: Included per TDD requirement from constitution (Test-First Development is mandatory).
 
@@ -83,14 +83,14 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T020 [P] [US1] E2E test for flashcard generation background flow in tests/e2e/flashcard-generation.spec.ts
+- [x] T020 [P] [US1] E2E test for flashcard generation background flow in tests/e2e/flashcard-generation.spec.ts
 
 ### Implementation for User Story 1
 
-- [ ] T021 [P] [US1] Create flashcard job handler wrapping generateFlashcardsFromContent() in lib/jobs/handlers/flashcard-job.ts
-- [ ] T022 [US1] Modify app/api/flashcards/generate/route.ts to create flashcard_generation job instead of sync call
-- [ ] T023 [US1] Update flashcard generation UI to use GenerationPlaceholder and useJobStatus in app/(app)/study/components/FlashcardStudyView.tsx
-- [ ] T024 [US1] Add logging for flashcard job processing in lib/jobs/handlers/flashcard-job.ts
+- [x] T021 [P] [US1] Create flashcard job handler wrapping generateFlashcardsFromContent() in lib/jobs/handlers/flashcard-job.ts
+- [x] T022 [US1] Modify app/api/flashcards/generate/route.ts to create flashcard_generation job instead of sync call
+- [x] T023 [US1] Update flashcard generation UI to use GenerationPlaceholder and useJobStatus in components/chat/GenerateFlashcardsButton.tsx
+- [x] T024 [US1] Add logging for flashcard job processing in lib/jobs/handlers/flashcard-job.ts
 
 **Checkpoint**: User Story 1 should be fully functional and testable independently
 
