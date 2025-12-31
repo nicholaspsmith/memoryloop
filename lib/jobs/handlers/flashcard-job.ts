@@ -72,8 +72,10 @@ export async function handleFlashcardGeneration(
     })
 
     // Generate flashcard pairs using Claude
+    // Skip educational content check since skill tree nodes are inherently educational
     const flashcardPairs = await generateFlashcardsFromContent(content, {
       userApiKey: process.env.ANTHROPIC_API_KEY,
+      skipEducationalCheck: true,
     })
 
     if (flashcardPairs.length === 0) {
