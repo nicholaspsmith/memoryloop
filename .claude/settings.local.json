@@ -112,7 +112,11 @@
       "Skill(speckit.plan)",
       "Skill(speckit.plan.validate)",
       "Skill(speckit.tasks)",
-      "mcp__serena__write_memory"
+      "mcp__serena__write_memory",
+      "Bash(npx serena:*)",
+      "Bash(npx next build:*)",
+      "Bash(pgrep:*)",
+      "mcp__serena__find_file"
     ]
   },
   "enabledMcpjsonServers": [
@@ -137,16 +141,6 @@
           {
             "type": "command",
             "command": ".claude/hooks/bash-guardian.sh",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "Grep|Read",
-        "hooks": [
-          {
-            "type": "command",
-            "command": ".claude/hooks/navigation-guardian.sh",
             "timeout": 5
           }
         ]
