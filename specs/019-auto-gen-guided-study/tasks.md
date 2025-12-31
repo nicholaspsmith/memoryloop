@@ -71,20 +71,20 @@ This feature uses existing:
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T011 [P] [US2] Unit test for node completion check (FSRS state >= 2) in `tests/unit/study/node-completion.test.ts`
-- [ ] T012 [P] [US2] Unit test for depth-first traversal logic in `tests/unit/study/guided-flow.test.ts`
+- [x] T011 [P] [US2] Unit test for node completion check (FSRS state >= 2) in `tests/unit/study/node-completion.test.ts`
+- [x] T012 [P] [US2] Unit test for depth-first traversal logic in `tests/unit/study/guided-flow.test.ts`
 - [ ] T013 [P] [US2] Contract test for GET /api/study/next-node endpoint in `tests/integration/study/next-node.test.ts`
 - [ ] T014 [P] [US2] Contract test for GET /api/goals/[goalId]/skill-tree/progress in `tests/integration/study/progress.test.ts`
 
 ### Implementation for User Story 2 Backend
 
-- [ ] T015 [US2] Create node-completion.ts with isNodeComplete function in `lib/study/node-completion.ts`
-- [ ] T016 [US2] Create guided-flow.ts with getNextIncompleteNode and depth-first ordering in `lib/study/guided-flow.ts`
-- [ ] T017 [US2] Create /api/study/next-node endpoint in `app/api/study/next-node/route.ts`
-- [ ] T018 [P] [US2] Create /api/goals/[goalId]/skill-tree/progress endpoint in `app/api/goals/[goalId]/skill-tree/progress/route.ts`
-- [ ] T019 [US2] Modify /api/study/session to support guided mode in `app/api/study/session/route.ts`
-- [ ] T020 [US2] Add logging for next-node requests (debug level) in `app/api/study/next-node/route.ts`
-- [ ] T021 [US2] Add logging for node completion events (info level) in `lib/study/node-completion.ts`
+- [x] T015 [US2] Create node-completion.ts with isNodeComplete function in `lib/study/node-completion.ts`
+- [x] T016 [US2] Create guided-flow.ts with getNextIncompleteNode and depth-first ordering in `lib/study/guided-flow.ts`
+- [x] T017 [US2] Create /api/study/next-node endpoint in `app/api/study/next-node/route.ts`
+- [x] T018 [P] [US2] Create /api/goals/[goalId]/skill-tree/progress endpoint in `app/api/goals/[goalId]/skill-tree/progress/route.ts`
+- [x] T019 [US2] Modify /api/study/session to support guided mode in `app/api/study/session/route.ts`
+- [x] T020 [US2] Add logging for next-node requests (debug level) in `app/api/study/next-node/route.ts`
+- [x] T021 [US2] Add logging for node completion events (info level) in `lib/study/node-completion.ts`
 
 **Checkpoint**: Backend APIs should return correct next node in depth-first order and track completion status.
 
