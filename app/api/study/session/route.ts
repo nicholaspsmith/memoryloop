@@ -9,8 +9,9 @@ import { getDb } from '@/lib/db/pg-client'
 import { flashcards, skillNodes } from '@/lib/db/drizzle-schema'
 import { eq, and, like, isNotNull } from 'drizzle-orm'
 import * as logger from '@/lib/logger'
-import { generateAndPersistDistractors } from '@/lib/ai/distractor-generator'
 import { getDistractorsForFlashcard } from '@/lib/db/operations/distractors'
+import { createJob } from '@/lib/db/operations/background-jobs'
+import { JobType } from '@/lib/db/drizzle-schema'
 
 /**
  * POST /api/study/session
@@ -34,6 +35,7 @@ interface StudyCard {
   answer: string
   cardType: 'flashcard' | 'multiple_choice'
   distractors?: string[]
+  distractorsJobId?: string // Job ID when distractors are being generated in background
   nodeId: string
   nodeTitle: string
   fsrsState: {
@@ -212,37 +214,33 @@ export async function POST(request: NextRequest) {
               count: metadata.distractors.length,
             })
           } else {
-            // T11: Progressive generation - generate and persist distractors
-            logger.info('Generating and persisting distractors for card without them', {
+            // Create background job for distractor generation (US2)
+            logger.info('Creating background job for distractor generation', {
               cardId: card.id,
               hasDbDistractors: dbDistractors.length > 0,
               hasMetadata: !!metadata,
               existingDistractors: metadata?.distractors?.length || 0,
             })
             try {
-              const result = await generateAndPersistDistractors(
-                card.id,
-                card.question,
-                card.answer
-              )
-              if (result.success && result.distractors) {
-                studyCard.distractors = shuffleArray([...result.distractors])
-                logger.info('Generated and persisted distractors for card', {
-                  cardId: card.id,
-                  generationTimeMs: result.generationTimeMs,
-                })
-              } else {
-                // Fallback to flashcard if generation fails
-                studyCard.cardType = 'flashcard'
-                logger.warn('Distractor generation failed, falling back to flashcard', {
-                  cardId: card.id,
-                  error: result.error,
-                })
-              }
+              const job = await createJob({
+                type: JobType.DISTRACTOR_GENERATION,
+                payload: {
+                  flashcardId: card.id,
+                  question: card.question,
+                  answer: card.answer,
+                },
+                userId: session.user.id,
+                priority: 0, // Lower priority than flashcard generation
+              })
+              studyCard.distractorsJobId = job.id
+              logger.info('Created distractor generation job', {
+                cardId: card.id,
+                jobId: job.id,
+              })
             } catch (error) {
-              // Fallback to flashcard on error
+              // Fallback to flashcard if job creation fails
               studyCard.cardType = 'flashcard'
-              logger.warn('Distractor generation error, falling back to flashcard', {
+              logger.warn('Failed to create distractor job, falling back to flashcard', {
                 cardId: card.id,
                 error: error instanceof Error ? error.message : 'Unknown error',
               })
