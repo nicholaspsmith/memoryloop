@@ -95,9 +95,11 @@ export default function FlashcardMode({
             isFlipped ? '[transform:rotateY(180deg)]' : ''
           }`}
         >
-          {/* T007: Front face with backface-visibility hidden */}
+          {/* T007: Front face - hidden when flipped */}
           <div
-            className="absolute inset-0 [backface-visibility:hidden] rounded-xl shadow-lg bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700"
+            className={`absolute inset-0 rounded-xl shadow-lg bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 [backface-visibility:hidden] [-webkit-backface-visibility:hidden] ${
+              isFlipped ? 'invisible' : ''
+            }`}
             data-testid="flashcard-front"
           >
             <div className="flex flex-col items-center justify-center h-full p-8">
@@ -111,9 +113,11 @@ export default function FlashcardMode({
             </div>
           </div>
 
-          {/* T007: Back face with backface-visibility hidden and rotateY(180deg) */}
+          {/* T007: Back face - pre-rotated 180deg, shown when flipped */}
           <div
-            className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)] rounded-xl shadow-lg bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800"
+            className={`absolute inset-0 rounded-xl shadow-lg bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 [backface-visibility:hidden] [-webkit-backface-visibility:hidden] [transform:rotateY(180deg)] ${
+              !isFlipped ? 'invisible' : ''
+            }`}
             data-testid="flashcard-back"
           >
             <div className="flex flex-col h-full p-8">
