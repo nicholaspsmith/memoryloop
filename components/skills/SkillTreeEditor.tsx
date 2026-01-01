@@ -22,7 +22,6 @@ interface SkillTreeEditorProps {
 
 export default function SkillTreeEditor({ goalId, nodes }: SkillTreeEditorProps) {
   const router = useRouter()
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [highlightedNodeId, setHighlightedNodeId] = useState<string | null>(null)
   const [isStudyModalOpen, setIsStudyModalOpen] = useState(false)
 
@@ -70,9 +69,6 @@ export default function SkillTreeEditor({ goalId, nodes }: SkillTreeEditorProps)
     }, [] as string[])
   }
 
-  // Get selected node data
-  const selectedNode = selectedNodeId ? findNode(nodes, selectedNodeId) : null
-
   // Get highlighted node data and descendants (T026)
   const highlightedNode = highlightedNodeId ? findNode(nodes, highlightedNodeId) : null
   const highlightedNodeIds = highlightedNode ? getDescendantIds(nodes, highlightedNode.path) : []
@@ -83,23 +79,14 @@ export default function SkillTreeEditor({ goalId, nodes }: SkillTreeEditorProps)
     return total + (node?.cardCount || 0)
   }, 0)
 
-  // Only show Generate Cards if node is fully mastered (100%) or has no cards
-  const canGenerateCards =
-    selectedNode && (selectedNode.masteryPercentage === 100 || selectedNode.cardCount === 0)
-
-  // Handle node selection - toggle between select and highlight (T024)
+  // Handle node selection - single click highlights node + children, second click deselects
   const handleNodeSelect = (nodeId: string) => {
-    // If clicking same node, toggle between selected and highlighted
-    if (selectedNodeId === nodeId) {
-      setSelectedNodeId(null)
-      setHighlightedNodeId(nodeId)
-    } else if (highlightedNodeId === nodeId) {
+    if (highlightedNodeId === nodeId) {
+      // Clicking same node again deselects it
       setHighlightedNodeId(null)
-      setSelectedNodeId(null)
     } else {
-      // First click selects for generation
-      setSelectedNodeId(nodeId)
-      setHighlightedNodeId(null)
+      // First click highlights node + children
+      setHighlightedNodeId(nodeId)
     }
   }
 
@@ -130,14 +117,31 @@ export default function SkillTreeEditor({ goalId, nodes }: SkillTreeEditorProps)
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Study Button (T028, T029) */}
-          {highlightedNodeId && (
+          {/* Generate Cards or Study Button */}
+          {highlightedNodeId && totalCardCount === 0 && (
+            <Link
+              href={`/goals/${goalId}/generate?nodeId=${highlightedNodeId}&bulkGenerate=true`}
+              className="px-3 py-1.5 text-sm bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors flex items-center gap-1"
+              data-testid="generate-cards-button"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                />
+              </svg>
+              Generate Cards
+            </Link>
+          )}
+
+          {highlightedNodeId && totalCardCount > 0 && (
             <button
               onClick={handleStudyClick}
-              disabled={totalCardCount === 0}
               data-testid="study-button"
-              className="px-3 py-1.5 text-sm bg-purple-600 text-white hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center gap-1"
-              title={totalCardCount === 0 ? 'No cards available' : `Study ${totalCardCount} cards`}
+              className="px-3 py-1.5 text-sm bg-purple-600 text-white hover:bg-purple-700 rounded-lg transition-colors flex items-center gap-1"
+              title={`Study ${totalCardCount} cards`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -150,23 +154,6 @@ export default function SkillTreeEditor({ goalId, nodes }: SkillTreeEditorProps)
               Study {totalCardCount} cards
             </button>
           )}
-
-          {canGenerateCards && (
-            <Link
-              href={`/goals/${goalId}/generate?nodeId=${selectedNodeId}`}
-              className="px-3 py-1.5 text-sm bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors flex items-center gap-1"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                />
-              </svg>
-              Generate More Cards
-            </Link>
-          )}
         </div>
       </div>
 
@@ -175,7 +162,7 @@ export default function SkillTreeEditor({ goalId, nodes }: SkillTreeEditorProps)
         <SkillTree
           nodes={nodes}
           onSelectNode={handleNodeSelect}
-          selectedNodeId={selectedNodeId}
+          selectedNodeId={null}
           highlightedNodeIds={highlightedNodeIds}
         />
       </div>
