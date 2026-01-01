@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 /**
  * FlashcardMode Component (T054)
@@ -55,10 +55,20 @@ export default function FlashcardMode({
   cardNumber,
   totalCards,
 }: FlashcardModeProps) {
-  // Key prop on the container will unmount/remount this component when card changes,
-  // which automatically resets all state to initial values
   const [isFlipped, setIsFlipped] = useState(false)
   const [isAnimating, setIsAnimating] = useState(false)
+  const prevCardNumber = useRef(cardNumber)
+
+  // Reset flip state when card changes (no animation - instant reset)
+  // React 18 automatically batches these setState calls
+  useEffect(() => {
+    if (cardNumber !== prevCardNumber.current) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional batch reset on card change
+      setIsFlipped(false)
+      setIsAnimating(false)
+      prevCardNumber.current = cardNumber
+    }
+  }, [cardNumber])
 
   const handleFlip = useCallback(() => {
     setIsFlipped((prev) => {
@@ -127,9 +137,9 @@ export default function FlashcardMode({
             </div>
           </div>
 
-          {/* T007: Back face - pre-rotated 180deg */}
+          {/* T007: Back face - pre-rotated 180deg, solid background required for backface-visibility */}
           <div
-            className="absolute inset-0 rounded-xl shadow-lg bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 [backface-visibility:hidden] [-webkit-backface-visibility:hidden] [transform:rotateY(180deg)]"
+            className="absolute inset-0 rounded-xl shadow-lg bg-green-50 dark:bg-green-900 border-2 border-green-200 dark:border-green-800 [backface-visibility:hidden] [-webkit-backface-visibility:hidden] [transform:rotateY(180deg)]"
             data-testid="flashcard-back"
           >
             <div className="flex flex-col h-full p-8">
@@ -153,7 +163,7 @@ export default function FlashcardMode({
               <button
                 key={option.value}
                 onClick={() => handleRate(option.value)}
-                className={`py-3 px-2 rounded-lg text-white font-medium transition-colors ${option.color}`}
+                className={`py-3 px-2 rounded-lg text-white font-medium cursor-pointer transition-all active:scale-95 ${option.color}`}
               >
                 <span className="block text-lg">{option.label}</span>
                 <span className="block text-xs opacity-80">{option.description}</span>
