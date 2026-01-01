@@ -87,46 +87,40 @@ export default function FlashcardMode({
       </div>
 
       {/* Card - T005: Perspective wrapper */}
-      <div className="w-full max-w-2xl min-h-[300px] [perspective:1000px]" data-testid="flashcard">
+      <div className="w-full max-w-2xl h-[300px] [perspective:1000px]" data-testid="flashcard">
         {/* T006: 3D flip animation with transform-style and rotateY */}
         <div
           onClick={handleFlip}
-          className={`relative w-full h-full min-h-[300px] cursor-pointer [transform-style:preserve-3d] transition-transform duration-[600ms] ${
+          className={`relative w-full h-full cursor-pointer [transform-style:preserve-3d] transition-transform duration-[600ms] ${
             isFlipped ? '[transform:rotateY(180deg)]' : ''
           }`}
         >
           {/* T007: Front face with backface-visibility hidden */}
           <div
-            className="absolute inset-0 w-full h-full [backface-visibility:hidden] rounded-xl shadow-lg"
+            className="absolute inset-0 [backface-visibility:hidden] rounded-xl shadow-lg bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700"
             data-testid="flashcard-front"
           >
-            <div className="h-full p-8 rounded-xl bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:scale-[1.02] transition-transform duration-300">
-              <div className="flex flex-col items-center justify-center h-full min-h-[250px]">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Question</p>
-                <p className="text-xl text-center text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
-                  {question}
-                </p>
-                <p className="text-sm text-blue-600 dark:text-blue-400 mt-8">
-                  Click to reveal answer
-                </p>
-              </div>
+            <div className="flex flex-col items-center justify-center h-full p-8">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Question</p>
+              <p className="text-xl text-center text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
+                {question}
+              </p>
+              <p className="text-sm text-blue-600 dark:text-blue-400 mt-8">
+                Click to reveal answer
+              </p>
             </div>
           </div>
 
           {/* T007: Back face with backface-visibility hidden and rotateY(180deg) */}
           <div
-            className="absolute inset-0 w-full h-full [backface-visibility:hidden] [transform:rotateY(180deg)] rounded-xl shadow-lg"
+            className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)] rounded-xl shadow-lg bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800"
             data-testid="flashcard-back"
           >
-            <div className="h-full p-8 rounded-xl bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800">
-              <div className="flex flex-col h-full min-h-[250px]">
-                <div className="flex-1">
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Answer</p>
-                  <p className="text-lg text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
-                    {answer}
-                  </p>
-                </div>
-              </div>
+            <div className="flex flex-col h-full p-8">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Answer</p>
+              <p className="text-lg text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
+                {answer}
+              </p>
             </div>
           </div>
         </div>
