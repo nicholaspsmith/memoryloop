@@ -1,12 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 /**
  * FlashcardMode Component (T054)
  *
  * Classic flip-to-reveal flashcard interaction.
  * User flips card then rates 1-4.
+ *
+ * Uses CSS 3D transforms for smooth flip animation.
+ * Key prop on card container resets animation when card changes.
  */
 
 interface FlashcardModeProps {
@@ -52,16 +55,25 @@ export default function FlashcardMode({
   cardNumber,
   totalCards,
 }: FlashcardModeProps) {
+  // Key prop on the container will unmount/remount this component when card changes,
+  // which automatically resets all state to initial values
   const [isFlipped, setIsFlipped] = useState(false)
+  const [isAnimating, setIsAnimating] = useState(false)
 
-  const handleFlip = () => {
-    if (!isFlipped) {
-      setIsFlipped(true)
-    }
-  }
+  const handleFlip = useCallback(() => {
+    setIsFlipped((prev) => {
+      if (!prev && !isAnimating) {
+        setIsAnimating(true)
+        // Animation completes after 600ms
+        setTimeout(() => setIsAnimating(false), 600)
+        return true
+      }
+      return prev
+    })
+  }, [isAnimating])
 
   const handleRate = (rating: 1 | 2 | 3 | 4) => {
-    setIsFlipped(false)
+    // Don't reset isFlipped here - let the cardNumber change trigger instant reset
     onRate(rating)
   }
 
@@ -70,14 +82,14 @@ export default function FlashcardMode({
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
       const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'
-      if (e.code === 'Space' && !isInput && !isFlipped) {
+      if (e.code === 'Space' && !isInput && !isFlipped && !isAnimating) {
         e.preventDefault() // T008: Prevent default scroll
         handleFlip()
       }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isFlipped])
+  }, [isFlipped, isAnimating, handleFlip])
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh]">
@@ -86,20 +98,22 @@ export default function FlashcardMode({
         Card {cardNumber} of {totalCards}
       </div>
 
-      {/* Card - T005: Perspective wrapper */}
-      <div className="w-full max-w-2xl h-[300px] [perspective:1000px]" data-testid="flashcard">
+      {/* Card - T005: Perspective wrapper with key to reset on card change */}
+      <div
+        key={cardNumber}
+        className="w-full max-w-2xl h-[300px] [perspective:1000px]"
+        data-testid="flashcard"
+      >
         {/* T006: 3D flip animation with transform-style and rotateY */}
         <div
           onClick={handleFlip}
-          className={`relative w-full h-full cursor-pointer [transform-style:preserve-3d] transition-transform duration-[600ms] ${
-            isFlipped ? '[transform:rotateY(180deg)]' : ''
+          className={`relative w-full h-full cursor-pointer transition-transform duration-500 [transform-style:preserve-3d] [-webkit-transform-style:preserve-3d] ${
+            isFlipped ? '[transform:rotateY(180deg)]' : '[transform:rotateY(0deg)]'
           }`}
         >
-          {/* T007: Front face - hidden when flipped */}
+          {/* T007: Front face */}
           <div
-            className={`absolute inset-0 rounded-xl shadow-lg bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 [backface-visibility:hidden] [-webkit-backface-visibility:hidden] ${
-              isFlipped ? 'invisible' : ''
-            }`}
+            className="absolute inset-0 rounded-xl shadow-lg bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 [backface-visibility:hidden] [-webkit-backface-visibility:hidden]"
             data-testid="flashcard-front"
           >
             <div className="flex flex-col items-center justify-center h-full p-8">
@@ -113,11 +127,9 @@ export default function FlashcardMode({
             </div>
           </div>
 
-          {/* T007: Back face - pre-rotated 180deg, shown when flipped */}
+          {/* T007: Back face - pre-rotated 180deg */}
           <div
-            className={`absolute inset-0 rounded-xl shadow-lg bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 [backface-visibility:hidden] [-webkit-backface-visibility:hidden] [transform:rotateY(180deg)] ${
-              !isFlipped ? 'invisible' : ''
-            }`}
+            className="absolute inset-0 rounded-xl shadow-lg bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 [backface-visibility:hidden] [-webkit-backface-visibility:hidden] [transform:rotateY(180deg)]"
             data-testid="flashcard-back"
           >
             <div className="flex flex-col h-full p-8">
