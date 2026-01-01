@@ -199,43 +199,43 @@ export default function StudyPage({ params }: { params: Promise<{ goalId: string
   }, [router, goalId])
 
   // Complete session (moved before handleRate to fix dependency issue)
-  const handleCompleteSession = useCallback(async () => {
+  const handleCompleteSession = useCallback(() => {
     if (!session || !goalId || !startTime) return
 
-    setLoading(true)
+    // Show completion screen immediately for instant feedback
+    setPhase('complete')
 
-    try {
-      const durationSeconds = Math.round((Date.now() - startTime.getTime()) / 1000)
+    // Send completion to server in background (fire-and-forget)
+    const durationSeconds = Math.round((Date.now() - startTime.getTime()) / 1000)
 
-      const response = await fetch('/api/study/session/complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: session.sessionId,
-          goalId,
-          mode: session.mode,
-          durationSeconds,
-          ratings: responses,
-        }),
-      })
-
-      if (!response.ok) {
+    fetch('/api/study/session/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: session.sessionId,
+        goalId,
+        mode: session.mode,
+        durationSeconds,
+        ratings: responses,
+      }),
+    })
+      .then((response) => {
+        if (response.ok) {
+          return response.json()
+        }
         throw new Error('Failed to complete session')
-      }
-
-      const data = await response.json()
-      setSummary(data.summary)
-      setPhase('complete')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to complete session')
-    } finally {
-      setLoading(false)
-    }
+      })
+      .then((data) => {
+        setSummary(data.summary)
+      })
+      .catch((err) => {
+        console.error('Failed to complete session:', err)
+      })
   }, [session, goalId, startTime, responses])
 
   // Rate card and move to next
   const handleRate = useCallback(
-    async (rating: 1 | 2 | 3 | 4) => {
+    (rating: 1 | 2 | 3 | 4) => {
       if (!session) return
 
       const currentCard = session.cards[currentIndex]
@@ -257,23 +257,19 @@ export default function StudyPage({ params }: { params: Promise<{ goalId: string
         }
       }
 
-      // Send rating to server
-      try {
-        await fetch('/api/study/rate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            cardId: currentCard.id,
-            rating,
-            responseTimeMs: Date.now() - (startTime?.getTime() || Date.now()),
-            mode: session.mode,
-          }),
-        })
-      } catch (err) {
-        console.error('Failed to rate card:', err)
-      }
+      // Send rating to server (fire-and-forget for instant UI feedback)
+      fetch('/api/study/rate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cardId: currentCard.id,
+          rating,
+          responseTimeMs: Date.now() - (startTime?.getTime() || Date.now()),
+          mode: session.mode,
+        }),
+      }).catch((err) => console.error('Failed to rate card:', err))
 
-      // Update local state
+      // Update local state immediately
       setResponses((prev) => [...prev, { cardId: currentCard.id, rating }])
 
       // Move to next card or complete
