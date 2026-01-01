@@ -148,40 +148,60 @@ export default function GeneratePage({ params }: { params: Promise<{ goalId: str
     setLoading(true)
     setError(null)
     setSuccess(null)
-    setBulkProgress({ current: 0, total: emptyNodes.length, currentNode: '' })
 
     const errors: string[] = []
     let totalCreated = 0
+    let completed = 0
 
-    for (let i = 0; i < emptyNodes.length; i++) {
-      const emptyNode = emptyNodes[i]
+    // Process in batches of 3 to avoid overwhelming the API
+    const batchSize = 3
+    for (let i = 0; i < emptyNodes.length; i += batchSize) {
+      const batch = emptyNodes.slice(i, i + batchSize)
+
+      // Update progress to show first node in batch
       setBulkProgress({
-        current: i + 1,
+        current: completed,
         total: emptyNodes.length,
-        currentNode: emptyNode.title,
+        currentNode: batch.map((n) => n.title).join(', '),
       })
 
-      try {
-        const response = await fetch(`/api/goals/${goalId}/generate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nodeId: emptyNode.id, count: 5, cardType: 'mixed' }),
+      const results = await Promise.allSettled(
+        batch.map(async (emptyNode) => {
+          const response = await fetch(`/api/goals/${goalId}/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nodeId: emptyNode.id, count: 5, cardType: 'mixed' }),
+          })
+
+          if (!response.ok) {
+            const data = await response.json()
+            throw new Error(data.error || 'Failed to generate cards')
+          }
+
+          return { node: emptyNode, result: await response.json() }
         })
+      )
 
-        if (!response.ok) {
-          const data = await response.json()
-          throw new Error(data.error || 'Failed to generate cards')
+      // Process results
+      results.forEach((result, idx) => {
+        if (result.status === 'fulfilled') {
+          totalCreated += result.value.result.created
+        } else {
+          errors.push(`${batch[idx].title}: ${result.reason?.message || 'Unknown error'}`)
         }
+      })
 
-        const result = await response.json()
-        totalCreated += result.created
-      } catch (err) {
-        errors.push(`${emptyNode.title}: ${err instanceof Error ? err.message : 'Unknown error'}`)
-      }
+      completed += batch.length
     }
 
     setBulkProgress(null)
     setLoading(false)
+
+    // Handle complete failure case
+    if (totalCreated === 0 && errors.length === emptyNodes.length) {
+      setError(`Failed to generate cards for all ${emptyNodes.length} topics. Please try again.`)
+      return
+    }
 
     if (errors.length > 0) {
       setError(`Completed with errors:\n${errors.join('\n')}`)
@@ -189,10 +209,8 @@ export default function GeneratePage({ params }: { params: Promise<{ goalId: str
 
     if (totalCreated > 0) {
       setSuccess(
-        `Successfully created ${totalCreated} cards across ${emptyNodes.length - errors.length} topics! Redirecting...`
+        `Created ${totalCreated} cards across ${emptyNodes.length - errors.length} topics! Redirecting...`
       )
-
-      // Redirect to goal page after short delay
       setTimeout(() => {
         router.push(`/goals/${goalId}`)
         router.refresh()
