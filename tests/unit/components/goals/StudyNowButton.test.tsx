@@ -22,21 +22,17 @@ describe('StudyNowButton', () => {
       expect(screen.getByRole('button')).toBeInTheDocument()
     })
 
-    it('should display "Study Now" text', () => {
-      render(<StudyNowButton onClick={mockOnClick} />)
-      expect(screen.getByText('Study Now')).toBeInTheDocument()
+    it('should display a play icon in default state', () => {
+      const { container } = render(<StudyNowButton onClick={mockOnClick} />)
+      const svg = container.querySelector('svg')
+      expect(svg).toBeInTheDocument()
+      expect(svg).toHaveAttribute('viewBox', '0 0 20 20')
     })
 
     it('should have green styling', () => {
       render(<StudyNowButton onClick={mockOnClick} />)
       const button = screen.getByRole('button')
       expect(button.className).toMatch(/green/)
-    })
-
-    it('should display a play icon', () => {
-      const { container } = render(<StudyNowButton onClick={mockOnClick} />)
-      const svg = container.querySelector('svg')
-      expect(svg).toBeInTheDocument()
     })
 
     it('should have type="button"', () => {
