@@ -13,6 +13,7 @@
 import { generateFlashcardsFromContent } from '@/lib/claude/flashcard-generator'
 import { createFlashcard } from '@/lib/db/operations/flashcards'
 import { getMessageById } from '@/lib/db/operations/messages'
+import { getSkillNodeById, incrementNodeCardCount } from '@/lib/db/operations/skill-nodes'
 import { createJob } from '@/lib/db/operations/background-jobs'
 import { registerHandler } from '@/lib/jobs/processor'
 import { JobType } from '@/lib/db/drizzle-schema'
@@ -23,6 +24,13 @@ import type {
   JobHandler,
 } from '@/lib/jobs/types'
 import * as logger from '@/lib/logger'
+
+/**
+ * Build content string from node title and description
+ */
+function buildNodeContent(title: string, description?: string | null): string {
+  return `Topic: ${title}\n\n${description || `Learn about ${title}`}`
+}
 
 /**
  * Handle flashcard generation from message content
@@ -36,14 +44,113 @@ export async function handleFlashcardGeneration(
   payload: FlashcardGenerationPayload,
   userId: string
 ): Promise<FlashcardGenerationResult> {
+  // Determine if this is node-based or message-based generation
+  const isNodeBased = !!payload.nodeId
+
+  if (isNodeBased) {
+    // Node-based generation (for skill tree nodes)
+    logger.info('[FlashcardJob] Starting node-based flashcard generation', {
+      nodeId: payload.nodeId,
+      userId,
+      maxCards: payload.maxCards ?? 5,
+    })
+
+    // Fetch node from database
+    const node = await getSkillNodeById(payload.nodeId!)
+    if (!node) {
+      throw new Error('Node not found')
+    }
+
+    // Build content from node title and description
+    const content = buildNodeContent(node.title, node.description)
+    const maxCards = payload.maxCards ?? 5
+
+    logger.info('[FlashcardJob] Node validated, generating flashcards', {
+      nodeId: payload.nodeId,
+      nodeTitle: node.title,
+      contentLength: content.length,
+    })
+
+    // Generate flashcard pairs using Claude
+    // Skip educational content check since skill tree nodes are inherently educational
+    const flashcardPairs = await generateFlashcardsFromContent(content, {
+      userApiKey: process.env.ANTHROPIC_API_KEY,
+      skipEducationalCheck: true,
+    })
+
+    if (flashcardPairs.length === 0) {
+      logger.info('[FlashcardJob] No flashcards generated from node content', {
+        nodeId: payload.nodeId,
+      })
+      return { flashcardIds: [], count: 0 }
+    }
+
+    // Limit to maxCards
+    const pairsToCreate = flashcardPairs.slice(0, maxCards)
+
+    logger.info('[FlashcardJob] Generated flashcard pairs for node', {
+      nodeId: payload.nodeId,
+      generated: flashcardPairs.length,
+      creating: pairsToCreate.length,
+    })
+
+    // Persist flashcards to database
+    const flashcardIds: string[] = []
+    for (const pair of pairsToCreate) {
+      const flashcard = await createFlashcard({
+        userId,
+        conversationId: null,
+        messageId: null,
+        skillNodeId: payload.nodeId,
+        question: pair.question,
+        answer: pair.answer,
+      })
+
+      flashcardIds.push(flashcard.id)
+
+      // Trigger distractor generation (non-blocking)
+      const distractorPayload: DistractorGenerationPayload = {
+        flashcardId: flashcard.id,
+        question: pair.question,
+        answer: pair.answer,
+      }
+
+      createJob({
+        type: JobType.DISTRACTOR_GENERATION,
+        payload: distractorPayload,
+        userId,
+        priority: 0,
+      }).catch((error) => {
+        logger.error('[FlashcardJob] Failed to enqueue distractor generation', error as Error, {
+          flashcardId: flashcard.id,
+        })
+      })
+    }
+
+    // Update node card count
+    await incrementNodeCardCount(payload.nodeId!, flashcardIds.length)
+
+    logger.info('[FlashcardJob] Node flashcard generation completed', {
+      nodeId: payload.nodeId,
+      flashcardIds,
+      count: flashcardIds.length,
+    })
+
+    return {
+      flashcardIds,
+      count: flashcardIds.length,
+    }
+  }
+
+  // Message-based generation (existing flow)
   logger.info('[FlashcardJob] Starting flashcard generation', {
     messageId: payload.messageId,
     userId,
-    contentLength: payload.content.length,
+    contentLength: payload.content?.length ?? 0,
   })
 
   // Validate message exists and belongs to user
-  const message = await getMessageById(payload.messageId)
+  const message = await getMessageById(payload.messageId!)
   if (!message) {
     throw new Error('Message not found')
   }
@@ -54,7 +161,7 @@ export async function handleFlashcardGeneration(
   logger.info('[FlashcardJob] Message validated, generating flashcards')
 
   // Generate flashcard pairs using Claude
-  const flashcardPairs = await generateFlashcardsFromContent(payload.content, {
+  const flashcardPairs = await generateFlashcardsFromContent(payload.content!, {
     userApiKey: process.env.ANTHROPIC_API_KEY,
   })
 
@@ -71,7 +178,7 @@ export async function handleFlashcardGeneration(
     const flashcard = await createFlashcard({
       userId,
       conversationId: message.conversationId,
-      messageId: payload.messageId,
+      messageId: payload.messageId!,
       question: pair.question,
       answer: pair.answer,
     })

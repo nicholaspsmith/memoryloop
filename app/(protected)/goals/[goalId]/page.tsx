@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import GoalProgress from '@/components/goals/GoalProgress'
+import StudyNowButton from '@/components/goals/StudyNowButton'
 import SkillTreeEditor from '@/components/skills/SkillTreeEditor'
 import { type SkillNodeData } from '@/components/skills/SkillNode'
 import { useJobStatus } from '@/hooks/useJobStatus'
@@ -142,54 +143,69 @@ export default function GoalDetailPage({ params }: { params: Promise<{ goalId: s
     retry()
   }
 
-  // Handle regenerate (for goals with existing skill tree)
-  const handleRegenerate = async (feedback?: string) => {
-    if (!goalId) return
+  // Poll flashcard generation jobs when skill tree exists but no cards yet
+  const [flashcardJobsStatus, setFlashcardJobsStatus] = useState<{
+    pending: number
+    processing: number
+    completed: number
+    total: number
+  } | null>(null)
 
-    const response = await fetch(`/api/goals/${goalId}/skill-tree/regenerate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ feedback }),
-    })
-
-    if (!response.ok) {
-      throw new Error('Failed to regenerate skill tree')
+  useEffect(() => {
+    // Only poll if we have a skill tree but no cards
+    if (!goalId || !goal?.skillTree || goal.stats.totalCards > 0) {
+      setFlashcardJobsStatus(null)
+      return
     }
 
-    const data = await response.json()
-    setGoal((prev) =>
-      prev
-        ? {
-            ...prev,
-            skillTree: prev.skillTree
-              ? {
-                  ...prev.skillTree,
-                  nodes: data.nodes,
-                  nodeCount: data.nodeCount,
-                  maxDepth: data.maxDepth,
-                }
-              : null,
-          }
-        : null
-    )
-  }
+    let isMounted = true
+    let pollCount = 0
+    let timeoutId: NodeJS.Timeout
 
-  // Handle nodes change
-  const handleNodesChange = (nodes: SkillNodeData[]) => {
-    setGoal((prev) =>
-      prev && prev.skillTree
-        ? {
-            ...prev,
-            skillTree: {
-              ...prev.skillTree,
-              nodes,
-            },
-          }
-        : prev
-    )
-  }
+    const pollFlashcardJobs = async () => {
+      if (!isMounted) return
 
-  // Handle archive
+      try {
+        const response = await fetch(`/api/goals/${goalId}/flashcard-jobs`)
+        if (!response.ok) return
+
+        const data = await response.json()
+        if (!isMounted) return
+
+        setFlashcardJobsStatus(data)
+
+        // If all jobs completed, refresh goal data
+        if (data.total > 0 && data.pending === 0 && data.processing === 0) {
+          const goalResponse = await fetch(`/api/goals/${goalId}`)
+          if (goalResponse.ok && isMounted) {
+            const goalData = await goalResponse.json()
+            setGoal(goalData)
+          }
+          return // Stop polling
+        }
+
+        // Continue polling
+        pollCount++
+        const delay = pollCount < 10 ? 3000 : pollCount < 30 ? 5000 : 10000
+        if (pollCount < 100) {
+          timeoutId = setTimeout(pollFlashcardJobs, delay)
+        }
+      } catch {
+        // Retry on error
+        timeoutId = setTimeout(pollFlashcardJobs, 5000)
+      }
+    }
+
+    // Start polling after a short delay
+    timeoutId = setTimeout(pollFlashcardJobs, 1000)
+
+    return () => {
+      isMounted = false
+      clearTimeout(timeoutId)
+    }
+  }, [goalId, goal?.skillTree, goal?.stats.totalCards])
+
+  /* Archive functionality hidden for streamlined UI
   const handleArchive = async () => {
     if (!goalId || !confirm('Are you sure you want to archive this goal?')) return
 
@@ -207,6 +223,7 @@ export default function GoalDetailPage({ params }: { params: Promise<{ goalId: s
       setError(err instanceof Error ? err.message : 'An error occurred')
     }
   }
+  */
 
   // Format time
   const formatTime = (seconds: number) => {
@@ -251,7 +268,7 @@ export default function GoalDetailPage({ params }: { params: Promise<{ goalId: s
       <div className="mb-6 flex items-start justify-between">
         <div className="flex items-start gap-6">
           <GoalProgress masteryPercentage={goal.masteryPercentage} size="lg" />
-          <div>
+          <div className="px-6">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               {goal.title}
             </h1>
@@ -269,20 +286,28 @@ export default function GoalDetailPage({ params }: { params: Promise<{ goalId: s
         </div>
 
         <div className="flex items-center gap-2">
-          {goal.skillTree && goal.skillTree.nodeCount > 0 && (
-            <Link
-              href={`/goals/${goal.id}/study`}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Study Now
-            </Link>
+          {goal.skillTree && goal.skillTree.nodeCount > 0 && goal.stats.totalCards > 0 && (
+            <StudyNowButton onClick={() => router.push(`/goals/${goal.id}/study?mode=guided`)} />
           )}
+          {goal.skillTree && goal.skillTree.nodeCount > 0 && goal.stats.totalCards === 0 && (
+            <div className="px-4 py-2 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 rounded-lg flex items-center gap-2 text-sm">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600 dark:border-yellow-400"></div>
+              <span>
+                Generating flashcards
+                {flashcardJobsStatus && flashcardJobsStatus.total > 0
+                  ? ` (${flashcardJobsStatus.completed}/${flashcardJobsStatus.total} topics)`
+                  : '...'}
+              </span>
+            </div>
+          )}
+          {/* Archive button hidden for streamlined UI
           <button
             onClick={handleArchive}
             className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
             Archive
           </button>
+*/}
         </div>
       </div>
 
@@ -291,12 +316,7 @@ export default function GoalDetailPage({ params }: { params: Promise<{ goalId: s
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Skill Tree</h2>
 
         {goal.skillTree ? (
-          <SkillTreeEditor
-            goalId={goal.id}
-            nodes={goal.skillTree.nodes}
-            onNodesChange={handleNodesChange}
-            onRegenerate={handleRegenerate}
-          />
+          <SkillTreeEditor goalId={goal.id} nodes={goal.skillTree.nodes} />
         ) : isPolling && job ? (
           <div className="py-12 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="max-w-2xl mx-auto px-6">

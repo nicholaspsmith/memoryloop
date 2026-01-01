@@ -12,6 +12,7 @@ import * as logger from '@/lib/logger'
 import { getDistractorsForFlashcard } from '@/lib/db/operations/distractors'
 import { createJob } from '@/lib/db/operations/background-jobs'
 import { JobType } from '@/lib/db/drizzle-schema'
+import { getNextIncompleteNode, getNodeProgress } from '@/lib/study/guided-flow'
 
 /**
  * POST /api/study/session
@@ -24,8 +25,11 @@ import { JobType } from '@/lib/db/drizzle-schema'
 
 const SessionRequestSchema = z.object({
   goalId: z.string().uuid(),
-  mode: z.enum(['flashcard', 'multiple_choice', 'timed', 'mixed']),
+  mode: z.enum(['flashcard', 'multiple_choice', 'timed', 'mixed', 'node', 'all']),
+  // Guided mode flag - when true, automatically selects next incomplete node
+  isGuided: z.boolean().optional().default(false),
   nodeId: z.string().uuid().optional(),
+  includeChildren: z.boolean().optional().default(true),
   cardLimit: z.number().int().min(1).max(50).optional().default(20),
 })
 
@@ -63,9 +67,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { goalId, mode, nodeId, cardLimit } = parseResult.data
+    const {
+      goalId,
+      mode,
+      isGuided,
+      nodeId: requestedNodeId,
+      includeChildren,
+      cardLimit,
+    } = parseResult.data
 
-    logger.info('Starting study session', { goalId, mode, nodeId, cardLimit })
+    logger.info('Starting study session', {
+      goalId,
+      mode,
+      isGuided,
+      nodeId: requestedNodeId,
+      cardLimit,
+    })
 
     // Validate goal belongs to user
     const goal = await getGoalByIdForUser(goalId, session.user.id)
@@ -82,6 +99,36 @@ export async function POST(request: NextRequest) {
     const db = getDb()
     const now = new Date()
 
+    // For guided mode, auto-determine the next node
+    let nodeId = requestedNodeId
+    let currentNode: { id: string; title: string; path: string } | null = null
+    let nodeProgress: { completedInNode: number; totalInNode: number } | null = null
+
+    if (isGuided) {
+      const nextNode = await getNextIncompleteNode(skillTree.id)
+      if (!nextNode) {
+        // All nodes complete or no cards yet
+        const { summary } = await getNodeProgress(skillTree.id)
+        const isComplete = summary.completedNodes === summary.totalNodes && summary.totalNodes > 0
+        return NextResponse.json({
+          sessionId: null,
+          mode,
+          isGuided: true,
+          isTreeComplete: isComplete,
+          currentNode: null,
+          cards: [],
+          totalCards: 0,
+          message: isComplete
+            ? "Congratulations! You've completed all nodes in this skill tree."
+            : 'Cards are still being generated. Please wait a moment.',
+        })
+      }
+      nodeId = nextNode.id
+      currentNode = { id: nextNode.id, title: nextNode.title, path: nextNode.path }
+      nodeProgress = { completedInNode: nextNode.completedCards, totalInNode: nextNode.totalCards }
+      logger.info('Guided mode: selected next node', { nodeId, path: nextNode.path })
+    }
+
     // Get all nodes in tree to filter cards
     const treeNodes = await getNodesByTreeId(skillTree.id)
     const treeNodeIds = treeNodes.map((n) => n.id)
@@ -93,7 +140,11 @@ export async function POST(request: NextRequest) {
       if (!node || node.treeId !== skillTree.id) {
         return NextResponse.json({ error: 'Node not found in this goal' }, { status: 404 })
       }
-      filterPath = node.path
+      filterPath = includeChildren ? node.path : null
+      // For guided/node mode without children, filter to exact node only
+      if ((isGuided || mode === 'node') && !includeChildren) {
+        filterPath = null // We'll filter by exact nodeId below
+      }
     }
 
     // Get cards for this goal's skill tree
@@ -268,7 +319,15 @@ export async function POST(request: NextRequest) {
     const response: Record<string, unknown> = {
       sessionId,
       mode,
+      isGuided,
       cards: shuffledCards,
+      totalCards: shuffledCards.length,
+    }
+
+    // Add guided mode info
+    if (isGuided && currentNode) {
+      response.currentNode = currentNode
+      response.nodeProgress = nodeProgress
     }
 
     // Add timed mode settings

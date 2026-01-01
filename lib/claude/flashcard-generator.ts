@@ -18,6 +18,8 @@ export interface GenerateFlashcardsOptions {
   maxFlashcards?: number
   minContentLength?: number
   userApiKey?: string | null
+  /** Skip the educational content check (e.g., for skill tree nodes that are inherently educational) */
+  skipEducationalCheck?: boolean
 }
 
 const FLASHCARD_GENERATION_PROMPT = `
@@ -243,7 +245,12 @@ export async function generateFlashcardsFromContent(
   content: string,
   options: GenerateFlashcardsOptions = {}
 ): Promise<FlashcardPair[]> {
-  const { maxFlashcards = 20, minContentLength = 50, userApiKey = null } = options
+  const {
+    maxFlashcards = 20,
+    minContentLength = 50,
+    userApiKey = null,
+    skipEducationalCheck = false,
+  } = options
 
   // Validate content length
   const trimmedContent = content.trim()
@@ -253,7 +260,8 @@ export async function generateFlashcardsFromContent(
   }
 
   // Check if content is educational (simple heuristic)
-  if (!hasEducationalContent(trimmedContent)) {
+  // Skip this check for skill tree nodes which are inherently educational
+  if (!skipEducationalCheck && !hasEducationalContent(trimmedContent)) {
     console.log('[FlashcardGenerator] Content not educational, skipping')
     return []
   }

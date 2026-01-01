@@ -3,18 +3,15 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import CardPreview, { type GeneratedCardData } from '@/components/cards/CardPreview'
 
 /**
- * Card Generation Page (T044)
+ * Card Generation Page (Simplified)
  *
  * Flow:
  * 1. User lands with nodeId in URL params
- * 2. Select card type and count
- * 3. Generate cards (loading state)
- * 4. Preview and edit cards
- * 5. Optionally refine with feedback
- * 6. Commit approved cards
+ * 2. Select card count
+ * 3. Generate cards (cards are created directly as active)
+ * 4. Redirect to goal page
  */
 
 interface NodeInfo {
@@ -24,18 +21,6 @@ interface NodeInfo {
   children?: NodeInfo[]
 }
 
-interface GenerationResult {
-  cards: GeneratedCardData[]
-  nodeId: string
-  nodeTitle: string
-  generatedAt: string
-  metadata: {
-    generationTimeMs: number
-    model: string
-    retryCount: number
-  }
-}
-
 export default function GeneratePage({ params }: { params: Promise<{ goalId: string }> }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -43,18 +28,12 @@ export default function GeneratePage({ params }: { params: Promise<{ goalId: str
 
   const [goalId, setGoalId] = useState<string | null>(null)
   const [node, setNode] = useState<NodeInfo | null>(null)
-  const [cards, setCards] = useState<GeneratedCardData[]>([])
   const [loading, setLoading] = useState(false)
-  const [committing, setCommitting] = useState(false)
-  const [refining, setRefining] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
   // Form state
-  // Card type removed - all cards support both modes
-  const [count, setCount] = useState(10)
-  const [refineFeedback, setRefineFeedback] = useState('')
-  const [showRefineInput, setShowRefineInput] = useState(false)
+  const [count, setCount] = useState(5)
 
   // Unwrap params
   useEffect(() => {
@@ -117,107 +96,22 @@ export default function GeneratePage({ params }: { params: Promise<{ goalId: str
         throw new Error(data.error || 'Failed to generate cards')
       }
 
-      const result: GenerationResult = await response.json()
-      setCards(result.cards)
+      const result = await response.json()
       setSuccess(
-        `Generated ${result.cards.length} cards in ${(result.metadata.generationTimeMs / 1000).toFixed(1)}s`
+        `Created ${result.created} cards in ${(result.metadata.generationTimeMs / 1000).toFixed(1)}s! Redirecting...`
       )
+
+      // Redirect to goal page after short delay
+      setTimeout(() => {
+        router.push(`/goals/${goalId}`)
+        router.refresh()
+      }, 1500)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate cards')
     } finally {
       setLoading(false)
     }
   }
-
-  // Refine cards
-  const handleRefine = async () => {
-    if (!goalId || !nodeId || !refineFeedback.trim()) return
-
-    setRefining(true)
-    setError(null)
-
-    try {
-      const response = await fetch(`/api/goals/${goalId}/generate/refine`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nodeId, cards, feedback: refineFeedback }),
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to refine cards')
-      }
-
-      const result = await response.json()
-      setCards(result.cards)
-      setRefineFeedback('')
-      setShowRefineInput(false)
-      setSuccess(`Cards refined based on: "${result.refinementApplied}"`)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to refine cards')
-    } finally {
-      setRefining(false)
-    }
-  }
-
-  // Commit cards
-  const handleCommit = async () => {
-    if (!goalId || !nodeId) return
-
-    const approvedCards = cards.filter((c) => c.approved)
-    if (approvedCards.length === 0) {
-      setError('No approved cards to commit')
-      return
-    }
-
-    setCommitting(true)
-    setError(null)
-
-    try {
-      const response = await fetch(`/api/goals/${goalId}/generate/commit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nodeId, cards }),
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to commit cards')
-      }
-
-      const result = await response.json()
-      setSuccess(`Committed ${result.committed} cards! Redirecting...`)
-
-      // Redirect to goal page after short delay
-      setTimeout(() => {
-        router.push(`/goals/${goalId}`)
-        router.refresh() // Force page to refetch data
-      }, 1500)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to commit cards')
-    } finally {
-      setCommitting(false)
-    }
-  }
-
-  // Update card
-  const handleUpdateCard = (tempId: string, updates: Partial<GeneratedCardData>) => {
-    setCards((prev) =>
-      prev.map((card) => (card.tempId === tempId ? { ...card, ...updates } : card))
-    )
-  }
-
-  // Remove card
-  const handleRemoveCard = (tempId: string) => {
-    setCards((prev) => prev.filter((card) => card.tempId !== tempId))
-  }
-
-  // Toggle all approval
-  const handleToggleAll = (approved: boolean) => {
-    setCards((prev) => prev.map((card) => ({ ...card, approved })))
-  }
-
-  const approvedCount = cards.filter((c) => c.approved).length
 
   if (!nodeId) {
     return (
@@ -236,7 +130,7 @@ export default function GeneratePage({ params }: { params: Promise<{ goalId: str
   }
 
   return (
-    <div className="flex flex-col min-h-screen p-6 max-w-4xl mx-auto">
+    <div className="flex flex-col min-h-screen p-6 max-w-md mx-auto">
       {/* Header */}
       <div className="mb-6">
         {goalId && (
@@ -255,10 +149,10 @@ export default function GeneratePage({ params }: { params: Promise<{ goalId: str
             Back to Goal
           </Link>
         )}
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Generate Cards</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Generate More Cards</h1>
         {node && (
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Creating cards for: <span className="font-medium">{node.title}</span>
+            Adding cards to: <span className="font-medium">{node.title}</span>
           </p>
         )}
       </div>
@@ -276,35 +170,31 @@ export default function GeneratePage({ params }: { params: Promise<{ goalId: str
       )}
 
       {/* Generation Form */}
-      {cards.length === 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            Generation Settings
-          </h2>
-
+      {!success && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <div className="mb-6">
-            {/* Number of Cards */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Number of Cards
-              </label>
-              <select
-                value={count}
-                onChange={(e) => setCount(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value={5}>5 cards</option>
-                <option value={10}>10 cards</option>
-                <option value={15}>15 cards</option>
-                <option value={20}>20 cards</option>
-              </select>
-            </div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Number of Cards
+            </label>
+            <select
+              value={count}
+              onChange={(e) => setCount(parseInt(e.target.value))}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value={5}>5 cards</option>
+              <option value={10}>10 cards</option>
+              <option value={15}>15 cards</option>
+              <option value={20}>20 cards</option>
+            </select>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              Cards will be created immediately and available for study.
+            </p>
           </div>
 
           <button
             onClick={handleGenerate}
             disabled={loading}
-            className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
           >
             {loading ? (
               <>
@@ -318,111 +208,14 @@ export default function GeneratePage({ params }: { params: Promise<{ goalId: str
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                   />
                 </svg>
-                Generate Cards
+                Generate {count} Cards
               </>
             )}
           </button>
         </div>
-      )}
-
-      {/* Cards Preview */}
-      {cards.length > 0 && (
-        <>
-          {/* Toolbar */}
-          <div className="flex items-center justify-between mb-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                {approvedCount} of {cards.length} approved
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleToggleAll(true)}
-                  className="text-sm text-green-600 dark:text-green-400 hover:underline"
-                >
-                  Approve All
-                </button>
-                <span className="text-gray-300 dark:text-gray-600">|</span>
-                <button
-                  onClick={() => handleToggleAll(false)}
-                  className="text-sm text-red-600 dark:text-red-400 hover:underline"
-                >
-                  Reject All
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowRefineInput(!showRefineInput)}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                Refine
-              </button>
-              <button
-                onClick={handleGenerate}
-                disabled={loading}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                Regenerate
-              </button>
-              <button
-                onClick={handleCommit}
-                disabled={committing || approvedCount === 0}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-              >
-                {committing ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Committing...
-                  </>
-                ) : (
-                  <>Commit {approvedCount} Cards</>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Refine Input */}
-          {showRefineInput && (
-            <div className="mb-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 p-4">
-              <label className="block text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">
-                How should the cards be improved?
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={refineFeedback}
-                  onChange={(e) => setRefineFeedback(e.target.value)}
-                  placeholder="e.g., Make questions more practical, add code examples..."
-                  className="flex-1 px-3 py-2 border border-blue-300 dark:border-blue-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <button
-                  onClick={handleRefine}
-                  disabled={refining || !refineFeedback.trim()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {refining ? 'Refining...' : 'Apply'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Cards List */}
-          <div className="space-y-4">
-            {cards.map((card, index) => (
-              <CardPreview
-                key={card.tempId}
-                card={card}
-                index={index}
-                onUpdate={handleUpdateCard}
-                onRemove={handleRemoveCard}
-              />
-            ))}
-          </div>
-        </>
       )}
     </div>
   )

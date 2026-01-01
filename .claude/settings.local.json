@@ -116,7 +116,8 @@
       "Bash(npx serena:*)",
       "Bash(npx next build:*)",
       "Bash(pgrep:*)",
-      "mcp__serena__find_file"
+      "mcp__serena__find_file",
+      "Bash(npx tsx:*)"
     ]
   },
   "enabledMcpjsonServers": [

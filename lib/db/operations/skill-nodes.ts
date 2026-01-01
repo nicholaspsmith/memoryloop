@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid'
 import { getDb } from '@/lib/db/pg-client'
 import { skillNodes, flashcards } from '@/lib/db/drizzle-schema'
-import { eq, and, like, isNull } from 'drizzle-orm'
+import { eq, and, like, isNull, sql } from 'drizzle-orm'
 import type { SkillNode, NewSkillNode } from '@/lib/db/drizzle-schema'
 import { State, type Card } from 'ts-fsrs'
 
@@ -218,6 +218,21 @@ export async function updateSkillNode(
   }
 
   return row ?? null
+}
+
+/**
+ * Atomically increment card count for a node
+ */
+export async function incrementNodeCardCount(nodeId: string, count: number): Promise<void> {
+  const db = getDb()
+
+  await db
+    .update(skillNodes)
+    .set({
+      cardCount: sql`${skillNodes.cardCount} + ${count}`,
+      updatedAt: new Date(),
+    })
+    .where(eq(skillNodes.id, nodeId))
 }
 
 /**

@@ -2,11 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import StudyModeSelector, { type StudyMode } from '@/components/study/StudyModeSelector'
 import FlashcardMode from '@/components/study/FlashcardMode'
 import MultipleChoiceModeWrapper from '@/components/study/MultipleChoiceModeWrapper'
 import TimedChallengeMode from '@/components/study/TimedChallengeMode'
 import MixedMode from '@/components/study/MixedMode'
+import GuidedStudyFlow from '@/components/study/GuidedStudyFlow'
 
 /**
  * Study Session Page (T059)
@@ -35,10 +37,22 @@ interface StudyCard {
 interface SessionData {
   sessionId: string
   mode: string
+  isGuided?: boolean
+  isTreeComplete?: boolean
   cards: StudyCard[]
   timedSettings?: {
     durationSeconds: number
     pointsPerCard: number
+  }
+  // Guided mode fields (T027)
+  currentNode?: {
+    id: string
+    title: string
+    path: string
+  }
+  nodeProgress?: {
+    completedInNode: number
+    totalInNode: number
   }
 }
 
@@ -50,6 +64,8 @@ interface SessionSummary {
 }
 
 export default function StudyPage({ params }: { params: Promise<{ goalId: string }> }) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [goalId, setGoalId] = useState<string | null>(null)
   const [goalTitle, setGoalTitle] = useState<string>('')
 
@@ -61,10 +77,23 @@ export default function StudyPage({ params }: { params: Promise<{ goalId: string
   const [startTime, setStartTime] = useState<Date | null>(null)
   const [summary, setSummary] = useState<SessionSummary | null>(null)
 
+  // Guided mode state (T027)
+  const [isGuidedMode, setIsGuidedMode] = useState(false)
+  const [isTreeComplete, setIsTreeComplete] = useState(false)
+
   // UI state
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [phase, setPhase] = useState<'select' | 'study' | 'complete'>('select')
+
+  // Check for guided mode from URL (T027)
+  useEffect(() => {
+    const mode = searchParams.get('mode')
+    if (mode === 'guided') {
+      setIsGuidedMode(true)
+      setSelectedMode('flashcard') // Guided mode uses flashcard presentation
+    }
+  }, [searchParams])
 
   // Unwrap params
   useEffect(() => {
@@ -91,7 +120,7 @@ export default function StudyPage({ params }: { params: Promise<{ goalId: string
   }, [goalId])
 
   // Start study session
-  const handleStartSession = async () => {
+  const handleStartSession = useCallback(async () => {
     if (!goalId) return
 
     setLoading(true)
@@ -101,7 +130,11 @@ export default function StudyPage({ params }: { params: Promise<{ goalId: string
       const response = await fetch('/api/study/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ goalId, mode: selectedMode }),
+        body: JSON.stringify({
+          goalId,
+          mode: selectedMode,
+          isGuided: isGuidedMode, // Pass guided flag separately
+        }),
       })
 
       if (!response.ok) {
@@ -110,6 +143,14 @@ export default function StudyPage({ params }: { params: Promise<{ goalId: string
       }
 
       const data: SessionData = await response.json()
+
+      // Handle guided mode response (T027)
+      if (data.isGuided && !data.sessionId) {
+        // No more nodes or cards being generated
+        setIsTreeComplete(data.isTreeComplete ?? false)
+        setPhase('complete')
+        return
+      }
 
       if (data.cards.length === 0) {
         throw new Error('No cards available. Generate some cards first.')
@@ -125,7 +166,59 @@ export default function StudyPage({ params }: { params: Promise<{ goalId: string
     } finally {
       setLoading(false)
     }
-  }
+  }, [goalId, isGuidedMode, selectedMode])
+
+  // Note: Guided mode no longer auto-starts - users choose their study mode first
+  // The isGuidedMode flag controls node selection, not presentation mode
+
+  // Handle continue to next node (T027)
+  const handleContinueToNextNode = useCallback(async () => {
+    setPhase('select')
+    setSession(null)
+    setSummary(null)
+    setIsTreeComplete(false)
+    // The auto-start effect will trigger the next session
+  }, [])
+
+  // Handle return to goal (T027)
+  const handleReturnToGoal = useCallback(() => {
+    router.push(`/goals/${goalId}`)
+  }, [router, goalId])
+
+  // Complete session (moved before handleRate to fix dependency issue)
+  const handleCompleteSession = useCallback(async () => {
+    if (!session || !goalId || !startTime) return
+
+    setLoading(true)
+
+    try {
+      const durationSeconds = Math.round((Date.now() - startTime.getTime()) / 1000)
+
+      const response = await fetch('/api/study/session/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: session.sessionId,
+          goalId,
+          mode: session.mode,
+          durationSeconds,
+          ratings: responses,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to complete session')
+      }
+
+      const data = await response.json()
+      setSummary(data.summary)
+      setPhase('complete')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to complete session')
+    } finally {
+      setLoading(false)
+    }
+  }, [session, goalId, startTime, responses])
 
   // Rate card and move to next
   const handleRate = useCallback(
@@ -161,43 +254,8 @@ export default function StudyPage({ params }: { params: Promise<{ goalId: string
         setCurrentIndex((prev) => prev + 1)
       }
     },
-    [session, currentIndex, startTime]
+    [session, currentIndex, startTime, handleCompleteSession]
   )
-
-  // Complete session
-  const handleCompleteSession = async () => {
-    if (!session || !goalId || !startTime) return
-
-    setLoading(true)
-
-    try {
-      const durationSeconds = Math.round((Date.now() - startTime.getTime()) / 1000)
-
-      const response = await fetch('/api/study/session/complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: session.sessionId,
-          goalId,
-          mode: session.mode,
-          durationSeconds,
-          ratings: responses,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to complete session')
-      }
-
-      const data = await response.json()
-      setSummary(data.summary)
-      setPhase('complete')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to complete session')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   // Handle timed mode completion
   const handleTimedComplete = async (score: number, correct: number, total: number) => {
@@ -400,6 +458,22 @@ export default function StudyPage({ params }: { params: Promise<{ goalId: string
 
   // Render completion summary
   if (phase === 'complete') {
+    // Show GuidedStudyFlow for guided mode (T027)
+    if (isGuidedMode) {
+      return (
+        <div className="flex flex-col min-h-screen p-6 max-w-4xl mx-auto">
+          <GuidedStudyFlow
+            currentNode={session?.currentNode || null}
+            nodeProgress={session?.nodeProgress || { completedInNode: 0, totalInNode: 0 }}
+            isTreeComplete={isTreeComplete}
+            onContinue={handleContinueToNextNode}
+            onReturn={handleReturnToGoal}
+          />
+        </div>
+      )
+    }
+
+    // Regular completion summary
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-6 max-w-2xl mx-auto">
         <div className="text-6xl mb-4">🎉</div>
