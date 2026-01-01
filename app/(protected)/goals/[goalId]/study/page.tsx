@@ -9,6 +9,7 @@ import MultipleChoiceModeWrapper from '@/components/study/MultipleChoiceModeWrap
 import TimedChallengeMode from '@/components/study/TimedChallengeMode'
 import MixedMode from '@/components/study/MixedMode'
 import GuidedStudyFlow from '@/components/study/GuidedStudyFlow'
+import StudySummary from '@/components/study/StudySummary'
 
 /**
  * Study Session Page (T059)
@@ -81,10 +82,18 @@ export default function StudyPage({ params }: { params: Promise<{ goalId: string
   const [isGuidedMode, setIsGuidedMode] = useState(false)
   const [isTreeComplete, setIsTreeComplete] = useState(false)
 
+  // Node study state (T040-T041)
+  const [correctCount, setCorrectCount] = useState(0)
+
   // UI state
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [phase, setPhase] = useState<'select' | 'study' | 'complete'>('select')
+
+  // Extract URL params for node study (T040-T041)
+  const nodeId = searchParams.get('nodeId')
+  const cardLimit = searchParams.get('cardLimit')
+  const isNodeStudy = !!nodeId
 
   // Check for guided mode from URL (T027)
   useEffect(() => {
@@ -134,6 +143,9 @@ export default function StudyPage({ params }: { params: Promise<{ goalId: string
           goalId,
           mode: selectedMode,
           isGuided: isGuidedMode, // Pass guided flag separately
+          nodeId: nodeId || undefined,
+          includeChildren: nodeId ? true : undefined,
+          cardLimit: cardLimit ? parseInt(cardLimit, 10) : undefined,
         }),
       })
 
@@ -159,6 +171,7 @@ export default function StudyPage({ params }: { params: Promise<{ goalId: string
       setSession(data)
       setCurrentIndex(0)
       setResponses([])
+      setCorrectCount(0)
       setStartTime(new Date())
       setPhase('study')
     } catch (err) {
@@ -166,7 +179,7 @@ export default function StudyPage({ params }: { params: Promise<{ goalId: string
     } finally {
       setLoading(false)
     }
-  }, [goalId, isGuidedMode, selectedMode])
+  }, [goalId, isGuidedMode, selectedMode, nodeId, cardLimit])
 
   // Note: Guided mode no longer auto-starts - users choose their study mode first
   // The isGuidedMode flag controls node selection, not presentation mode
@@ -228,6 +241,22 @@ export default function StudyPage({ params }: { params: Promise<{ goalId: string
       const currentCard = session.cards[currentIndex]
       if (!currentCard) return
 
+      // Track correct/incorrect for node study (T040)
+      if (isNodeStudy) {
+        // For flashcard mode: rating >= 3 is correct
+        // For MC mode: rating of 3 is correct
+        if (session.mode === 'multiple_choice') {
+          if (rating === 3) {
+            setCorrectCount((prev) => prev + 1)
+          }
+        } else {
+          // Flashcard mode or other modes
+          if (rating >= 3) {
+            setCorrectCount((prev) => prev + 1)
+          }
+        }
+      }
+
       // Send rating to server
       try {
         await fetch('/api/study/rate', {
@@ -254,7 +283,7 @@ export default function StudyPage({ params }: { params: Promise<{ goalId: string
         setCurrentIndex((prev) => prev + 1)
       }
     },
-    [session, currentIndex, startTime, handleCompleteSession]
+    [session, currentIndex, startTime, handleCompleteSession, isNodeStudy]
   )
 
   // Handle timed mode completion
@@ -468,6 +497,21 @@ export default function StudyPage({ params }: { params: Promise<{ goalId: string
             isTreeComplete={isTreeComplete}
             onContinue={handleContinueToNextNode}
             onReturn={handleReturnToGoal}
+          />
+        </div>
+      )
+    }
+
+    // Show StudySummary for node study (T041)
+    if (isNodeStudy) {
+      return (
+        <div className="flex flex-col min-h-screen p-6 max-w-4xl mx-auto">
+          <StudySummary
+            cardsCompleted={responses.length}
+            totalSelected={session?.cards.length || 0}
+            correctCount={correctCount}
+            goalId={goalId!}
+            onDone={() => router.push(`/goals/${goalId}`)}
           />
         </div>
       )

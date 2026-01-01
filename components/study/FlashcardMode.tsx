@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 /**
  * FlashcardMode Component (T054)
@@ -65,6 +65,20 @@ export default function FlashcardMode({
     onRate(rating)
   }
 
+  // T003, T004: Spacebar flip with input focus guard
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement
+      const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'
+      if (e.code === 'Space' && !isInput && !isFlipped) {
+        e.preventDefault() // T008: Prevent default scroll
+        handleFlip()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isFlipped])
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh]">
       {/* Progress */}
@@ -72,40 +86,49 @@ export default function FlashcardMode({
         Card {cardNumber} of {totalCards}
       </div>
 
-      {/* Card */}
-      <div
-        onClick={handleFlip}
-        className={`w-full max-w-2xl min-h-[300px] rounded-xl shadow-lg cursor-pointer transition-transform duration-300 ${
-          !isFlipped ? 'hover:scale-[1.02]' : ''
-        }`}
-      >
+      {/* Card - T005: Perspective wrapper */}
+      <div className="w-full max-w-2xl min-h-[300px] [perspective:1000px]" data-testid="flashcard">
+        {/* T006: 3D flip animation with transform-style and rotateY */}
         <div
-          className={`h-full p-8 rounded-xl ${
-            isFlipped
-              ? 'bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800'
-              : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700'
+          onClick={handleFlip}
+          className={`relative w-full h-full min-h-[300px] cursor-pointer [transform-style:preserve-3d] transition-transform duration-[600ms] ${
+            isFlipped ? '[transform:rotateY(180deg)]' : ''
           }`}
         >
-          {!isFlipped ? (
-            <div className="flex flex-col items-center justify-center h-full">
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Question</p>
-              <p className="text-xl text-center text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
-                {question}
-              </p>
-              <p className="text-sm text-blue-600 dark:text-blue-400 mt-8">
-                Click to reveal answer
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col h-full">
-              <div className="flex-1">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Answer</p>
-                <p className="text-lg text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
-                  {answer}
+          {/* T007: Front face with backface-visibility hidden */}
+          <div
+            className="absolute inset-0 w-full h-full [backface-visibility:hidden] rounded-xl shadow-lg"
+            data-testid="flashcard-front"
+          >
+            <div className="h-full p-8 rounded-xl bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:scale-[1.02] transition-transform duration-300">
+              <div className="flex flex-col items-center justify-center h-full min-h-[250px]">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Question</p>
+                <p className="text-xl text-center text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
+                  {question}
+                </p>
+                <p className="text-sm text-blue-600 dark:text-blue-400 mt-8">
+                  Click to reveal answer
                 </p>
               </div>
             </div>
-          )}
+          </div>
+
+          {/* T007: Back face with backface-visibility hidden and rotateY(180deg) */}
+          <div
+            className="absolute inset-0 w-full h-full [backface-visibility:hidden] [transform:rotateY(180deg)] rounded-xl shadow-lg"
+            data-testid="flashcard-back"
+          >
+            <div className="h-full p-8 rounded-xl bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800">
+              <div className="flex flex-col h-full min-h-[250px]">
+                <div className="flex-1">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Answer</p>
+                  <p className="text-lg text-gray-900 dark:text-gray-100 whitespace-pre-wrap">
+                    {answer}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
