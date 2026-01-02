@@ -25,7 +25,11 @@ const config: KnipConfig = {
   },
 
   playwright: {
-    entry: ['tests/e2e/**/*.spec.ts', 'playwright.config.ts'],
+    entry: [
+      'tests/e2e/**/*.spec.ts',
+      'tests/e2e/**/*.setup.ts', // Playwright setup projects (e.g., auth.setup.ts)
+      'playwright.config.ts',
+    ],
   },
 
   // Files and directories to ignore
