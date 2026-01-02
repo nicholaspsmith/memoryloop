@@ -1,20 +1,23 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { getGoalsByUserId } from '@/lib/db/operations/goals'
+import { getGoalsByUserId, getGoalCounts } from '@/lib/db/operations/goals'
 import { getSkillTreeByGoalId } from '@/lib/db/operations/skill-trees'
-import GoalCard from '@/components/goals/GoalCard'
+import GoalLimitIndicator from '@/components/goals/GoalLimitIndicator'
+import GoalsPageContent from '@/components/goals/GoalsPageContent'
 
 /**
  * Goals Dashboard Page (T033)
  *
  * Protected route - displays user's learning goals.
- * Replaces the old home/chat flow with goal-based entry.
+ * Server component that fetches data and renders client component for interactions.
  *
  * Features:
- * - List all goals with mastery progress
+ * - List active and archived goals with mastery progress
+ * - Multi-select for bulk operations (T030)
+ * - Archive/delete/restore functionality (T029, T030, T031)
  * - Create new goal button
- * - Filter by status
+ * - Goal limits enforcement
  */
 
 export const metadata = {
@@ -28,33 +31,40 @@ export default async function GoalsPage() {
     redirect('/login')
   }
 
-  // Get all non-archived goals
-  const rawGoals = await getGoalsByUserId(session.user.id, {
-    includeArchived: false,
+  // Get goal counts for limit indicator
+  const counts = await getGoalCounts(session.user.id)
+
+  // Get all goals (both active and archived)
+  const allGoalsRaw = await getGoalsByUserId(session.user.id, {
+    includeArchived: true,
   })
 
-  // Fetch skill tree info for each goal
-  const goals = await Promise.all(
-    rawGoals.map(async (goal) => {
-      const tree = await getSkillTreeByGoalId(goal.id)
-      return {
-        id: goal.id,
-        title: goal.title,
-        description: goal.description,
-        status: goal.status as 'active' | 'paused' | 'completed' | 'archived',
-        masteryPercentage: goal.masteryPercentage,
-        totalTimeSeconds: goal.totalTimeSeconds,
-        createdAt: goal.createdAt.toISOString(),
-        skillTree: tree
-          ? {
-              id: tree.id,
-              nodeCount: tree.nodeCount,
-              maxDepth: tree.maxDepth,
-            }
-          : null,
-      }
-    })
-  )
+  // Transform goals with skill tree info
+  const transformGoal = async (goal: (typeof allGoalsRaw)[0]) => {
+    const tree = await getSkillTreeByGoalId(goal.id)
+    return {
+      id: goal.id,
+      title: goal.title,
+      description: goal.description,
+      status: goal.status as 'active' | 'paused' | 'completed' | 'archived',
+      masteryPercentage: goal.masteryPercentage,
+      totalTimeSeconds: goal.totalTimeSeconds,
+      createdAt: goal.createdAt.toISOString(),
+      skillTree: tree
+        ? {
+            id: tree.id,
+            nodeCount: tree.nodeCount,
+            maxDepth: tree.maxDepth,
+          }
+        : null,
+    }
+  }
+
+  const allGoals = await Promise.all(allGoalsRaw.map(transformGoal))
+
+  // Separate active and archived goals
+  const goals = allGoals.filter((g) => g.status !== 'archived')
+  const archivedGoals = allGoals.filter((g) => g.status === 'archived')
 
   const activeGoals = goals.filter((g) => g.status === 'active')
   const completedGoals = goals.filter((g) => g.status === 'completed')
@@ -63,9 +73,12 @@ export default async function GoalsPage() {
     <div className="flex flex-col h-full p-6 max-w-7xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            My Learning Goals
-          </h1>
+          <div className="flex items-center gap-4 mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+              My Learning Goals
+            </h1>
+            <GoalLimitIndicator counts={counts} />
+          </div>
           <p className="text-gray-600 dark:text-gray-400">
             Track your progress toward mastering new skills
           </p>
@@ -108,8 +121,8 @@ export default async function GoalsPage() {
         </div>
       )}
 
-      {/* Goals List */}
-      {goals.length === 0 ? (
+      {/* Goals List - Client Component with Tabs & Multi-Select */}
+      {goals.length === 0 && archivedGoals.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="mb-4 text-gray-400 dark:text-gray-600">
             <svg
@@ -140,11 +153,7 @@ export default async function GoalsPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {goals.map((goal) => (
-            <GoalCard key={goal.id} goal={goal} />
-          ))}
-        </div>
+        <GoalsPageContent goals={goals} archivedGoals={archivedGoals} counts={counts} />
       )}
     </div>
   )
