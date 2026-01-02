@@ -2,6 +2,7 @@ import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getGoalsByUserId, getGoalCounts } from '@/lib/db/operations/goals'
+import { GOAL_LIMITS } from '@/lib/constants/goals'
 import { getSkillTreeByGoalId } from '@/lib/db/operations/skill-trees'
 import GoalLimitIndicator from '@/components/goals/GoalLimitIndicator'
 import GoalsPageContent from '@/components/goals/GoalsPageContent'
@@ -83,15 +84,23 @@ export default async function GoalsPage() {
             Track your progress toward mastering new skills
           </p>
         </div>
-        <Link
-          href="/goals/new"
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          New Goal
-        </Link>
+        {counts.active < GOAL_LIMITS.ACTIVE && (
+          <Link
+            href="/goals/new"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            data-testid="new-goal-button"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            New Goal
+          </Link>
+        )}
       </div>
 
       {/* Stats Summary */}
