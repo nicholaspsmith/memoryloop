@@ -11,12 +11,101 @@ import type { DuplicateCheckResult } from '@/lib/dedup/types'
  *
  * Tests API contract for POST /api/goals/check-duplicate
  * Per specs/023-dedupe/contracts/dedupe-api.md
- *
- * These tests will FAIL until the endpoint is implemented (TDD approach).
+ * Uses mocked embeddings to ensure consistent behavior across environments.
  *
  * Feature: 023-dedupe
  * User Story 2: Goal Duplicate Detection
  */
+
+// Mock the embeddings module - use keyword-based approach for high similarity
+// Texts containing common keywords get similar embeddings
+vi.mock('@/lib/embeddings', () => {
+  function createMockEmbedding(text: string): number[] {
+    const DIMS = 1024
+    const embedding = new Array(DIMS).fill(0)
+    const normalized = text.toLowerCase()
+
+    // Check for key topics and use fixed embeddings for each
+    if (normalized.includes('python')) {
+      for (let i = 0; i < 100; i++) {
+        embedding[i] = 1.0
+      }
+    }
+    if (normalized.includes('typescript')) {
+      for (let i = 100; i < 200; i++) {
+        embedding[i] = 1.0
+      }
+    }
+    if (
+      normalized.includes('javascript') ||
+      normalized.includes('react') ||
+      normalized.includes('next')
+    ) {
+      for (let i = 200; i < 300; i++) {
+        embedding[i] = 1.0
+      }
+    }
+    if (
+      normalized.includes('web') ||
+      normalized.includes('frontend') ||
+      normalized.includes('fullstack')
+    ) {
+      for (let i = 300; i < 400; i++) {
+        embedding[i] = 1.0
+      }
+    }
+    // Note: Don't use 'ai' alone - it matches 'explain', 'certain', etc.
+    if (
+      normalized.includes('machine') ||
+      normalized.includes('learning') ||
+      normalized.includes('artificial')
+    ) {
+      for (let i = 400; i < 500; i++) {
+        embedding[i] = 1.0
+      }
+    }
+    if (
+      normalized.includes('programming') ||
+      normalized.includes('development') ||
+      normalized.includes('coding')
+    ) {
+      for (let i = 500; i < 600; i++) {
+        embedding[i] = 1.0
+      }
+    }
+    if (normalized.includes('french') || normalized.includes('français')) {
+      for (let i = 600; i < 700; i++) {
+        embedding[i] = 1.0
+      }
+    }
+
+    // Add small variation based on text length to avoid identical embeddings
+    const textHash = text.length * 0.001
+    embedding[1023] = textHash
+
+    // Normalize to unit vector
+    let norm = 0
+    for (let i = 0; i < DIMS; i++) {
+      norm += embedding[i] * embedding[i]
+    }
+    norm = Math.sqrt(norm)
+    if (norm > 0) {
+      for (let i = 0; i < DIMS; i++) {
+        embedding[i] /= norm
+      }
+    } else {
+      embedding[0] = 1.0
+    }
+    return embedding
+  }
+
+  return {
+    generateEmbedding: (text: string) => Promise.resolve(createMockEmbedding(text)),
+    generateEmbeddings: (texts: string[]) =>
+      Promise.resolve(texts.map((t) => createMockEmbedding(t))),
+    EMBEDDING_DIMENSIONS: 1024,
+  }
+})
 
 // Mock auth module
 vi.mock('@/auth', () => ({
