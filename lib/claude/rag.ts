@@ -26,7 +26,7 @@ export function shouldUseRAG(_content: string): boolean {
 }
 
 /**
- * Builds RAG context from similar past conversations.
+ * Builds RAG context from similar past learning content.
  * Currently returns empty context (RAG disabled).
  */
 export async function buildRAGContext(

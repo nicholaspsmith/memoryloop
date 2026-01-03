@@ -5,9 +5,9 @@ import { test, expect } from '@playwright/test'
  *
  * Tests the complete user authentication journey:
  * 1. Navigate to app → see login screen
- * 2. Sign up with email/password → automatically logged in and redirected to chat
+ * 2. Sign up with email/password → automatically logged in and redirected to goals
  * 3. Log out → redirected to login screen
- * 4. Log in with credentials → access chat interface
+ * 4. Log in with credentials → access goals interface
  *
  * Following TDD - these should FAIL until implementation is complete.
  */
@@ -41,14 +41,14 @@ test.describe('Authentication Flow', () => {
     // Submit form
     await page.getByRole('button', { name: /sign up/i }).click()
 
-    // Should be redirected to chat after successful signup
-    await expect(page).toHaveURL('/chat', { timeout: 10000 })
+    // Should be redirected to goals after successful signup
+    await expect(page).toHaveURL('/goals', { timeout: 10000 })
 
-    // Should see chat interface
-    await expect(page.getByRole('heading', { name: /chat/i })).toBeVisible()
+    // Should see goals interface
+    await expect(page.getByRole('heading', { name: /goals/i })).toBeVisible()
   })
 
-  test('should redirect authenticated users from login to chat', async ({ page }) => {
+  test('should redirect authenticated users from login to goals', async ({ page }) => {
     // First sign up
     await page.goto('/signup')
     const uniqueEmail = `test-redirect-${Date.now()}@example.com`
@@ -57,14 +57,14 @@ test.describe('Authentication Flow', () => {
     await page.getByLabel(/name/i).fill(testName)
     await page.getByRole('button', { name: /sign up/i }).click()
 
-    // Wait for redirect to chat
-    await expect(page).toHaveURL('/chat', { timeout: 10000 })
+    // Wait for redirect to goals
+    await expect(page).toHaveURL('/goals', { timeout: 10000 })
 
     // Try to navigate to login page
     await page.goto('/login')
 
-    // Should be redirected back to chat
-    await expect(page).toHaveURL('/chat')
+    // Should be redirected back to goals
+    await expect(page).toHaveURL('/goals')
   })
 
   test('should allow user to log out', async ({ page }) => {
@@ -76,8 +76,8 @@ test.describe('Authentication Flow', () => {
     await page.getByLabel(/name/i).fill(testName)
     await page.getByRole('button', { name: /sign up/i }).click()
 
-    // Wait for redirect to chat
-    await expect(page).toHaveURL('/chat', { timeout: 10000 })
+    // Wait for redirect to goals
+    await expect(page).toHaveURL('/goals', { timeout: 10000 })
 
     // Find and click logout button
     await page.getByRole('button', { name: /log out|sign out/i }).click()
@@ -98,8 +98,8 @@ test.describe('Authentication Flow', () => {
     await page.getByLabel(/name/i).fill(testName)
     await page.getByRole('button', { name: /sign up/i }).click()
 
-    // Wait for redirect to chat
-    await expect(page).toHaveURL('/chat', { timeout: 10000 })
+    // Wait for redirect to goals
+    await expect(page).toHaveURL('/goals', { timeout: 10000 })
 
     // Log out
     await page.getByRole('button', { name: /log out|sign out/i }).click()
@@ -110,11 +110,11 @@ test.describe('Authentication Flow', () => {
     await page.getByLabel(/password/i).fill(testPassword)
     await page.getByRole('button', { name: /sign in/i }).click()
 
-    // Should be redirected to chat
-    await expect(page).toHaveURL('/chat', { timeout: 10000 })
+    // Should be redirected to goals
+    await expect(page).toHaveURL('/goals', { timeout: 10000 })
 
-    // Should see chat interface
-    await expect(page.getByRole('heading', { name: /chat/i })).toBeVisible()
+    // Should see goals interface
+    await expect(page.getByRole('heading', { name: /goals/i })).toBeVisible()
   })
 
   test('should show error for invalid login credentials', async ({ page }) => {
@@ -144,7 +144,7 @@ test.describe('Authentication Flow', () => {
     await page.getByRole('button', { name: /sign up/i }).click()
 
     // Wait for successful signup
-    await expect(page).toHaveURL('/chat', { timeout: 10000 })
+    await expect(page).toHaveURL('/goals', { timeout: 10000 })
 
     // Log out
     await page.getByRole('button', { name: /log out|sign out/i }).click()
@@ -164,12 +164,12 @@ test.describe('Authentication Flow', () => {
     await expect(page).toHaveURL('/signup')
   })
 
-  test('should protect /chat route from unauthenticated access', async ({ page }) => {
+  test('should protect /goals route from unauthenticated access', async ({ page }) => {
     // Clear any existing session
     await page.context().clearCookies()
 
     // Try to access protected route directly
-    await page.goto('/chat')
+    await page.goto('/goals')
 
     // Should be redirected to login
     await expect(page).toHaveURL('/login', { timeout: 10000 })
@@ -184,14 +184,14 @@ test.describe('Authentication Flow', () => {
     await page.getByLabel(/name/i).fill(testName)
     await page.getByRole('button', { name: /sign up/i }).click()
 
-    // Wait for redirect to chat
-    await expect(page).toHaveURL('/chat', { timeout: 10000 })
+    // Wait for redirect to goals
+    await expect(page).toHaveURL('/goals', { timeout: 10000 })
 
     // Reload the page
     await page.reload()
 
-    // Should still be on chat page (authenticated)
-    await expect(page).toHaveURL('/chat')
-    await expect(page.getByRole('heading', { name: /chat/i })).toBeVisible()
+    // Should still be on goals page (authenticated)
+    await expect(page).toHaveURL('/goals')
+    await expect(page.getByRole('heading', { name: /goals/i })).toBeVisible()
   })
 })

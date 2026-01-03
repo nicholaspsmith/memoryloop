@@ -20,25 +20,25 @@ test.describe('Page Transitions', () => {
     // TODO: Add actual login logic when authentication is set up
   })
 
-  test('navigates from chat to quiz with smooth transition', async ({ page }) => {
-    // Start on chat page
-    await page.goto('/chat')
-    await expect(page).toHaveURL('/chat')
+  test('navigates from goals to progress with smooth transition', async ({ page }) => {
+    // Start on goals page
+    await page.goto('/goals')
+    await expect(page).toHaveURL('/goals')
 
-    // Click quiz navigation tab
-    const quizTab = page.getByRole('link', { name: /quiz/i })
-    await quizTab.click()
+    // Click progress navigation tab
+    const progressTab = page.getByRole('link', { name: /progress/i })
+    await progressTab.click()
 
-    // Verify we navigated to quiz page
-    await expect(page).toHaveURL('/quiz')
+    // Verify we navigated to progress page
+    await expect(page).toHaveURL('/progress')
 
     // Page should be visible (transition complete)
     await expect(page.locator('body')).toBeVisible()
   })
 
-  test('navigates from quiz to settings with smooth transition', async ({ page }) => {
-    await page.goto('/quiz')
-    await expect(page).toHaveURL('/quiz')
+  test('navigates from progress to settings with smooth transition', async ({ page }) => {
+    await page.goto('/progress')
+    await expect(page).toHaveURL('/progress')
 
     const settingsTab = page.getByRole('link', { name: /settings/i })
     await settingsTab.click()
@@ -47,37 +47,37 @@ test.describe('Page Transitions', () => {
     await expect(page.locator('body')).toBeVisible()
   })
 
-  test('navigates from settings to chat with smooth transition', async ({ page }) => {
+  test('navigates from settings to goals with smooth transition', async ({ page }) => {
     await page.goto('/settings')
     await expect(page).toHaveURL('/settings')
 
-    const chatTab = page.getByRole('link', { name: /chat/i })
-    await chatTab.click()
+    const goalsTab = page.getByRole('link', { name: /goals/i })
+    await goalsTab.click()
 
-    await expect(page).toHaveURL('/chat')
+    await expect(page).toHaveURL('/goals')
     await expect(page.locator('body')).toBeVisible()
   })
 
   test('handles rapid navigation between pages', async ({ page }) => {
-    // Start on chat
-    await page.goto('/chat')
+    // Start on goals
+    await page.goto('/goals')
 
     // Rapidly click through all tabs
-    await page.getByRole('link', { name: /quiz/i }).click()
+    await page.getByRole('link', { name: /progress/i }).click()
     await page.getByRole('link', { name: /settings/i }).click()
-    await page.getByRole('link', { name: /chat/i }).click()
+    await page.getByRole('link', { name: /goals/i }).click()
 
-    // Should end up on chat page without errors
-    await expect(page).toHaveURL('/chat')
+    // Should end up on goals page without errors
+    await expect(page).toHaveURL('/goals')
     await expect(page.locator('body')).toBeVisible()
   })
 
   test('transitions complete within 300ms', async ({ page }) => {
-    await page.goto('/chat')
+    await page.goto('/goals')
 
     const startTime = Date.now()
-    await page.getByRole('link', { name: /quiz/i }).click()
-    await expect(page).toHaveURL('/quiz')
+    await page.getByRole('link', { name: /progress/i }).click()
+    await expect(page).toHaveURL('/progress')
     const endTime = Date.now()
 
     // Transition should complete quickly (under 1 second)
@@ -86,18 +86,18 @@ test.describe('Page Transitions', () => {
   })
 
   test('maintains navigation state during transitions', async ({ page }) => {
-    await page.goto('/chat')
+    await page.goto('/goals')
 
-    // Navigate to quiz
-    await page.getByRole('link', { name: /quiz/i }).click()
-    await expect(page).toHaveURL('/quiz')
+    // Navigate to progress
+    await page.getByRole('link', { name: /progress/i }).click()
+    await expect(page).toHaveURL('/progress')
 
     // Use browser back button
     await page.goBack()
-    await expect(page).toHaveURL('/chat')
+    await expect(page).toHaveURL('/goals')
 
     // Use browser forward button
     await page.goForward()
-    await expect(page).toHaveURL('/quiz')
+    await expect(page).toHaveURL('/progress')
   })
 })

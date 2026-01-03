@@ -111,7 +111,7 @@ export default function SignupForm({ onSuccess }: SignupFormProps) {
       if (onSuccess) {
         onSuccess()
       }
-      router.push('/chat')
+      router.push('/goals')
       router.refresh()
     } catch (err) {
       console.error('Signup error:', err)

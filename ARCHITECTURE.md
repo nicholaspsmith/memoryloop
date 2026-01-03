@@ -13,9 +13,11 @@ MemoryLoop uses a **hybrid database architecture** with PostgreSQL and LanceDB w
 ### Tables
 
 - **users** - User accounts and authentication
-- **conversations** - Chat conversations
-- **messages** - Chat message metadata (content, role, timestamps)
-- **api_keys** - Encrypted Claude API keys (using pgcrypto)
+- **learning_goals** - Learning goals with skill trees
+- **skill_trees** - Hierarchical skill structures for goals
+- **skill_nodes** - Individual skills within a tree
+- **flashcards** - Flashcard questions and answers
+- **review_logs** - FSRS spaced repetition history
 
 ### Why PostgreSQL?
 
@@ -41,9 +43,11 @@ const db = getDb() // Drizzle ORM instance
 ### Operations
 
 - `lib/db/operations/users.ts`
-- `lib/db/operations/conversations.ts`
-- `lib/db/operations/messages.ts`
-- `lib/db/operations/api-keys.ts`
+- `lib/db/operations/goals.ts`
+- `lib/db/operations/skill-trees.ts`
+- `lib/db/operations/skill-nodes.ts`
+- `lib/db/operations/flashcards.ts`
+- `lib/db/operations/review-logs.ts`
 
 ---
 
@@ -53,8 +57,8 @@ const db = getDb() // Drizzle ORM instance
 
 ### Tables
 
-- **messages** - Full message copies with vector embeddings (768-dim)
-- **flashcards** - User flashcards with question embeddings (768-dim)
+- **flashcards** - User flashcards with question embeddings (1024-dim via Jina)
+- **goals** - Goal embeddings for duplicate detection
 - **review_logs** - FSRS spaced repetition history
 
 ### Why LanceDB?
@@ -87,28 +91,27 @@ const db = await getDbConnection() // LanceDB instance
 
 ## Data Flow
 
-### Chat Flow (Both Databases)
+### Goal Creation Flow (Both Databases)
 
 ```
-User sends message
-  → POST /api/chat/conversations/[id]/messages
-  → createMessage() → PostgreSQL.messages (immediate)
-  → syncMessageToLanceDB() → LanceDB.messages (async, with embedding)
-  → Stream Claude response
-  → createMessage() → PostgreSQL.messages (immediate)
-  → syncMessageToLanceDB() → LanceDB.messages (async, with embedding)
+User creates learning goal
+  → POST /api/goals
+  → createGoal() → PostgreSQL.learning_goals (immediate)
+  → generateGoalEmbedding() → LanceDB.goals (async, with embedding)
+  → Claude generates skill tree
+  → createSkillTree() → PostgreSQL.skill_trees (save structure)
+  → createSkillNodes() → PostgreSQL.skill_nodes (save individual skills)
 ```
 
 ### Flashcard Generation Flow (Both Databases)
 
 ```
-User clicks "Generate Flashcards"
+User clicks "Generate Flashcards" on skill node
   → POST /api/flashcards/generate
-  → getMessageById() → PostgreSQL.messages (fetch message content)
+  → getSkillNodeById() → PostgreSQL.skill_nodes (fetch skill content)
   → generateFlashcardsFromContent() → Claude API
-  → createFlashcard() → LanceDB.flashcards (save with embedding)
-  → markMessageWithFlashcards() → PostgreSQL.messages (update flag)
-  → updateMessageHasFlashcardsInLanceDB() → LanceDB.messages (async sync)
+  → createFlashcard() → PostgreSQL.flashcards (save with embedding)
+  → syncFlashcardToLanceDB() → LanceDB.flashcards (async, vector search)
 ```
 
 ### Quiz Flow (LanceDB)
@@ -147,8 +150,8 @@ User rates flashcard
 
 ### Option C: Hybrid (Current)
 
-- ✅ PostgreSQL for mission-critical auth/chat data
-- ✅ LanceDB for high-volume learning data
+- ✅ PostgreSQL for mission-critical auth and learning goal data
+- ✅ LanceDB for high-volume vector search and review data
 - ✅ Best performance characteristics for each domain
 - ✅ Zero cost for flashcards/reviews (bulk of data volume)
 - ⚠️ Two databases to maintain
@@ -162,23 +165,25 @@ User rates flashcard
 
 ### Foreign Key Pattern
 
-Since flashcards reference messages, we maintain referential integrity through application logic:
+Since flashcards reference skill nodes, we maintain referential integrity through application logic:
 
 ```typescript
 // When creating flashcard
 export async function createFlashcard(data: {
-  messageId: string // References PostgreSQL.messages.id
+  skillNodeId: string // References PostgreSQL.skill_nodes.id
+  goalId: string // References PostgreSQL.learning_goals.id
   // ...
 }) {
-  // 1. Verify message exists in PostgreSQL
-  const message = await getMessageById(data.messageId)
-  if (!message) {
-    throw new Error('Message not found')
+  // 1. Verify skill node exists in PostgreSQL
+  const skillNode = await getSkillNodeById(data.skillNodeId)
+  if (!skillNode) {
+    throw new Error('Skill node not found')
   }
 
-  // 2. Create flashcard in LanceDB
-  const flashcard = await lanceDbCreate('flashcards', {
-    messageId: data.messageId, // Store reference
+  // 2. Create flashcard in PostgreSQL
+  const flashcard = await db.insert(flashcards).values({
+    skillNodeId: data.skillNodeId,
+    goalId: data.goalId,
     // ...
   })
 
@@ -188,24 +193,24 @@ export async function createFlashcard(data: {
 
 ### Joining Data Across Databases
 
-When we need to join flashcards with message data:
+When we need to join flashcards with skill node data:
 
 ```typescript
-// Get flashcards with their source messages
-export async function getFlashcardsWithMessages(userId: string) {
-  // 1. Get flashcards from LanceDB
-  const flashcards = await getFlashcardsByUserId(userId)
+// Get flashcards with their source skill nodes
+export async function getFlashcardsWithSkillNodes(userId: string, goalId: string) {
+  // 1. Get flashcards from PostgreSQL
+  const flashcards = await getFlashcardsByGoalId(goalId)
 
-  // 2. Get unique message IDs
-  const messageIds = [...new Set(flashcards.map((f) => f.messageId))]
+  // 2. Get unique skill node IDs
+  const skillNodeIds = [...new Set(flashcards.map((f) => f.skillNodeId))]
 
-  // 3. Fetch messages from PostgreSQL
-  const messages = await getMessagesByIds(messageIds)
+  // 3. Fetch skill nodes from PostgreSQL
+  const skillNodes = await getSkillNodesByIds(skillNodeIds)
 
   // 4. Join in application layer
   return flashcards.map((flashcard) => ({
     ...flashcard,
-    message: messages.find((m) => m.id === flashcard.messageId),
+    skillNode: skillNodes.find((s) => s.id === flashcard.skillNodeId),
   }))
 }
 ```
@@ -217,23 +222,24 @@ export async function getFlashcardsWithMessages(userId: string) {
 ### PostgreSQL Tests
 
 - User authentication
-- API key encryption/decryption
-- Conversation management
-- Message CRUD operations
+- Learning goal CRUD operations
+- Skill tree generation and management
+- Flashcard CRUD operations
 
 ### LanceDB Tests
 
-- Flashcard generation
+- Goal embedding and similarity search
+- Flashcard embedding and deduplication
 - FSRS scheduling
-- Vector search
 - Review log tracking
 
 ### Integration Tests
 
 Tests that span both databases:
 
-- Flashcard generation (reads from PostgreSQL, writes to LanceDB)
-- Context building for RAG (queries both databases)
+- Goal creation with embedding sync to LanceDB
+- Flashcard generation with deduplication checks
+- Study flow (PostgreSQL flashcards → LanceDB review logs)
 
 **Setup Pattern:**
 
@@ -269,19 +275,19 @@ beforeAll(async () => {
 
 **User growth patterns:**
 
-- 100 users × 100 messages = 10K messages → PostgreSQL (acceptable)
-- 100 users × 500 flashcards = 50K flashcards → LanceDB (free!)
+- 100 users × 10 goals = 1K goals → PostgreSQL (minimal)
+- 100 users × 500 flashcards = 50K flashcards → PostgreSQL + LanceDB vectors
 - 100 users × 5000 reviews = 500K reviews → LanceDB (free!)
 
 **Why this matters:**
 
-- Flashcards + reviews = 90% of data volume
-- Keeping them in LanceDB means free tier can handle 10-100x more users
+- Reviews = majority of data volume
+- Keeping review logs in LanceDB means free tier can handle 10-100x more users
 
 **Scaling limits:**
 
-- PostgreSQL: Supabase free tier = 500MB (plenty for chat history)
-- LanceDB: Disk space only (cheap)
+- PostgreSQL: Supabase free tier = 500MB (plenty for goals/flashcards)
+- LanceDB: Disk space only (cheap, used for vectors and review logs)
 
 ---
 
@@ -300,8 +306,8 @@ The application originally used LanceDB for everything, but encountered issues:
 
 Rather than fully migrating to PostgreSQL (expensive at scale) or staying with LanceDB (unsafe for auth), we split the data:
 
-- **PostgreSQL:** Low-volume, high-value data (users, API keys, conversations)
-- **LanceDB:** High-volume, ML-optimized data (flashcards, reviews)
+- **PostgreSQL:** Transactional data (users, goals, skill trees, flashcards)
+- **LanceDB:** Vector storage and high-volume logs (embeddings, review logs)
 
 This gives us the best of both worlds while keeping costs near zero.
 
@@ -313,25 +319,24 @@ This gives us the best of both worlds while keeping costs near zero.
 
 - `POST /api/auth/signup` - Create user
 - `POST /api/auth/[...nextauth]` - Authenticate user
-- `GET/POST /api/chat/conversations` - Manage conversations
-- `GET/POST /api/chat/conversations/[id]/messages` - Chat messages
-- `GET/POST/DELETE /api/settings/api-key` - API key management
-- `POST /api/settings/api-key/validate` - Validate API key
+- `GET/POST /api/goals` - Manage learning goals
+- `GET/PUT/DELETE /api/goals/[id]` - Goal CRUD
+- `GET/POST /api/goals/[id]/skill-tree` - Skill tree management
+- `GET /api/flashcards` - List user flashcards
+- `GET/DELETE /api/flashcards/[id]` - Flashcard CRUD
+- `POST /api/flashcards/generate` - Generate from skill node
 
 ### LanceDB Endpoints
 
-- `GET /api/flashcards` - List user flashcards
-- `GET/DELETE /api/flashcards/[id]` - Flashcard CRUD
-- `POST /api/flashcards/generate` - Generate from message
-- `GET /api/quiz/due` - Get due flashcards (FSRS)
-- `POST /api/quiz/rate` - Rate flashcard review
-- `GET /api/quiz/stats` - User quiz statistics
-- `GET /api/quiz/history` - Review history
+- `GET /api/study/due` - Get due flashcards (FSRS)
+- `POST /api/study/rate` - Rate flashcard review
+- `GET /api/progress/stats` - User study statistics
+- `GET /api/progress/history` - Review history
 
 ### Hybrid Endpoints (Query Both)
 
-- `POST /api/flashcards/generate` - Reads PostgreSQL (message), writes LanceDB (flashcards)
-- Context building for RAG - Reads both for semantic search
+- `POST /api/goals` - Creates goal in PostgreSQL, syncs embedding to LanceDB
+- `POST /api/flashcards/generate` - Creates flashcards with deduplication (checks LanceDB vectors)
 
 ---
 
@@ -355,13 +360,13 @@ lib/db/
 ├── pg-client.ts           # PostgreSQL connection (Drizzle)
 ├── schema.ts              # LanceDB schema initialization
 ├── drizzle-schema.ts      # PostgreSQL schema (Drizzle)
-├── queries.ts             # Generic LanceDB query helpers
+├── queries.ts             # Generic query helpers
 └── operations/
     ├── users.ts           # PostgreSQL
-    ├── conversations.ts   # PostgreSQL
-    ├── messages.ts        # PostgreSQL
-    ├── api-keys.ts        # PostgreSQL
-    ├── flashcards.ts      # LanceDB
+    ├── goals.ts           # PostgreSQL
+    ├── skill-trees.ts     # PostgreSQL
+    ├── skill-nodes.ts     # PostgreSQL
+    ├── flashcards.ts      # PostgreSQL + LanceDB vectors
     └── review-logs.ts     # LanceDB
 ```
 

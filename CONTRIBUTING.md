@@ -15,24 +15,33 @@ Thank you for your interest in contributing to MemoryLoop! This document provide
 
 1. Fork the repository
 2. Clone your fork:
+
    ```bash
    git clone https://github.com/YOUR_USERNAME/memoryloop.git
    cd memoryloop
    ```
+
 3. Add upstream remote:
+
    ```bash
    git remote add upstream https://github.com/nicholaspsmith/memoryloop.git
    ```
+
 4. Install dependencies:
+
    ```bash
    npm install
    ```
+
 5. Copy environment variables:
+
    ```bash
    cp .env.example .env.local
    ```
+
 6. Configure your `.env.local` with your API keys
 7. Initialize the database:
+
    ```bash
    npm run db:init
    ```
@@ -239,7 +248,7 @@ Include:
 memoryloop/
 ├── app/                   # Next.js App Router
 │   ├── (auth)/           # Auth pages (login, signup)
-│   ├── (protected)/      # Protected routes (chat, quiz)
+│   ├── (protected)/      # Protected routes (goals, quiz)
 │   └── api/              # API routes
 ├── components/           # React components
 ├── lib/                  # Shared utilities
