@@ -67,6 +67,7 @@ export async function deleteGoalFromLanceDB(goalId: string): Promise<void> {
   try {
     const db = await getDbConnection()
     const table = await db.openTable('goals')
+    // SAFETY: goalId validated as UUID above, string interpolation is safe
     await table.delete(`id = '${goalId}'`)
     console.log(`[LanceDB] Deleted goal ${goalId}`)
   } catch (error) {

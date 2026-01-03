@@ -57,6 +57,7 @@ export async function deleteFlashcardFromLanceDB(flashcardId: string): Promise<v
   try {
     const db = await getDbConnection()
     const table = await db.openTable('flashcards')
+    // SAFETY: flashcardId validated as UUID above, string interpolation is safe
     await table.delete(`id = '${flashcardId}'`)
     console.log(`[LanceDB] Deleted flashcard ${flashcardId}`)
   } catch (error) {
