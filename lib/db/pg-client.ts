@@ -5,7 +5,7 @@ import * as schema from './drizzle-schema'
 /**
  * PostgreSQL Database Client for MemoryLoop
  *
- * Uses Drizzle ORM for users, conversations, messages, and API keys.
+ * Uses Drizzle ORM for users, learning goals, skill trees, and flashcards.
  * Vector embeddings are stored in LanceDB (see lib/db/client.ts).
  */
 

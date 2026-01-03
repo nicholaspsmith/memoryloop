@@ -6,7 +6,7 @@ import SignupForm from '@/components/auth/SignupForm'
  * Signup Page
  *
  * Public route - displays signup form for new users.
- * Authenticated users are redirected to /chat.
+ * Authenticated users are redirected to /goals.
  */
 
 export const metadata = {
@@ -16,9 +16,9 @@ export const metadata = {
 export default async function SignupPage() {
   const session = await auth()
 
-  // Redirect authenticated users to chat
+  // Redirect authenticated users to goals
   if (session) {
-    redirect('/chat')
+    redirect('/goals')
   }
 
   return (

@@ -6,7 +6,7 @@ import LoginForm from '@/components/auth/LoginForm'
  * Login Page
  *
  * Public route - displays login form for unauthenticated users.
- * Authenticated users are redirected to /chat.
+ * Authenticated users are redirected to /goals.
  */
 
 export const metadata = {
@@ -16,9 +16,9 @@ export const metadata = {
 export default async function LoginPage() {
   const session = await auth()
 
-  // Redirect authenticated users to chat
+  // Redirect authenticated users to goals
   if (session) {
-    redirect('/chat')
+    redirect('/goals')
   }
 
   return (

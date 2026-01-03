@@ -6,7 +6,7 @@ import Link from 'next/link'
 /**
  * Protected Routes Error Boundary
  *
- * Catches errors in authenticated routes (chat and quiz).
+ * Catches errors in authenticated routes (goals and progress).
  * Provides contextual error messages and recovery options.
  */
 
@@ -60,10 +60,10 @@ export default function ProtectedError({
             </button>
 
             <Link
-              href="/chat"
+              href="/goals"
               className="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
-              Go to Chat
+              Go to Goals
             </Link>
           </div>
 

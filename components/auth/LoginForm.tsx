@@ -62,7 +62,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
         if (onSuccess) {
           onSuccess()
         }
-        router.push('/chat')
+        router.push('/goals')
         router.refresh()
       }
     } catch (err) {

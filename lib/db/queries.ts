@@ -67,7 +67,7 @@ export async function update<T extends { id: string }>(
   const { embedding: _, ...existingWithoutEmbedding } = existing as any
   const updated = { ...existingWithoutEmbedding, ...updates }
 
-  // Only add embedding field if it existed in the original record (e.g., messages have it, conversations don't)
+  // Only add embedding field if it existed in the original record (e.g., flashcards have it)
   // This preserves the schema structure while avoiding LanceDB internal type issues
   if ('embedding' in existing && !('embedding' in updates)) {
     updated.embedding = null

@@ -32,8 +32,8 @@ setup('authenticate', async ({ page }) => {
   const submitButton = page.locator('button[type="submit"]')
   await submitButton.click()
 
-  // Wait for redirect to authenticated area (chat or dashboard)
-  await page.waitForURL(/\/(chat|dashboard|settings)/, { timeout: 10000 })
+  // Wait for redirect to authenticated area (goals or dashboard)
+  await page.waitForURL(/\/(goals|dashboard|settings)/, { timeout: 10000 })
 
   // Verify we're logged in by checking for authenticated UI elements
   await expect(page).not.toHaveURL(/\/(login|signup)/)
