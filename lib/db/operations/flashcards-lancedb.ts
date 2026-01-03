@@ -79,13 +79,18 @@ export async function searchSimilarFlashcardIds(
     const db = await getDbConnection()
     const table = await db.openTable('flashcards')
 
-    const results = await table
+    // Get all results without SQL filter (LanceDB has issues with WHERE on recent inserts)
+    const allResults = await table
       .vectorSearch(queryEmbedding)
-      .where(`"userId" = '${userId}'`)
-      .limit(limit)
+      .bypassVectorIndex() // Brute-force search to see all data including recent inserts
+      .limit(100)
       .toArray()
 
-    return results.map((r: any) => r.id)
+    // Filter by userId in JavaScript
+    return allResults
+      .filter((r: { userId: string }) => r.userId === userId)
+      .slice(0, limit)
+      .map((r: any) => r.id)
   } catch (error) {
     console.error('[LanceDB] Flashcard semantic search failed:', error)
     return []
@@ -114,15 +119,19 @@ export async function searchSimilarFlashcardsWithScores(
     const db = await getDbConnection()
     const table = await db.openTable('flashcards')
 
-    const results = await table
+    // Get all results without SQL filter (LanceDB has issues with WHERE on recent inserts)
+    const allResults = await table
       .vectorSearch(queryEmbedding)
-      .where(`"userId" = '${userId}'`)
-      .limit(limit)
+      .bypassVectorIndex() // Brute-force search to see all data including recent inserts
+      .limit(100)
       .toArray()
+
+    // Filter by userId in JavaScript
+    const userResults = allResults.filter((r: { userId: string }) => r.userId === userId)
 
     // LanceDB returns _distance (lower = more similar)
     // Convert to similarity score (0-1, higher = more similar)
-    return results.map((r: any) => ({
+    return userResults.slice(0, limit).map((r: any) => ({
       id: r.id,
       similarity: 1 / (1 + r._distance), // Normalize distance to 0-1 range
     }))
@@ -160,15 +169,19 @@ export async function findSimilarFlashcardsWithThreshold(
     const db = await getDbConnection()
     const table = await db.openTable('flashcards')
 
-    // Get more results than limit to filter by threshold
-    const results = await table
+    // Get all results without SQL filter (LanceDB has issues with WHERE on recent inserts)
+    // Then filter by userId in JavaScript
+    const allResults = await table
       .vectorSearch(queryEmbedding)
-      .where(`"userId" = '${userId}'`)
-      .limit(limit * 2) // Fetch extra to account for threshold filtering
+      .bypassVectorIndex() // Brute-force search to see all data including recent inserts
+      .limit(100) // Get more to ensure we capture matching userId
       .toArray()
 
+    // Filter by userId in JavaScript
+    const userResults = allResults.filter((r: { userId: string }) => r.userId === userId)
+
     // Convert distance to similarity and filter by threshold
-    const similarItems = results
+    const similarItems = userResults
       .map((r: { id: string; _distance: number }) => ({
         id: r.id,
         similarity: 1 / (1 + r._distance),

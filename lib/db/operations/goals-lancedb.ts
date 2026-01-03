@@ -43,7 +43,11 @@ export async function syncGoalToLanceDB(goal: {
       },
     ])
 
-    console.log(`[LanceDB] Synced goal ${goal.id} with embedding`)
+    // Debug: count rows after insert
+    const countResults = await table.countRows()
+    console.log(
+      `[LanceDB] Synced goal ${goal.id} with embedding for userId=${goal.userId}, table now has ${countResults} rows`
+    )
   } catch (error) {
     console.error(`[LanceDB] Failed to sync goal ${goal.id}:`, error)
   }
@@ -91,12 +95,16 @@ export async function findSimilarGoals(
     const db = await getDbConnection()
     const table = await db.openTable('goals')
 
-    // Get more results than limit to filter by threshold
-    const results = await table
+    // Get all results without SQL filter (LanceDB has issues with WHERE on recent inserts)
+    // Then filter by userId in JavaScript
+    const allResults = await table
       .vectorSearch(queryEmbedding)
-      .where(`"userId" = '${userId}'`)
-      .limit(limit * 2) // Fetch extra to account for threshold filtering
+      .bypassVectorIndex() // Brute-force search to see all data including recent inserts
+      .limit(100) // Get more to ensure we capture matching userId
       .toArray()
+
+    // Filter by userId in JavaScript
+    const results = allResults.filter((r: { userId: string }) => r.userId === userId)
 
     // Convert distance to similarity and filter by threshold
     const similarItems = results
