@@ -3,6 +3,9 @@ import { Rating, State } from 'ts-fsrs'
 import { createReviewLog, getReviewLogsByFlashcardId } from '@/lib/db/operations/review-logs'
 import { createUser } from '@/lib/db/operations/users'
 import { createFlashcard } from '@/lib/db/operations/flashcards'
+import { createGoal } from '@/lib/db/operations/goals'
+import { createSkillTree } from '@/lib/db/operations/skill-trees'
+import { createSkillNode } from '@/lib/db/operations/skill-nodes'
 import { hashPassword } from '@/lib/auth/helpers'
 import { closeDbConnection } from '@/lib/db/client'
 
@@ -27,9 +30,32 @@ describe('Review Logs Database Operations', () => {
     })
     testUserId = user.id
 
+    // Create goal
+    const goal = await createGoal({
+      userId: testUserId,
+      title: 'Test Goal',
+      description: 'Test goal for review logs',
+    })
+
+    // Create skill tree
+    const tree = await createSkillTree({
+      goalId: goal.id,
+    })
+
+    // Create skill node
+    const node = await createSkillNode({
+      treeId: tree.id,
+      title: 'Test Skill Node',
+      description: 'Test skill node for review logs',
+      depth: 1,
+      path: '0',
+      sortOrder: 0,
+    })
+
     // Create flashcard
     const flashcard = await createFlashcard({
       userId: testUserId,
+      skillNodeId: node.id,
       question: 'Test question?',
       answer: 'Test answer',
     })

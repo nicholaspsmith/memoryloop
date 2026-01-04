@@ -1,5 +1,8 @@
 import { getDbConnection } from '@/lib/db/client'
 import { generateEmbedding } from '@/lib/embeddings'
+import { getDb } from '@/lib/db/pg-client'
+import { flashcards } from '@/lib/db/drizzle-schema'
+import { inArray } from 'drizzle-orm'
 
 /**
  * LanceDB Flashcard Operations
@@ -201,5 +204,78 @@ export async function findSimilarFlashcardsWithThreshold(
   } catch (error) {
     console.error('[LanceDB] Flashcard threshold search failed:', error)
     return []
+  }
+}
+
+/**
+ * Clean up orphaned LanceDB embeddings
+ *
+ * Removes embeddings for flashcards that no longer exist in PostgreSQL.
+ * Should be called after migrations that delete flashcards.
+ *
+ * @returns Number of orphaned embeddings deleted
+ */
+export async function cleanupOrphanedFlashcardEmbeddings(): Promise<number> {
+  try {
+    const lanceDb = await getDbConnection()
+    const table = await lanceDb.openTable('flashcards')
+
+    // Get all IDs from LanceDB (paginated to handle large datasets)
+    const allLanceIds: string[] = []
+    let offset = 0
+    const pageSize = 10000
+
+    while (true) {
+      const batch = await table.query().limit(pageSize).toArray()
+      if (batch.length === 0) break
+      allLanceIds.push(...batch.map((r: { id: string }) => r.id))
+      if (batch.length < pageSize) break // Last page
+      offset += pageSize
+    }
+
+    if (allLanceIds.length === 0) {
+      console.log('[LanceDB] No flashcard embeddings to check')
+      return 0
+    }
+
+    console.log(`[LanceDB] Checking ${allLanceIds.length} embeddings for orphans`)
+
+    // Check which IDs exist in PostgreSQL (batched to avoid parameter limits)
+    const pgDb = getDb()
+    const existingIds = new Set<string>()
+    const batchSize = 1000
+
+    for (let i = 0; i < allLanceIds.length; i += batchSize) {
+      const batch = allLanceIds.slice(i, i + batchSize)
+      const batchResults = await pgDb
+        .select({ id: flashcards.id })
+        .from(flashcards)
+        .where(inArray(flashcards.id, batch))
+
+      batchResults.forEach((c) => existingIds.add(c.id))
+    }
+
+    // Find orphaned IDs (in LanceDB but not in PostgreSQL)
+    const orphanedIds = allLanceIds.filter((id) => !existingIds.has(id))
+
+    if (orphanedIds.length === 0) {
+      console.log('[LanceDB] No orphaned flashcard embeddings found')
+      return 0
+    }
+
+    console.log(`[LanceDB] Found ${orphanedIds.length} orphaned embeddings, deleting...`)
+
+    // Delete orphaned embeddings in parallel (batched for controlled concurrency)
+    const deleteBatchSize = 50
+    for (let i = 0; i < orphanedIds.length; i += deleteBatchSize) {
+      const batch = orphanedIds.slice(i, i + deleteBatchSize)
+      await Promise.all(batch.map((id) => deleteFlashcardFromLanceDB(id)))
+    }
+
+    console.log(`[LanceDB] Cleaned up ${orphanedIds.length} orphaned flashcard embeddings`)
+    return orphanedIds.length
+  } catch (error) {
+    console.error('[LanceDB] Failed to cleanup orphaned embeddings:', error)
+    return 0
   }
 }

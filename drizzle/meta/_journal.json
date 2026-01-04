@@ -78,6 +78,13 @@
       "when": 1735862400000,
       "tag": "0010_drop_deprecated_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1736041200000,
+      "tag": "0011_cleanup_orphaned_flashcards",
+      "breakpoints": true
     }
   ]
 }
