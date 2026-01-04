@@ -220,35 +220,56 @@ export async function cleanupOrphanedFlashcardEmbeddings(): Promise<number> {
     const lanceDb = await getDbConnection()
     const table = await lanceDb.openTable('flashcards')
 
-    // Get all IDs from LanceDB
-    const lanceResults = await table.query().limit(100000).toArray()
-    const lanceIds = lanceResults.map((r: { id: string }) => r.id)
+    // Get all IDs from LanceDB (paginated to handle large datasets)
+    const allLanceIds: string[] = []
+    let offset = 0
+    const pageSize = 10000
 
-    if (lanceIds.length === 0) {
+    while (true) {
+      const batch = await table.query().limit(pageSize).toArray()
+      if (batch.length === 0) break
+      allLanceIds.push(...batch.map((r: { id: string }) => r.id))
+      if (batch.length < pageSize) break // Last page
+      offset += pageSize
+    }
+
+    if (allLanceIds.length === 0) {
       console.log('[LanceDB] No flashcard embeddings to check')
       return 0
     }
 
-    // Check which IDs exist in PostgreSQL
-    const pgDb = getDb()
-    const existingCards = await pgDb
-      .select({ id: flashcards.id })
-      .from(flashcards)
-      .where(inArray(flashcards.id, lanceIds))
+    console.log(`[LanceDB] Checking ${allLanceIds.length} embeddings for orphans`)
 
-    const existingIds = new Set(existingCards.map((c) => c.id))
+    // Check which IDs exist in PostgreSQL (batched to avoid parameter limits)
+    const pgDb = getDb()
+    const existingIds = new Set<string>()
+    const batchSize = 1000
+
+    for (let i = 0; i < allLanceIds.length; i += batchSize) {
+      const batch = allLanceIds.slice(i, i + batchSize)
+      const batchResults = await pgDb
+        .select({ id: flashcards.id })
+        .from(flashcards)
+        .where(inArray(flashcards.id, batch))
+
+      batchResults.forEach((c) => existingIds.add(c.id))
+    }
 
     // Find orphaned IDs (in LanceDB but not in PostgreSQL)
-    const orphanedIds = lanceIds.filter((id: string) => !existingIds.has(id))
+    const orphanedIds = allLanceIds.filter((id) => !existingIds.has(id))
 
     if (orphanedIds.length === 0) {
       console.log('[LanceDB] No orphaned flashcard embeddings found')
       return 0
     }
 
-    // Delete orphaned embeddings
-    for (const id of orphanedIds) {
-      await deleteFlashcardFromLanceDB(id)
+    console.log(`[LanceDB] Found ${orphanedIds.length} orphaned embeddings, deleting...`)
+
+    // Delete orphaned embeddings in parallel (batched for controlled concurrency)
+    const deleteBatchSize = 50
+    for (let i = 0; i < orphanedIds.length; i += deleteBatchSize) {
+      const batch = orphanedIds.slice(i, i + deleteBatchSize)
+      await Promise.all(batch.map((id) => deleteFlashcardFromLanceDB(id)))
     }
 
     console.log(`[LanceDB] Cleaned up ${orphanedIds.length} orphaned flashcard embeddings`)

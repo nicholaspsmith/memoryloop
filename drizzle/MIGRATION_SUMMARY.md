@@ -22,7 +22,7 @@ Cleaned up orphaned flashcards and established proper FK constraints:
 
 #### Data Cleanup
 
-- **8,527 orphaned flashcards deleted** (had `skill_node_id = NULL`)
+- **[count varies by database] orphaned flashcards deleted** (had `skill_node_id = NULL`)
 - **0 dangling references** (no invalid skill_node_id references found)
 - **Total flashcards before**: 9,504
 - **Total flashcards after**: 977
@@ -70,7 +70,7 @@ WHERE table_name = 'flashcards'
 
 ### Data Loss
 
-- **8,527 legacy flashcards permanently deleted**
+- **[count varies by database] legacy flashcards permanently deleted**
 - These were all message-based flashcards from the old system
 - No user-generated goal-based flashcards were affected
 

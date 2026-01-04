@@ -7,7 +7,7 @@ This migration handles the cleanup of orphaned flashcards and establishes proper
 ## Problem Statement
 
 1. The `flashcards.skill_node_id` column had NO database FK constraint - only a Drizzle relation existed
-2. 8,527 orphaned flashcards exist with `skill_node_id = NULL` (from old message-based generation)
+2. [count varies by database] orphaned flashcards exist with `skill_node_id = NULL` (from old message-based generation)
 3. When goals/skill trees/nodes are deleted, flashcards are NOT cascaded
 
 ## Changes
@@ -29,7 +29,7 @@ This migration handles the cleanup of orphaned flashcards and establishes proper
 
 ```sql
 -- Total flashcards: 9,504
--- Orphaned (skill_node_id IS NULL): 8,527 (89.7%)
+-- Orphaned (skill_node_id IS NULL): [count varies by database] (89.7%)
 -- Valid (linked to skill nodes): 977 (10.3%)
 ```
 
@@ -43,7 +43,7 @@ This migration handles the cleanup of orphaned flashcards and establishes proper
 
 ### Breaking Changes
 
-- **8,527 flashcards will be permanently deleted**
+- **[count varies by database] flashcards will be permanently deleted**
 - All deleted flashcards are from the old message-based generation system
 - This is a one-way migration - deleted data cannot be recovered
 

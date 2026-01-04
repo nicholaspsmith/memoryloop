@@ -3,7 +3,8 @@
 -- See: Orphaned flashcard cleanup task
 
 -- IMPORTANT: This migration will DELETE orphaned flashcards
--- 8,527 flashcards with skill_node_id = NULL will be removed
+-- Flashcards with skill_node_id = NULL will be removed
+-- The actual count depends on your database (logged at runtime)
 -- These are legacy flashcards from message-based generation
 
 -- Step 1: Log count of flashcards to be deleted
