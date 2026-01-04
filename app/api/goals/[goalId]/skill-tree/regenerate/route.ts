@@ -10,7 +10,7 @@ import {
 import { getNodesByTreeId, createSkillNodes, buildNodeTree } from '@/lib/db/operations/skill-nodes'
 import { generateSkillTree, flattenGeneratedNodes } from '@/lib/ai/skill-tree-generator'
 import { getDb } from '@/lib/db/pg-client'
-import { skillNodes, flashcards } from '@/lib/db/drizzle-schema'
+import { skillNodes } from '@/lib/db/drizzle-schema'
 import { eq } from 'drizzle-orm'
 import * as logger from '@/lib/logger'
 
@@ -73,16 +73,7 @@ export async function POST(request: Request, context: RouteContext) {
 
       const db = getDb()
 
-      // Unlink flashcards from old nodes (set skillNodeId to null)
-      const oldNodes = await getNodesByTreeId(existingTree.id)
-      for (const node of oldNodes) {
-        await db
-          .update(flashcards)
-          .set({ skillNodeId: null })
-          .where(eq(flashcards.skillNodeId, node.id))
-      }
-
-      // Delete old nodes
+      // Delete old nodes - CASCADE delete automatically removes linked flashcards
       await db.delete(skillNodes).where(eq(skillNodes.treeId, existingTree.id))
 
       // Insert new nodes

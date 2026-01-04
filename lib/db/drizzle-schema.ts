@@ -52,7 +52,10 @@ export const flashcards = pgTable('flashcards', {
   fsrsState: jsonb('fsrs_state').notNull(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   // Goal-based learning extensions (014-goal-based-learning)
-  skillNodeId: uuid('skill_node_id'), // FK added after skillNodes table defined
+  // Note: FK constraint with cascade delete defined via migration (forward reference to skillNodes)
+  skillNodeId: uuid('skill_node_id')
+    .notNull()
+    .references(() => skillNodes.id, { onDelete: 'cascade' }),
   cardType: varchar('card_type', { length: 20 }).notNull().default('flashcard'),
   // 'flashcard' | 'multiple_choice' | 'scenario'
   cardMetadata: jsonb('card_metadata'),
