@@ -12,12 +12,13 @@ import { auth } from '@/auth'
 import { getGoalByIdForUser } from '@/lib/db/operations/goals'
 import { getSkillTreeByGoalId } from '@/lib/db/operations/skill-trees'
 import { getDb } from '@/lib/db/pg-client'
-import { backgroundJobs, skillNodes } from '@/lib/db/drizzle-schema'
+import { backgroundJobs, skillNodes, JobType } from '@/lib/db/drizzle-schema'
 import { eq, and, sql } from 'drizzle-orm'
 import { processJob, canProcessJob } from '@/lib/jobs/processor'
 import {
   resetStaleJobs,
   resetFailedJobsForMissingHandler,
+  createJob,
 } from '@/lib/db/operations/background-jobs'
 import * as logger from '@/lib/logger'
 
@@ -67,9 +68,14 @@ export async function GET(_request: Request, context: RouteContext) {
 
     const db = getDb()
 
-    // Get all node IDs for this tree
+    // Get all nodes for this tree with their details
     const nodes = await db
-      .select({ id: skillNodes.id })
+      .select({
+        id: skillNodes.id,
+        title: skillNodes.title,
+        description: skillNodes.description,
+        cardCount: skillNodes.cardCount,
+      })
       .from(skillNodes)
       .where(eq(skillNodes.treeId, tree.id))
 
@@ -101,6 +107,47 @@ export async function GET(_request: Request, context: RouteContext) {
           sql`${backgroundJobs.payload}->>'nodeId' IN (${nodeIdsSql})`
         )
       )
+
+    // Find nodes that have no cards AND no existing jobs - create jobs for them
+    const nodesWithJobs = new Set(jobs.map((j) => (j.payload as { nodeId?: string })?.nodeId))
+    const nodesNeedingJobs = nodes.filter((n) => n.cardCount === 0 && !nodesWithJobs.has(n.id))
+
+    let jobsCreated = 0
+    if (nodesNeedingJobs.length > 0) {
+      logger.info('[FlashcardJobs] Creating missing jobs for nodes without cards', {
+        nodeCount: nodesNeedingJobs.length,
+        goalId,
+      })
+
+      for (const node of nodesNeedingJobs) {
+        await createJob({
+          type: JobType.FLASHCARD_GENERATION,
+          payload: {
+            nodeId: node.id,
+            nodeTitle: node.title,
+            nodeDescription: node.description ?? undefined,
+            maxCards: 5,
+          },
+          userId,
+          priority: 0,
+        })
+        jobsCreated++
+      }
+
+      // Re-fetch jobs to include newly created ones
+      const updatedJobs = await db
+        .select()
+        .from(backgroundJobs)
+        .where(
+          and(
+            eq(backgroundJobs.type, 'flashcard_generation'),
+            eq(backgroundJobs.userId, userId),
+            sql`${backgroundJobs.payload}->>'nodeId' IN (${nodeIdsSql})`
+          )
+        )
+      jobs.length = 0
+      jobs.push(...updatedJobs)
+    }
 
     // Count by status
     const counts = {
@@ -142,6 +189,7 @@ export async function GET(_request: Request, context: RouteContext) {
       failed: counts.failed,
       total: jobs.length,
       triggered: jobsToTrigger.length,
+      created: jobsCreated,
     })
   } catch (error) {
     logger.error('Failed to get flashcard jobs', error as Error)
