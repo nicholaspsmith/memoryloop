@@ -8,6 +8,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./tests/setup.ts'],
+    globalSetup: ['./tests/global-teardown.ts'],
     include: ['**/tests/integration/**/*.test.ts', '**/tests/contract/**/*.test.ts'],
     exclude: ['**/node_modules/**', '**/dist/**', '**/.next/**'],
     // Run tests sequentially to avoid resource contention
