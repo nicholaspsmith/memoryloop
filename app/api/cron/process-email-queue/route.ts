@@ -4,8 +4,8 @@
  * Background job to process queued emails
  *
  * Should be called periodically by:
- * - Vercel Cron (for production deployments)
- * - GitHub Actions workflow (scheduled)
+ * - GitHub Actions workflow (scheduled every 5 minutes)
+ * - System cron job on the server
  * - Manual curl/fetch during development
  *
  * Security: Use CRON_SECRET env var to authenticate requests
