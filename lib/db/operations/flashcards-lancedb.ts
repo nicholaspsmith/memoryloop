@@ -220,18 +220,12 @@ export async function cleanupOrphanedFlashcardEmbeddings(): Promise<number> {
     const lanceDb = await getDbConnection()
     const table = await lanceDb.openTable('flashcards')
 
-    // Get all IDs from LanceDB (paginated to handle large datasets)
+    // Get all IDs from LanceDB
+    // Note: LanceDB's query().limit() returns all matching rows up to limit
+    // For very large tables, this could be memory intensive but is acceptable for our use case
     const allLanceIds: string[] = []
-    let offset = 0
-    const pageSize = 10000
-
-    while (true) {
-      const batch = await table.query().limit(pageSize).toArray()
-      if (batch.length === 0) break
-      allLanceIds.push(...batch.map((r: { id: string }) => r.id))
-      if (batch.length < pageSize) break // Last page
-      offset += pageSize
-    }
+    const batch = await table.query().limit(100000).toArray()
+    allLanceIds.push(...batch.map((r: { id: string }) => r.id))
 
     if (allLanceIds.length === 0) {
       console.log('[LanceDB] No flashcard embeddings to check')
