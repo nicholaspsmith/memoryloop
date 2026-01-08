@@ -34,6 +34,24 @@ Sentry.init({
       })
     }
 
+    // Scrub request/response bodies (may contain user flashcards, goals, messages)
+    if (event.request?.data) {
+      event.request.data = '[REDACTED]'
+    }
+
+    // Scrub any extra context that might contain PII
+    if (event.contexts?.data) {
+      delete event.contexts.data
+    }
+
+    // Anonymize user context to prevent IP address and user ID tracking
+    if (event.user) {
+      event.user = {
+        id: event.user.id ? '[ANONYMIZED]' : undefined,
+        ip_address: undefined,
+      }
+    }
+
     // Scrub sensitive data from error messages
     if (event.message) {
       event.message = event.message

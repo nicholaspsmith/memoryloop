@@ -64,6 +64,20 @@ Sentry.init({
         return breadcrumb
       })
     }
+
+    // Scrub request bodies (may contain user-generated content)
+    if (event.request?.data) {
+      event.request.data = '[REDACTED]'
+    }
+
+    // Anonymize user context to prevent IP address and user ID tracking
+    if (event.user) {
+      event.user = {
+        id: event.user.id ? '[ANONYMIZED]' : undefined,
+        ip_address: undefined,
+      }
+    }
+
     return event
   },
 })
