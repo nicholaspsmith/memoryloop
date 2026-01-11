@@ -9,6 +9,12 @@
 </p>
 
 <p align="center">
+  <a href="https://loopi.nicholaspsmith.com/">
+    <img src="https://img.shields.io/badge/Live%20Demo-loopi.nicholaspsmith.com-blue?style=for-the-badge" alt="Live Demo">
+  </a>
+</p>
+
+<p align="center">
   <a href="https://github.com/nicholaspsmith/loopi/actions/workflows/ci.yml">
     <img src="https://github.com/nicholaspsmith/loopi/actions/workflows/ci.yml/badge.svg" alt="CI">
   </a>
