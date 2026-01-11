@@ -5,7 +5,7 @@
 <h1 align="center">Loopi</h1>
 
 <p align="center">
-  <strong>Master any skill with AI-powered spaced repetition learning</strong>
+  <strong>Your AI-powered skill tree for learning anything</strong>
 </p>
 
 <p align="center">
@@ -19,7 +19,11 @@
 
 ---
 
-Loopi is a web application that enables you to learn through conversation with Claude and convert those conversations into flashcards for spaced repetition practice.
+**Want to learn guitar? Master a new programming language? Finally understand quantum physics?** Loopi makes it happen.
+
+Tell Loopi what you want to learn, and it generates a personalized skill tree—breaking down complex topics into bite-sized goals you can actually achieve. Then, using the science-backed FSRS spaced repetition algorithm, Loopi schedules your reviews at the perfect moment to cement knowledge into long-term memory.
+
+No more forgotten tutorials. No more abandoned courses. Just steady, measurable progress toward mastering anything you set your mind to.
 
 ## Screenshots
 
@@ -48,16 +52,16 @@ Loopi is a web application that enables you to learn through conversation with C
 
 ## Features
 
-- **Interactive Chat**: Have meaningful conversations with Claude about any topic
-- **Smart Flashcard Generation**: Automatically convert Claude's responses into question-answer flashcards
-- **Spaced Repetition**: Quiz yourself using FSRS-based spaced repetition for optimal learning
-- **Progress Tracking**: Monitor your learning journey with detailed review statistics
-- **Secure Authentication**: Password reset and email verification with rate limiting
-- **Security Audit Trail**: Comprehensive logging of authentication events with IP geolocation
+- **AI-Generated Skill Trees**: Tell Loopi what you want to learn and watch it create a structured learning path with clear milestones
+- **Smart Goal Breakdown**: Complex topics get decomposed into achievable sub-goals so you always know your next step
+- **FSRS Spaced Repetition**: Science-backed algorithm schedules reviews at optimal intervals for maximum retention
+- **Interactive Study Sessions**: Chat with Claude to deepen understanding, then reinforce with flashcard reviews
+- **Progress Visualization**: Track your mastery across skills with intuitive dashboards and statistics
+- **Secure & Private**: Email verification, encrypted API keys, and comprehensive security logging
 
 ## Tech Stack
 
-- **Framework**: Next.js 15.1 with React 19 and App Router
+- **Framework**: Next.js 16.0.10 with React 19 and App Router
 - **Language**: TypeScript 5.7
 - **Authentication**: NextAuth.js 5
 - **Database**: Hybrid architecture
@@ -185,31 +189,31 @@ loopi/
 
 ## Usage
 
-### Creating an Account
+### Getting Started
 
-1. Navigate to the signup page
-2. Enter your email, password, and name
-3. Click "Sign up"
+1. Create an account and verify your email
+2. Add your Anthropic API key in Settings (or use the shared key if available)
 
-### Having a Conversation
+### Setting Learning Goals
 
-1. Go to the Chat tab
-2. Type your question or topic
-3. Claude will respond with detailed information
+1. Go to the Goals dashboard
+2. Click "New Goal" and describe what you want to learn
+3. Loopi generates a skill tree with sub-goals and milestones
+4. Start with any goal that interests you
 
-### Generating Flashcards
+### Study Sessions
 
-1. After receiving a response from Claude, click "Generate Flashcards"
-2. The system will automatically create question-answer pairs
-3. View confirmation of how many flashcards were created
+1. Select a goal to study
+2. Chat with Claude to explore the topic and deepen understanding
+3. Loopi automatically generates flashcards from your conversations
+4. Review flashcards when they're due—rate each as Again, Hard, Good, or Easy
+5. The FSRS algorithm schedules optimal review times for long-term retention
 
-### Studying with Flashcards
+### Tracking Progress
 
-1. Go to the Quiz tab
-2. Review the question, think of your answer
-3. Click "Show Answer" to reveal the correct answer
-4. Rate your knowledge: Again, Hard, Good, or Easy
-5. The FSRS algorithm will schedule your next review
+1. View your skill tree to see mastery levels across all goals
+2. Check the dashboard for upcoming reviews and study streaks
+3. Watch your knowledge compound over time
 
 ## Development
 
