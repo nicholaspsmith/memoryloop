@@ -24,6 +24,7 @@ services:
       - API_KEY_ENCRYPTION_SECRET=${API_KEY_ENCRYPTION_SECRET}
       - RESEND_API_KEY=${RESEND_API_KEY}
       - SMTP_FROM=${SMTP_FROM}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
     depends_on:
       postgres:
         condition: service_healthy
