@@ -61,7 +61,7 @@ No more forgotten tutorials. No more abandoned courses. Just steady, measurable 
 
 ## Tech Stack
 
-- **Framework**: Next.js 15.1 with React 19 and App Router
+- **Framework**: Next.js 16.0.10 with React 19 and App Router
 - **Language**: TypeScript 5.7
 - **Authentication**: NextAuth.js 5
 - **Database**: Hybrid architecture
