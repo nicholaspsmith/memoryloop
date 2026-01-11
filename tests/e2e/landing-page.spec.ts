@@ -108,8 +108,8 @@ test.describe('Landing Page - Unauthenticated Users', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    // Verify logo is visible
-    const logo = page.locator('img[alt="Loopi Logo"]')
+    // Verify logo is visible (alt text updated for accessibility)
+    const logo = page.locator('img[alt="Loopi - AI-powered skill tree learning platform"]')
     await expect(logo).toBeVisible()
 
     // Verify subheadline is visible
