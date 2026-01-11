@@ -31,10 +31,14 @@ docker pull "${IMAGE_NAME}"
 echo "Ensuring data directories have correct permissions..."
 mkdir -p "${DEPLOY_DIR}/data/postgres"
 mkdir -p "${DEPLOY_DIR}/data/lancedb"
+# Stop containers before fixing permissions (files may be locked)
+echo "Stopping containers for permission fix..."
+docker compose -f "${COMPOSE_FILE}" stop 2>/dev/null || true
+
 # PostgreSQL runs as uid 70 in alpine image
-chown -R 70:70 "${DEPLOY_DIR}/data/postgres"
+chown -R 70:70 "${DEPLOY_DIR}/data/postgres" 2>/dev/null || true
 # Next.js app runs as uid 1001 (nextjs user)
-chown -R 1001:1001 "${DEPLOY_DIR}/data/lancedb"
+chown -R 1001:1001 "${DEPLOY_DIR}/data/lancedb" 2>/dev/null || true
 
 # Create backup of current state
 BACKUP_TAG="backup-$(date +%Y%m%d-%H%M%S)"
